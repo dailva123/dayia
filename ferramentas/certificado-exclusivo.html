@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Gerador de Certificado Exclusivo Aliança Ferroviária</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1a1a;
+    --paper:#fff;
+    --line:#333;
+    --muted:#666;
+    --accent:#0a5;
+    --hair:#d8d8d8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    background:#e9e9e9;
+    margin:0;
+    padding:20px;
+    display:flex;
+    gap:24px;
+    align-items:flex-start;
+    justify-content:center;
+    flex-wrap:wrap;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
+  }
+  /* ---------- FORM PANEL ---------- */
+  .panel{
+    width:380px;
+    background:#fff;
+    border-radius:10px;
+    padding:20px 22px;
+    font-family: Arial, Helvetica, sans-serif;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+  }
+  .panel h2{
+    font-size:16px;
+    margin:0 0 4px;
+    color:#222;
+  }
+  .panel .sub{
+    font-size:12px;
+    color:#777;
+    margin-bottom:16px;
+  }
+  .lang-toggle{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+  }
+  .lang-toggle button{
+    flex:1;
+    padding:8px;
+    border:1px solid #ccc;
+    background:#f5f5f5;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:bold;
+    color:#444;
+  }
+  .lang-toggle button.active{
+    background:#111;
+    color:#fff;
+    border-color:#111;
+  }
+  label{
+    display:block;
+    font-size:11px;
+    font-weight:bold;
+    text-transform:uppercase;
+    color:#555;
+    margin:12px 0 4px;
+  }
+  input[type=text], input[type=number], input[type=date], select, textarea{
+    width:100%;
+    padding:7px 8px;
+    border:1px solid #ccc;
+    border-radius:5px;
+    font-size:13px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  textarea{resize:vertical; min-height:40px;}
+  .row2{display:flex; gap:10px;}
+  .row2 > div{flex:1;}
+  .radio-row{display:flex; gap:14px; margin-top:4px;}
+  .radio-row label{
+    display:flex; align-items:center; gap:5px;
+    font-size:12px; font-weight:normal; text-transform:none; margin:0;
+    color:#333;
+  }
+  .radio-row input{width:auto;}
+  .actions{
+    margin-top:20px;
+    display:flex;
+    gap:10px;
+  }
+  .actions button{
+    flex:1;
+    padding:11px;
+    border:none;
+    border-radius:6px;
+    font-size:14px;
+    font-weight:bold;
+    cursor:pointer;
+  }
+  #printBtn{background:var(--accent); color:#fff;}
+  #resetBtn{background:#eee; color:#333;}
+  hr.sep{border:none; border-top:1px solid #eee; margin:16px 0;}
+  .import-box{
+    background:#f3f8f6;
+    border:1px dashed #0a5;
+    border-radius:8px;
+    padding:12px 14px;
+  }
+  .import-box input[type=file]{
+    font-size:12px;
+    margin-bottom:8px;
+  }
+  .import-box button{
+    width:100%;
+    padding:9px;
+    border:none;
+    border-radius:6px;
+    background:var(--accent);
+    color:#fff;
+    font-weight:bold;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .import-box button:disabled{
+    background:#aaa;
+    cursor:not-allowed;
+  }
+  .import-status{
+    font-size:12px;
+    margin-top:8px;
+    min-height:16px;
+    color:#555;
+  }
+  .import-status.error{color:#c0392b;}
+  .import-status.ok{color:#0a5;}
+
+  .item-row{
+    display:flex;
+    gap:6px;
+    margin-bottom:6px;
+    align-items:flex-start;
+  }
+  .item-row input{
+    font-size:12px;
+    padding:6px 7px;
+  }
+  .item-row .item-code{width:80px;}
+  .item-row .item-custref{width:80px;}
+  .item-row .item-desc{flex:1;}
+  .item-row .item-pos{width:50px;}
+  .item-row .item-qty{width:60px;}
+  .item-row .item-remove{
+    background:#f2d7d7;
+    color:#c0392b;
+    border:none;
+    border-radius:5px;
+    width:26px;
+    height:32px;
+    cursor:pointer;
+    font-weight:bold;
+    flex-shrink:0;
+  }
+  #addItemBtn{
+    width:100%;
+    padding:8px;
+    border:1px dashed #999;
+    background:#fafafa;
+    border-radius:6px;
+    color:#444;
+    font-size:12.5px;
+    cursor:pointer;
+    margin-top:2px;
+  }
+
+  /* ---------- CERTIFICATE ---------- */
+  .cert-wrap{
+    background:#ccc;
+    padding:14px;
+    border-radius:8px;
+  }
+  .cert{
+    width:700px;
+    min-height:900px;
+    background:var(--paper);
+    color:var(--ink);
+    padding:46px 54px;
+    box-shadow:0 2px 14px rgba(0,0,0,.25);
+    position:relative;
+    line-height:1.5;
+  }
+  .cert-header{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    border-bottom:3px solid var(--ink);
+    padding-bottom:14px;
+    margin-bottom:28px;
+  }
+  .logo-img{
+    height:44px;
+    width:auto;
+    display:block;
+    flex-shrink:0;
+  }
+  .cert-header h1{
+    font-size:17px;
+    font-weight:700;
+    letter-spacing:.2px;
+    margin:0;
+  }
+  .cert-title{
+    text-align:center;
+    font-size:19px;
+    font-weight:700;
+    margin-bottom:28px;
+    letter-spacing:.2px;
+  }
+
+  /* bloco de campos: grid rótulo/valor bem alinhado */
+  .info-block{
+    margin-bottom:22px;
+  }
+  .field{
+    display:grid;
+    grid-template-columns:180px 1fr;
+    column-gap:10px;
+    padding:5px 0;
+    font-size:14px;
+    border-bottom:1px solid var(--hair);
+  }
+  .field:first-child{border-top:1px solid var(--hair);}
+  .field b{
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .field .val{word-break:break-word;}
+  .field.inline-pair{
+    display:grid;
+    grid-template-columns:180px 1fr 130px 1fr;
+    column-gap:10px;
+  }
+  .field.inline-pair b:nth-of-type(2){padding-left:4px;}
+
+  .declare{
+    font-size:13.5px;
+    margin:20px 0 14px;
+    line-height:1.55;
+  }
+  .approval-block{
+    margin-bottom:14px;
+  }
+  .approval-line{
+    font-size:14px;
+    margin-bottom:6px;
+  }
+  .approval-line b{font-weight:700;}
+  .nota{
+    font-size:13px;
+    line-height:1.55;
+    margin-bottom:6px;
+  }
+
+  .divider{
+    border-top:1px dashed var(--ink);
+    margin:22px 0;
+  }
+
+  .items-table{
+    width:100%;
+    border-collapse:collapse;
+    margin:14px 0 20px;
+    font-size:13px;
+  }
+  .items-table th, .items-table td{
+    border:1px solid var(--ink);
+    padding:7px 9px;
+    text-align:left;
+    vertical-align:top;
+  }
+  .items-table th{
+    background:#f0f0f0;
+    font-size:11.5px;
+    letter-spacing:.2px;
+    font-weight:700;
+  }
+  .items-table td.qty-cell{
+    text-align:center;
+    white-space:nowrap;
+  }
+
+  .test-section{
+    margin-bottom:6px;
+  }
+  .test-block{
+    text-align:center;
+    margin-bottom:18px;
+  }
+  .test-block h3{
+    font-size:14px;
+    font-weight:700;
+    margin:0 0 8px;
+    letter-spacing:.2px;
+  }
+  .test-block .status{
+    font-size:13.5px;
+  }
+
+  .footer-city{
+    text-align:center;
+    font-size:14px;
+    font-weight:700;
+    margin-top:34px;
+  }
+  .checked-badge{
+    display:block;
+    width:fit-content;
+    margin:16px auto;
+    background:#111;
+    color:#fff;
+    font-weight:700;
+    font-size:12.5px;
+    letter-spacing:.2px;
+    padding:6px 16px;
+    border-radius:2px;
+  }
+  .qc-label{
+    text-align:center;
+    font-size:14px;
+    font-weight:700;
+    margin-top:4px;
+  }
+  .company-footer{
+    text-align:center;
+    font-size:12px;
+    font-weight:700;
+    color:var(--muted);
+    margin-top:20px;
+    line-height:1.6;
+    border-top:1px solid var(--hair);
+    padding-top:14px;
+  }
+  .company-footer a{color:#0645ad;}
+
+  @media print{
+    body{background:#fff; padding:0; display:block;}
+    .panel{display:none;}
+    .cert-wrap{background:#fff; padding:0;}
+    .cert{box-shadow:none; width:100%; min-height:0;}
+    .checked-badge, .items-table th{
+      -webkit-print-color-adjust:exact;
+      print-color-adjust:exact;
+      color-adjust:exact;
+    }
+    .test-section, .checked-badge, .company-footer, .footer-city, .qc-label{
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= FORM ================= -->
+<div class="panel">
+  <h2 id="panelTitle">Gerador de Certificado de Qualidade</h2>
+  <div class="sub" id="panelSub">Preencha os dados da nota fiscal para gerar o certificado</div>
+
+  <div class="lang-toggle">
+    <button id="btnPT" class="active" onclick="setLang('pt')">Português</button>
+    <button id="btnEN" onclick="setLang('en')">English</button>
+  </div>
+
+  <div class="import-box">
+    <label id="lb_import" style="margin-top:0;">Importar PDF da Nota Fiscal (DANFE)</label>
+    <input type="file" id="pdfInput" accept="application/pdf" onchange="handlePdfSelect(event)">
+    <button id="extractBtn" onclick="extractFromPdf()" disabled>Extrair dados automaticamente</button>
+    <div id="importStatus" class="import-status"></div>
+    <button type="button" id="debugToggle" onclick="toggleDebug()" style="display:none; margin-top:8px; background:#eee; color:#444; font-size:11px; padding:6px;">Ver texto lido do PDF (diagnóstico)</button>
+    <textarea id="debugText" readonly style="display:none; width:100%; height:160px; font-size:10px; margin-top:8px; font-family:monospace;"></textarea>
+  </div>
+
+  <hr class="sep">
+
+  <label id="lb_certNum">Nº do Certificado</label>
+  <input type="text" id="certNum" value="10533524-25" oninput="render()">
+
+  <label id="lb_client">Cliente</label>
+  <input type="text" id="client" value="VEDAÇÕES AURORA INDUSTRIAIS LTDA." oninput="render()">
+
+  <label id="lb_po">Pedido de Compra</label>
+  <input type="text" id="po" value="91688" oninput="render()">
+
+  <div class="row2">
+    <div>
+      <label id="lb_invoice">Nº Nota Fiscal</label>
+      <input type="text" id="invoice" value="070.385" oninput="render()">
+    </div>
+    <div>
+      <label id="lb_invDate">Data</label>
+      <input type="date" id="invDate" oninput="render()">
+    </div>
+  </div>
+
+  <label id="lb_trace">Rastreabilidade</label>
+  <input type="text" id="trace" value="NA" oninput="render()">
+
+  <hr class="sep">
+
+  <label id="lb_itemsTitle" style="margin-bottom:8px;">Itens do Certificado</label>
+  <div id="itemsEditor"></div>
+  <button type="button" id="addItemBtn" onclick="addItem()">+ Adicionar item</button>
+
+  <hr class="sep">
+
+  <label id="lb_dim">Dimensional</label>
+  <select id="dim" onchange="render()">
+    <option value="approved">Aprovado</option>
+    <option value="reproved">Reprovado</option>
+  </select>
+
+  <label id="lb_mat">Material</label>
+  <select id="mat" onchange="render()">
+    <option value="approved">Aprovado</option>
+    <option value="reproved">Reprovado</option>
+  </select>
+
+  <label id="lb_n2">Teste de Nitrogênio (N²)</label>
+  <select id="n2" onchange="render()">
+    <option value="na">Não Aplicável</option>
+    <option value="approved">Aprovado</option>
+    <option value="reproved">Reprovado</option>
+  </select>
+
+  <label id="lb_tight">Teste de Estanqueidade</label>
+  <select id="tight" onchange="render()">
+    <option value="na">Não Aplicável</option>
+    <option value="approved">Aprovado</option>
+    <option value="reproved">Reprovado</option>
+  </select>
+
+  <hr class="sep">
+
+  <div class="row2">
+    <div>
+      <label id="lb_city">Cidade</label>
+      <input type="text" id="city" value="SÃO PAULO/SP" oninput="render()">
+    </div>
+    <div>
+      <label id="lb_issueDate">Data de Emissão</label>
+      <input type="date" id="issueDate" oninput="render()">
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="printBtn" onclick="downloadCert()">⬇️ Baixar certificado para imprimir</button>
+    <button id="resetBtn" onclick="location.reload()">↺</button>
+  </div>
+  <button type="button" id="saveFolderBtn" onclick="saveToFolder()" style="width:100%; margin-top:8px; padding:10px; border:1px solid #0a5; background:#f3f8f6; color:#0a5; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer;">📁 Escolher pasta e salvar direto lá</button>
+  <div id="folderStatus" style="font-size:11px; color:#777; margin-top:6px;"></div>
+
+  <hr class="sep">
+
+  <label id="lb_batchTitle" style="margin-bottom:4px;">Processar Vários PDFs (Lote)</label>
+  <div class="sub" id="batchSub" style="margin-bottom:10px;">Selecione várias notas fiscais em PDF - os dados de todas são extraídos, e você navega uma a uma pra preencher o Nº do certificado e a Data de Emissão antes de salvar. Pode repetir quantas vezes quiser: cada nova seleção se soma à fila, sem limite.</div>
+  <input type="file" id="batchPdfInput" accept="application/pdf" multiple onchange="handleBatchSelect(event)">
+  <button type="button" id="batchProcessBtn" onclick="extractBatch()" disabled style="width:100%; margin-top:8px; padding:10px; border:none; background:var(--accent); color:#fff; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer;">🔍 Abrir e extrair todas as notas</button>
+  <div id="batchLog" style="display:none; margin-top:10px; max-height:140px; overflow-y:auto; font-size:11px; color:#555; font-family:monospace; white-space:pre-wrap; background:#f7f7f7; border-radius:6px; padding:8px;"></div>
+
+  <div id="batchNav" style="display:none; margin-top:12px; border:1px solid #ddd; border-radius:8px; padding:10px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+      <button type="button" id="batchPrevBtn" onclick="batchGo(-1)" style="padding:7px 10px; border:1px solid #ccc; background:#f5f5f5; border-radius:6px; cursor:pointer;">◀</button>
+      <div style="flex:1; text-align:center; font-size:12px;">
+        <div id="batchCounter" style="font-weight:bold;">1 / 1</div>
+        <div id="batchFileName" style="color:#777; font-size:11px; word-break:break-all;"></div>
+      </div>
+      <button type="button" id="batchNextBtn" onclick="batchGo(1)" style="padding:7px 10px; border:1px solid #ccc; background:#f5f5f5; border-radius:6px; cursor:pointer;">▶</button>
+    </div>
+    <div id="batchList" style="margin-top:10px; max-height:160px; overflow-y:auto; font-size:11px;"></div>
+  </div>
+</div>
+
+<!-- ================= CERTIFICATE PREVIEW ================= -->
+<div class="cert-wrap">
+  <div class="cert">
+    <div class="cert-header">
+      <img class="logo-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMjAiIGhlaWdodD0iNzIiIHZpZXdCb3g9IjAgMCAyMjAgNzIiPjxyZWN0IHdpZHRoPSIyMjAiIGhlaWdodD0iNzIiIHJ4PSIxMCIgZmlsbD0iIzFGM0E1RiIvPjxjaXJjbGUgY3g9IjM2IiBjeT0iMzYiIHI9IjIwIiBmaWxsPSJub25lIiBzdHJva2U9IiNGMkMyMzAiIHN0cm9rZS13aWR0aD0iNiIvPjx0ZXh0IHg9IjY2IiB5PSIzMyIgZm9udC1mYW1pbHk9IkFyaWFsLEhlbHZldGljYSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmZmIj5FTVBSRVNBPC90ZXh0Pjx0ZXh0IHg9IjY2IiB5PSI1NCIgZm9udC1mYW1pbHk9IkFyaWFsLEhlbHZldGljYSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjRjJDMjMwIj5NT0RFTE88L3RleHQ+PC9zdmc+" alt="Empresa Modelo logo">
+      <h1>EMPRESA MODELO LTDA.</h1>
+    </div>
+
+    <div class="cert-title"><span id="c_title">CERTIFICADO DE QUALIDADE</span> - Nº. <span id="c_certNum"></span></div>
+
+    <div class="info-block">
+      <div class="field"><b id="c_lb_client">CLIENTE:</b><span class="val" id="c_client"></span></div>
+      <div class="field"><b id="c_lb_po">PEDIDO DE COMPRA:</b><span class="val" id="c_po"></span></div>
+
+      <div class="field inline-pair">
+        <b id="c_lb_invoice">NOTA FISCAL Nº.</b><span class="val" id="c_invoice"></span>
+        <b id="c_lb_invDate">DATA:</b><span class="val" id="c_invDate"></span>
+      </div>
+
+      <div class="field"><b id="c_lb_trace">RASTREABILIDADE:</b><span class="val" id="c_trace"></span></div>
+    </div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th id="c_lb_itemCustRef">REF. CLIENTE</th>
+          <th id="c_lb_itemRef">REF. INTERNA</th>
+          <th id="c_lb_itemDesc">DESCRIÇÃO</th>
+          <th id="c_lb_itemPos">POS.</th>
+          <th id="c_lb_itemQty">QTD.</th>
+        </tr>
+      </thead>
+      <tbody id="c_itemsBody"></tbody>
+    </table>
+
+    <div class="declare" id="c_declare">DECLARAMOS QUE TODAS AS ESPECIFICAÇÕES SOLICITADAS FORAM ATENDIDAS.</div>
+
+    <div class="approval-block">
+      <div class="approval-line"><b id="c_lb_dim">DIMENSIONAL</b> – <span id="c_dim"></span></div>
+      <div class="approval-line"><b id="c_lb_mat">MATERIAL</b> - <span id="c_mat"></span></div>
+    </div>
+
+    <div class="nota"><b id="c_lb_nota">NOTA:</b> <span id="c_notaText">DECLARAMOS QUE O PRODUTO ACIMA DISCRIMINADO ATENDE A TODAS AS ESPECIFICAÇÕES SOLICITADAS.</span></div>
+
+    <div class="divider"></div>
+
+    <div class="test-section">
+      <div class="test-block">
+        <h3 id="c_lb_n2title">TESTE DE NITROGÊNIO (N²)</h3>
+        <div class="status">• <span id="c_n2"></span></div>
+      </div>
+
+      <div class="test-block">
+        <h3 id="c_lb_tighttitle">TESTE DE ESTANQUEIDADE</h3>
+        <div class="status">• <span id="c_tight"></span></div>
+      </div>
+    </div>
+
+    <div class="footer-city"><span id="c_city"></span>. <span id="c_issueDate"></span></div>
+
+    <div class="checked-badge" id="c_checked">Verificado eletronicamente – dispensa assinatura.</div>
+
+    <div class="qc-label" id="c_qc">Controle de Qualidade</div>
+
+    <div class="company-footer">
+      <div id="c_companyName">Empresa Modelo Ltda.</div>
+      <div>Rua das Indústrias, 1000 – São Paulo – SP – CEP 01000-000</div>
+      <div>Tel. (0xx11) 4000-0000 – Fax. (0xx11) 4000-0001 – <a href="http://www.empresamodelo.com.br">www.empresamodelo.com.br</a> - e-mail: <a href="mailto:contato@empresamodelo.com.br">contato@empresamodelo.com.br</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const dict = {
+  pt: {
+    panelTitle:"Gerador de Certificado de Qualidade",
+    panelSub:"Preencha os dados da nota fiscal para gerar o certificado",
+    lb_import:"Importar PDF da Nota Fiscal (DANFE)",
+    extractBtn:"Extrair dados automaticamente",
+    statusExtracting:"Lendo o PDF localmente e reconhecendo os campos...",
+    statusPartial:"Alguns campos foram identificados e preenchidos. Confira e complete o que faltar antes de gerar.",
+    statusMultiItem:"Todos os itens da nota foram importados automaticamente para a tabela abaixo.",
+    statusSuccess:"Dados importados com sucesso. Confira os campos antes de gerar.",
+    statusError:"Não foi possível identificar os campos automaticamente neste PDF. Preencha manualmente.",
+    statusSelect:"Selecione um arquivo PDF para começar.",
+    lb_batchTitle:"Processar Vários PDFs (Lote)",
+    batchSub:"Selecione várias notas fiscais em PDF - os dados de todas são extraídos, e você navega uma a uma pra preencher o Nº do certificado e a Data de Emissão antes de salvar. Pode repetir quantas vezes quiser: cada nova seleção se soma à fila, sem limite.",
+    batchBtn:"📁 Processar e salvar todos na pasta",
+    batchProcessing:"Processando",
+    batchNotSupported:"Esse recurso não é suportado neste navegador (funciona no Chrome/Edge).",
+    batchNoWritePerm:"Permissão de escrita na pasta não foi concedida.",
+    batchNoText:"PDF sem texto (imagem escaneada)",
+    batchNoItems:"Nenhum item reconhecido",
+    batchDone:"Concluído:", batchSaved:"certificado(s) salvo(s)", batchFailed:"com erro",
+    batchItems:"itens", batchError:"Erro:", batchReady:"nota(s) prontas para revisão. Use ◀ ▶ para navegar, preencha o Nº do certificado e a Data de Emissão, depois use os botões de salvar de sempre.",
+    lb_certNum:"Nº do Certificado", lb_client:"Cliente",
+    lb_po:"Pedido de Compra",
+    lb_invoice:"Nº Nota Fiscal", lb_invDate:"Data", lb_trace:"Rastreabilidade",
+    lb_itemsTitle:"Itens do Certificado",
+    lb_itemCustRef:"Ref. Cliente", lb_itemCode:"Ref. interna", lb_itemDesc:"Descrição", lb_itemPos:"Pos.", lb_itemQty:"Qtd.",
+    addItemBtn:"+ Adicionar item",
+    lb_dim:"Dimensional", lb_mat:"Material", lb_n2:"Teste de Nitrogênio (N²)", lb_tight:"Teste de Estanqueidade",
+    lb_city:"Cidade", lb_issueDate:"Data de Emissão",
+    optApproved:"Aprovado", optReproved:"Reprovado", optNA:"Não Aplicável",
+    title:"CERTIFICADO DE QUALIDADE",
+    lb_clientC:"CLIENTE:",
+    lb_poC:"PEDIDO DE COMPRA:", lb_invoiceC:"NOTA FISCAL Nº.", lb_invDateC:"DATA:",
+    lb_traceC:"RASTREABILIDADE:",
+    lb_itemCustRefC:"REF. CLIENTE", lb_itemRefC:"REF. INTERNA", lb_itemDescC:"DESCRIÇÃO", lb_itemPosC:"POS.", lb_itemQtyC:"QTD.",
+    declare:"DECLARAMOS QUE TODAS AS ESPECIFICAÇÕES SOLICITADAS FORAM ATENDIDAS.",
+    lb_dimC:"DIMENSIONAL", lb_matC:"MATERIAL", lb_nota:"NOTA:",
+    notaText:"DECLARAMOS QUE O PRODUTO ACIMA DISCRIMINADO ATENDE A TODAS AS ESPECIFICAÇÕES SOLICITADAS.",
+    n2title:"TESTE DE NITROGÊNIO (N²)", tighttitle:"TESTE DE ESTANQUEIDADE",
+    checked:"Verificado eletronicamente – dispensa assinatura.",
+    qc:"Controle de Qualidade", companyName:"Empresa Modelo Ltda.",
+    approved:"APROVADO", reproved:"REPROVADO", na:"NÃO APLICÁVEL"
+  },
+  en: {
+    panelTitle:"Quality Certificate Generator",
+    panelSub:"Fill in the invoice details to generate the certificate",
+    lb_import:"Import Invoice PDF (DANFE)",
+    extractBtn:"Extract data automatically",
+    statusExtracting:"Reading PDF locally and detecting fields...",
+    statusPartial:"Some fields were detected and filled in. Review and complete the rest before generating.",
+    statusMultiItem:"All items from the invoice were automatically imported into the table below.",
+    statusSuccess:"Data imported successfully. Please review before generating.",
+    statusError:"Could not automatically detect the fields in this PDF. Please fill in manually.",
+    statusSelect:"Select a PDF file to begin.",
+    lb_batchTitle:"Batch Process Multiple PDFs",
+    batchSub:"Select several invoice PDFs - the data from all of them is extracted, and you navigate one by one to fill in the Certificate Nº and Issue Date before saving. Repeat as many times as you like: each new selection is added to the queue, with no limit.",
+    batchBtn:"📁 Process and save all to folder",
+    batchProcessing:"Processing",
+    batchNotSupported:"This feature is not supported in this browser (works in Chrome/Edge).",
+    batchNoWritePerm:"Write permission for the folder was not granted.",
+    batchNoText:"No text in PDF (scanned image)",
+    batchNoItems:"No items recognized",
+    batchDone:"Done:", batchSaved:"certificate(s) saved", batchFailed:"failed",
+    batchItems:"items", batchError:"Error:", batchReady:"invoice(s) ready for review. Use ◀ ▶ to navigate, fill in the certificate Nº and Issue Date, then use the usual save buttons.",
+    lb_certNum:"Certificate Nº", lb_client:"Client",
+    lb_po:"Purchase Order",
+    lb_invoice:"Invoice Nº", lb_invDate:"Date", lb_trace:"Traceability",
+    lb_itemsTitle:"Certificate Items",
+    lb_itemCustRef:"Customer Ref.", lb_itemCode:"Internal Ref.", lb_itemDesc:"Description", lb_itemPos:"Pos.", lb_itemQty:"Qty.",
+    addItemBtn:"+ Add item",
+    lb_dim:"Dimensional", lb_mat:"Material", lb_n2:"Nitrogen Test (N²)", lb_tight:"Tightness Test",
+    lb_city:"City", lb_issueDate:"Issue Date",
+    optApproved:"Approved", optReproved:"Rejected", optNA:"Not Applicable",
+    title:"QUALITY CERTIFICATE",
+    lb_clientC:"CLIENT:",
+    lb_poC:"PURCHASE ORDER:", lb_invoiceC:"INVOICE Nº.", lb_invDateC:"DATA:",
+    lb_traceC:"TRACEABILITY:",
+    lb_itemCustRefC:"CUSTOMER REF.", lb_itemRefC:"INTERNAL REF.", lb_itemDescC:"DESCRIPTION", lb_itemPosC:"POS.", lb_itemQtyC:"QTY.",
+    declare:"WE DECLARE THAT ALL REQUESTED SPECIFICATIONS HAVE BEEN COMPLETED.",
+    lb_dimC:"DIMENSIONAL", lb_matC:"MATERIAL", lb_nota:"NOTA:",
+    notaText:"WE DECLARE THAT THE ABOVE DISCRIMINATED PRODUCT MEETS ALL THE REQUESTED SPECIFICATIONS.",
+    n2title:"NITROGEN TEST (N²)", tighttitle:"TIGHTNESS TEST",
+    checked:"Checked electronically – no subscription required.",
+    qc:"Quality Control", companyName:"Empresa Modelo Ltda.",
+    approved:"APPROVED", reproved:"REJECTED", na:"NOT APPLICABLE"
+  }
+};
+
+let currentLang = 'pt';
+
+function setLang(lang){
+  currentLang = lang;
+  document.getElementById('btnPT').classList.toggle('active', lang==='pt');
+  document.getElementById('btnEN').classList.toggle('active', lang==='en');
+  const t = dict[lang];
+
+  // panel labels
+  document.getElementById('panelTitle').textContent = t.panelTitle;
+  document.getElementById('panelSub').textContent = t.panelSub;
+  document.getElementById('lb_import').textContent = t.lb_import;
+  document.getElementById('extractBtn').textContent = t.extractBtn;
+  document.getElementById('lb_itemsTitle').textContent = t.lb_itemsTitle;
+  document.getElementById('addItemBtn').textContent = t.addItemBtn;
+  document.getElementById('lb_batchTitle').textContent = t.lb_batchTitle;
+  document.getElementById('batchSub').textContent = t.batchSub;
+  document.getElementById('batchProcessBtn').textContent = t.batchBtn;
+  const map = ['certNum','client','po','invoice','invDate','trace','dim','mat','n2','tight','city','issueDate'];
+  map.forEach(k=>{
+    const el = document.getElementById('lb_'+k);
+    if(el) el.textContent = t['lb_'+k];
+  });
+
+  // select options
+  fillSelect('dim', t);
+  fillSelect('mat', t);
+  fillSelect('n2', t, true);
+  fillSelect('tight', t, true);
+
+  renderItemsEditor();
+  render();
+}
+
+function fillSelect(id, t, withNA){
+  const sel = document.getElementById(id);
+  const val = sel.value;
+  sel.innerHTML = '';
+  if(withNA){
+    sel.innerHTML += `<option value="na">${t.optNA}</option>`;
+  }
+  sel.innerHTML += `<option value="approved">${t.optApproved}</option>`;
+  sel.innerHTML += `<option value="reproved">${t.optReproved}</option>`;
+  sel.value = val;
+}
+
+function fmtDate(dateStr){
+  if(!dateStr) return '';
+  const [y,m,d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function statusText(val, t){
+  if(val==='approved') return t.approved;
+  if(val==='reproved') return t.reproved;
+  return t.na;
+}
+
+// ---------- Tradução automática da descrição (PT -> EN) ----------
+// Dicionário de termos comuns de conexões hidráulicas/pneumáticas.
+// Tradução por termo/frase - não é um tradutor completo, cobre o vocabulário técnico usual.
+const PT_EN_DICT = [
+  ['ESPIGAO MACHO', 'Male Hose Nipple'],
+  ['ESPIGAO FEMEA', 'Female Hose Nipple'],
+  ['ESPIGAO', 'Hose Nipple'],
+  ['BUJAO C/SEXT INTERNO', 'Hex Socket Plug'],
+  ['BUJAO SEXT.INTERNO', 'Hex Socket Plug'],
+  ['BUJAO CAB.QUADRADA', 'Square Head Plug'],
+  ['BUJAO C/SEXT', 'Hex Plug'],
+  ['BUJAO', 'Plug'],
+  ['TAMPAO PROTETOR DE FLANGE', 'Flange Protector Cap'],
+  ['TAMPAO FEMEA', 'Female Cap'],
+  ['TAMPAO GALVANIZADO', 'Galvanized Cap'],
+  ['TAMPAO', 'Cap'],
+  ['COTOVELO MACHO FEMEA', 'Male Female Elbow'],
+  ['COTOVELO FEMEA/FEMEA', 'Female Female Elbow'],
+  ['COTOVELO 90', '90° Elbow'],
+  ['COTOVELO', 'Elbow'],
+  ['UNIAO RETA DE REDUÇAO', 'Straight Reducing Union'],
+  ['UNIAO RETA DE REDUCAO', 'Straight Reducing Union'],
+  ['UNIAO RETA', 'Straight Union'],
+  ['UNIAO A.CONICO', 'Tapered Union'],
+  ['UNIAO PRETA ASS.BRONZE', 'Black Union, Bronze Seat'],
+  ['UNIAO PRETA', 'Black Union'],
+  ['UNIAO M/F', 'Male/Female Union'],
+  ['UNIAO', 'Union'],
+  ['ADAPTADOR NIPLE', 'Nipple Adapter'],
+  ['NIPLE', 'Nipple'],
+  ['BUCHA DE REDUCAO', 'Reducing Bushing'],
+  ['BUCHA REDUCAO', 'Reducing Bushing'],
+  ['BUCHA RED.', 'Reducing Bushing'],
+  ['BUCHA', 'Bushing'],
+  ['REDUCAO', 'Reducer'],
+  ['ADAPTADOR', 'Adapter'],
+  ['CONECTOR RAPIDO', 'Quick Connector'],
+  ['CONECTOR', 'Connector'],
+  ['CONEXAO COTOVELO FIXO', 'Fixed Elbow Fitting'],
+  ['CONEXAO', 'Fitting'],
+  ['ROSCA INTERNA', 'Internal Thread'],
+  ['ROSCA EXTERNA', 'External Thread'],
+  ['ROSCA', 'Thread'],
+  ['ANEL DE VEDACAO', 'Sealing Ring'],
+  ['ANEL', 'Ring'],
+  ['VEDACAO', 'Seal'],
+  ['TUBO', 'Tube'],
+  ['MANGUEIRA', 'Hose'],
+  ['ABRACADEIRA LEVE', 'Light Clamp'],
+  ['ABRACADEIRA', 'Clamp'],
+  ['BRACADEIRA LEVE', 'Light Clamp'],
+  ['BRACADEIRA', 'Clamp'],
+  ['VALVULA ESFERA MINI', 'Mini Ball Valve'],
+  ['VALVULA ESFERA', 'Ball Valve'],
+  ['VALVULA GAVETA DE BRONZE', 'Bronze Gate Valve'],
+  ['VALVULA GAVETA', 'Gate Valve'],
+  ['VALVULA AGULHA', 'Needle Valve'],
+  ['VALVULA', 'Valve'],
+  ['V.SOL.', 'Solenoid Valve'],
+  ['REGISTRO', 'Shut-off Valve'],
+  ['FLANGE SO', 'Slip-On Flange'],
+  ['FLANGE PESCOCO', 'Weld Neck Flange'],
+  ['FLG PESCOCO', 'Weld Neck Flange'],
+  ['FLG SO', 'Slip-On Flange'],
+  ['CONTRA FLANGE', 'Blind Flange'],
+  ['FLANGE', 'Flange'],
+  ['PARAFUSO', 'Screw'],
+  ['PORCA', 'Nut'],
+  ['ARRUELA', 'Washer'],
+  ['EM LATAO', 'Brass'],
+  ['DE LATAO', 'Brass'],
+  ['LATAO', 'Brass'],
+  ['EM ACO INOX', 'Stainless Steel'],
+  ['ACO INOX', 'Stainless Steel'],
+  ['ACO CARBONO', 'Carbon Steel'],
+  ['GALVANIZADO', 'Galvanized'],
+  ['ZINCADO', 'Zinc-Plated'],
+  ['CROMADO', 'Chrome-Plated'],
+  ['METALICO', 'Metallic'],
+  ['PLASTICO', 'Plastic'],
+  ['MACHO', 'Male'],
+  ['FEMEA', 'Female'],
+  ['INTERNO', 'Internal'],
+  ['EXTERNO', 'External'],
+  ['C/SEXT', 'Hex'],
+  ['SEXTAVADO', 'Hexagonal'],
+  ['RAPIDO', 'Quick'],
+  ['TERMINAL REUSAVEL', 'Reusable Terminal'],
+  ['TERMINAL', 'Terminal'],
+  ['FILTRO DE AR', 'Air Filter'],
+  ['FILTRO', 'Filter'],
+  ['PRENSA CABO', 'Cable Gland'],
+  ['CURVA 90', '90° Bend'],
+  ['CURVA', 'Bend'],
+  ['LUVA REDONDA', 'Round Coupling'],
+  ['LUVA', 'Coupling'],
+  ['BASE SOLDA', 'Weld Base'],
+  ['ASS.BRONZE', 'Bronze Seat'],
+  ['ASSENTO EM BRONZE', 'Bronze Seat'],
+  ['ASSENTO DE BRONZE', 'Bronze Seat'],
+  ['ASSENTO', 'Seat'],
+  ['BRONZE', 'Bronze'],
+  ['PRETO', 'Black'],
+  ['PRETA', 'Black'],
+  ['REDONDA', 'Round'],
+  ['LEVE', 'Light'],
+  ['FIXO', 'Fixed'],
+  ['INOX', 'Stainless'],
+  ['CINZA', 'Gray'],
+  ['CURVO', 'Curved']
+].sort((a,b) => b[0].length - a[0].length); // frases mais longas primeiro
+
+function translateToEnglish(text){
+  if(!text) return text;
+  let result = text;
+  PT_EN_DICT.forEach(([pt, en]) => {
+    const escaped = pt.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+    const regex = new RegExp(escaped, 'gi');
+    result = result.replace(regex, en);
+  });
+  return result;
+}
+
+function render(){
+  const t = dict[currentLang];
+  const v = id => document.getElementById(id).value;
+
+  document.getElementById('c_title').textContent = t.title;
+  document.getElementById('c_certNum').textContent = v('certNum');
+  document.getElementById('c_client').textContent = v('client');
+  document.getElementById('c_po').textContent = v('po');
+  document.getElementById('c_invoice').textContent = v('invoice');
+  document.getElementById('c_invDate').textContent = fmtDate(v('invDate'));
+  document.getElementById('c_trace').textContent = v('trace');
+  document.getElementById('c_city').textContent = v('city');
+  document.getElementById('c_issueDate').textContent = fmtDate(v('issueDate'));
+
+  document.getElementById('c_lb_client').textContent = t.lb_clientC;
+  document.getElementById('c_lb_po').textContent = t.lb_poC;
+  document.getElementById('c_lb_invoice').textContent = t.lb_invoiceC;
+  document.getElementById('c_lb_invDate').textContent = t.lb_invDateC;
+  document.getElementById('c_lb_trace').textContent = t.lb_traceC;
+  document.getElementById('c_lb_itemCustRef').textContent = t.lb_itemCustRefC;
+  document.getElementById('c_lb_itemRef').textContent = t.lb_itemRefC;
+  document.getElementById('c_lb_itemDesc').textContent = t.lb_itemDescC;
+  document.getElementById('c_lb_itemPos').textContent = t.lb_itemPosC;
+  document.getElementById('c_lb_itemQty').textContent = t.lb_itemQtyC;
+  document.getElementById('c_declare').textContent = t.declare;
+  document.getElementById('c_lb_dim').textContent = t.lb_dimC;
+  document.getElementById('c_lb_mat').textContent = t.lb_matC;
+  document.getElementById('c_lb_nota').textContent = t.lb_nota;
+  document.getElementById('c_notaText').textContent = t.notaText;
+  document.getElementById('c_lb_n2title').textContent = t.n2title;
+  document.getElementById('c_lb_tighttitle').textContent = t.tighttitle;
+  document.getElementById('c_checked').textContent = t.checked;
+  document.getElementById('c_qc').textContent = t.qc;
+  document.getElementById('c_companyName').textContent = t.companyName;
+
+  document.getElementById('c_dim').textContent = statusText(v('dim'), t);
+  document.getElementById('c_mat').textContent = statusText(v('mat'), t);
+  document.getElementById('c_n2').textContent = statusText(v('n2'), t);
+  document.getElementById('c_tight').textContent = statusText(v('tight'), t);
+
+  // tabela de itens do certificado
+  const tbody = document.getElementById('c_itemsBody');
+  tbody.innerHTML = certItems.map(it => {
+    const descText = currentLang === 'en' ? translateToEnglish(it.desc) : it.desc;
+    return `
+    <tr>
+      <td>${escapeHtml(it.custRef)}</td>
+      <td>${escapeHtml(it.chpRef)}</td>
+      <td>${escapeHtml(descText)}</td>
+      <td class="qty-cell">${escapeHtml(it.position)}</td>
+      <td class="qty-cell">${escapeHtml(it.qty)}</td>
+    </tr>
+  `;
+  }).join('');
+}
+
+function escapeHtml(str){
+  return (str || '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
+
+// ---------- Monta o HTML final do certificado (usado tanto para baixar quanto para salvar em pasta) ----------
+function buildCertHtml(){
+  const certHtml = document.querySelector('.cert').outerHTML;
+  const styles = document.querySelector('style').outerHTML;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Certificado de Qualidade</title>
+  ${styles}
+  <style>
+    body{ background:#fff; margin:0; padding:20px; }
+    .cert{ box-shadow:none; }
+  </style>
+</head>
+<body>
+  ${certHtml}
+</body>
+</html>`;
+}
+
+function certFileName(){
+  const certNum = (document.getElementById('certNum').value || '').trim();
+  const client = (document.getElementById('client').value || '').trim();
+  const invoiceRaw = (document.getElementById('invoice').value || '').trim();
+  // limpa pontos e zeros à esquerda (ex: "000.074.184" -> "74184")
+  const invoice = invoiceRaw.replace(/\D/g, '').replace(/^0+/, '') || invoiceRaw;
+
+  const sanitize = s => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+
+  let name = 'Certificado de qualidade';
+  if(certNum) name += ` Nº ${sanitize(certNum)}`;
+  if(client) name += ` ${sanitize(client)}`;
+  if(invoice) name += ` NF ${sanitize(invoice)}`;
+
+  return `${name}.pdf`;
+}
+
+// pedido "puro", sem a linha (ex: "4500637798-20" -> "4500637798")
+function pedidoBase(){
+  const poRaw = (document.getElementById('po').value || '').trim();
+  const m = poRaw.match(/^(\d+)/);
+  return m ? m[1] : poRaw;
+}
+
+// nome por item: "PEDIDO-LINHA-CÓDIGO" (ex: "4500559104-20-PV92A720020P209")
+// a linha vem sempre do próprio item (campo "position"), nunca do sufixo do
+// campo Pedido de Compra - isso evita duplicar e funciona certo mesmo quando
+// a nota tem vários itens, cada um com sua própria linha
+function itemFileNameBase(item){
+  const sanitize = s => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+  const pedido = sanitize(pedidoBase());
+  const linha = sanitize((item && item.position || '').replace(/^\/+/, ''));
+  const codigo = sanitize((item && (item.custRef || item.chpRef)) || '');
+
+  const parts = [pedido, linha, codigo].filter(Boolean);
+  return parts.length ? parts.join('-') : 'certificado';
+}
+
+// nome usado ao salvar direto na pasta quando a nota tem só 1 item:
+// "Certificado de qualidade Nº CERTNUM-PEDIDO-LINHA-CÓDIGO"
+// ex: "Certificado de qualidade Nº 10534224-26-4500315199-30-PV34A721030P16C.pdf"
+function folderFileName(){
+  const item = (typeof certItems !== 'undefined' && certItems[0]) ? certItems[0] : null;
+  const sanitize = s => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+  const certNum = sanitize((document.getElementById('certNum').value || '').trim());
+
+  const base = itemFileNameBase(item); // já é "PEDIDO-LINHA-CÓDIGO"
+  const prefix = certNum ? `Certificado de qualidade Nº ${certNum}-` : '';
+  return `${prefix}${base}.pdf`;
+}
+
+// nome combinado quando a nota tem MAIS DE 1 item: "PEDIDO-LINHA1-LINHA2 CODIGO1 CODIGO2"
+// ex: "4500834206-10-20 PVM80A720283P004 PVM80A720283P005"
+function multiItemFileNameBase(){
+  const sanitize = s => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+  const pedido = sanitize(pedidoBase());
+  const linhas = certItems
+    .map(it => (it.position || '').replace(/^\/+/, '').trim())
+    .filter(Boolean)
+    .map(sanitize);
+  const codigos = certItems
+    .map(it => (it.custRef || it.chpRef || '').trim())
+    .filter(Boolean)
+    .map(sanitize);
+
+  let base = pedido || 'certificado';
+  if(linhas.length) base += '-' + linhas.join('-');
+  if(codigos.length) base += '-' + codigos.join('-');
+  return base;
+}
+
+// gera o PDF do certificado a partir do elemento renderizado na tela
+// Gera em página de tamanho customizado (igual ao conteúdo) para NUNCA cortar texto no meio,
+// que era o que acontecia ao forçar formato A4 fixo com conteúdo mais alto que uma página.
+async function buildCertPdfBlob(){
+  const el = document.querySelector('.cert');
+  const scale = 2.5;
+
+  if(document.fonts && document.fonts.ready){
+    try{ await document.fonts.ready; }catch(e){}
+  }
+
+  // Sem essas opções, o html2canvas só captura a parte do certificado que
+  // está dentro da área visível da tela no momento da captura - quando o
+  // certificado é mais alto que a janela do navegador, tudo que fica "abaixo
+  // da dobra" (testes, cidade/data, selo, rodapé) sai cortado do PDF/impressão.
+  // windowHeight + scrollY forçam a captura do elemento inteiro, independente
+  // de rolagem ou do tamanho da janela.
+  const canvas = await html2canvas(el, {
+    scale,
+    useCORS: true,
+    scrollX: 0,
+    scrollY: -window.scrollY,
+    windowWidth: document.documentElement.scrollWidth,
+    windowHeight: Math.max(document.documentElement.scrollHeight, el.scrollHeight + el.offsetTop)
+  });
+
+  // px -> mm (96dpi padrão). Divide pela escala pois o canvas foi renderizado em alta resolução.
+  const pxToMm = px => (px / scale) * 0.264583;
+
+  const marginMm = 10;
+  const pdfWidth = pxToMm(canvas.width) + marginMm * 2;
+  const pdfHeight = pxToMm(canvas.height) + marginMm * 2;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({
+    unit: 'mm',
+    format: [pdfWidth, pdfHeight],
+    orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait'
+  });
+
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+  doc.addImage(imgData, 'JPEG', marginMm, marginMm, pdfWidth - marginMm * 2, pdfHeight - marginMm * 2);
+
+  return doc.output('blob');
+}
+
+// ---------- Download do certificado em PDF ----------
+async function downloadCert(){
+  const btn = document.getElementById('printBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = currentLang === 'pt' ? 'Gerando PDF...' : 'Generating PDF...';
+
+  try{
+    const blob = await buildCertPdfBlob();
+    const url = URL.createObjectURL(blob);
+
+    const multiItem = typeof certItems !== 'undefined' && certItems.length > 1;
+    const fileName = multiItem ? `${multiItemFileNameBase()}.pdf` : certFileName();
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    if(typeof markCurrentBatchSaved === 'function') markCurrentBatchSaved();
+  }catch(err){
+    console.error('Erro ao gerar PDF:', err);
+    alert((currentLang === 'pt' ? 'Erro ao gerar PDF: ' : 'Error generating PDF: ') + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+// ---------- Salvar direto numa pasta escolhida (File System Access API - só Chrome/Edge) ----------
+let savedDirHandle = null;
+
+async function saveToFolder(){
+  const statusEl = document.getElementById('folderStatus');
+
+  if(!window.showDirectoryPicker){
+    statusEl.textContent = currentLang === 'pt'
+      ? 'Esse recurso não é suportado neste navegador (funciona no Chrome/Edge). Use o botão de baixar acima.'
+      : 'This feature is not supported in this browser (works in Chrome/Edge). Use the download button above.';
+    return;
+  }
+
+  try{
+    // se ainda não escolheu a pasta nesta sessão, pede pra escolher
+    // (mode: 'readwrite' é obrigatório, senão o navegador só dá acesso de leitura e a gravação falha)
+    if(!savedDirHandle){
+      savedDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    }
+
+    // confirma que a permissão de escrita realmente foi concedida
+    const perm = await savedDirHandle.requestPermission({ mode: 'readwrite' });
+    if(perm !== 'granted'){
+      throw new Error(currentLang === 'pt'
+        ? 'Permissão de escrita na pasta não foi concedida.'
+        : 'Write permission for the folder was not granted.');
+    }
+
+    const folderBtn = document.getElementById('saveFolderBtn');
+    const prevText = folderBtn.textContent;
+    folderBtn.disabled = true;
+    folderBtn.textContent = currentLang === 'pt' ? 'Gerando PDF...' : 'Generating PDF...';
+
+    const multiItem = typeof certItems !== 'undefined' && certItems.length > 1;
+    const fileName = multiItem ? `${multiItemFileNameBase()}.pdf` : folderFileName();
+    const pdfBlob = await buildCertPdfBlob();
+    const fileHandle = await savedDirHandle.getFileHandle(fileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(pdfBlob);
+    await writable.close();
+    if(typeof markCurrentBatchSaved === 'function') markCurrentBatchSaved();
+
+    folderBtn.disabled = false;
+    folderBtn.textContent = currentLang === 'pt'
+      ? '📁 Salvar de novo na mesma pasta'
+      : '📁 Save again to the same folder';
+
+    const successMsg = (currentLang === 'pt' ? '✅ Salvo como: ' : '✅ Saved as: ') + fileName;
+    statusEl.textContent = successMsg;
+    statusEl.style.color = '#0a5';
+    statusEl.style.fontWeight = 'bold';
+    alert(successMsg);
+  }catch(err){
+    if(err.name === 'AbortError') return; // usuário cancelou a escolha da pasta
+    console.error('Erro ao salvar na pasta:', err);
+    const msg = (currentLang === 'pt' ? 'Erro ao salvar: ' : 'Error saving: ') + err.message;
+    statusEl.textContent = msg;
+    statusEl.style.color = '#c0392b';
+    statusEl.style.fontWeight = 'bold';
+    alert(msg);
+    savedDirHandle = null;
+
+    const folderBtnErr = document.getElementById('saveFolderBtn');
+    folderBtnErr.disabled = false;
+    folderBtnErr.textContent = currentLang === 'pt' ? '📁 Escolher pasta e salvar direto lá' : '📁 Choose folder and save there';
+  }
+}
+
+// ---------- Processamento em lote: extrai TODAS as notas primeiro, depois a
+// pessoa navega uma a uma preenchendo Nº do certificado e Data de Emissão
+// antes de salvar (nada é salvo automaticamente). ----------
+let selectedBatchFiles = [];
+let batchQueue = [];   // [{ fileName, client, po, invoice, invDate, items, certNum, issueDate, saved }]
+let batchIndex = -1;
+
+function handleBatchSelect(evt){
+  selectedBatchFiles = Array.from(evt.target.files || []);
+  document.getElementById('batchProcessBtn').disabled = selectedBatchFiles.length === 0;
+  document.getElementById('batchLog').style.display = 'none';
+  document.getElementById('batchLog').textContent = '';
+  // NÃO reseta batchQueue/batchIndex aqui: escolher mais arquivos deve
+  // ACUMULAR na fila de revisão já existente, não substituí-la - assim dá
+  // pra ir juntando quantas notas quiser, em quantas rodadas quiser, sem
+  // limite e sem perder o que já foi extraído/preenchido antes.
+}
+
+function logBatch(msg){
+  const el = document.getElementById('batchLog');
+  el.style.display = 'block';
+  el.textContent += (el.textContent ? '\n' : '') + msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+// lê e reconhece os dados de todos os PDFs selecionados, sem gerar nem salvar
+// nenhum certificado ainda - só monta a fila de revisão
+async function extractBatch(){
+  const t = dict[currentLang];
+  if(selectedBatchFiles.length === 0) return;
+
+  const btn = document.getElementById('batchProcessBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  document.getElementById('batchLog').textContent = '';
+  document.getElementById('batchLog').style.display = 'block';
+
+  const queueLengthBefore = batchQueue.length;
+
+  for(let i = 0; i < selectedBatchFiles.length; i++){
+    const file = selectedBatchFiles[i];
+    btn.textContent = `${t.batchProcessing} ${i + 1}/${selectedBatchFiles.length}...`;
+
+    try{
+      // um PDF pode conter uma única nota OU várias notas concatenadas -
+      // splitLinesIntoInvoices devolve sempre um array, com 1 item no caso comum
+      // (mantém {text, x0} de cada linha - parseItems usa o x0 pra saber a
+      // coluna de continuações de código; parseDanfe só precisa do texto)
+      const invoiceLineGroups = await splitLinesIntoInvoices(file);
+      const invoiceTexts = invoiceLineGroups.map(lines => lines.map(l => l.text).join('\n'));
+      if(invoiceTexts.length === 0 || !invoiceTexts.some(tx => tx.trim())){
+        throw new Error(t.batchNoText);
+      }
+
+      let foundAny = false;
+      for(let n = 0; n < invoiceTexts.length; n++){
+        const text = invoiceTexts[n];
+        if(!text.trim()) continue;
+
+        const parsed = parseDanfe(text);
+        const items = parseItems(invoiceLineGroups[n]);
+        if(items.length === 0) continue; // pula trechos sem itens reconhecíveis (ruído entre notas)
+
+        foundAny = true;
+        const label = invoiceTexts.length > 1
+          ? `${file.name} — NF ${parsed.invoice || (n + 1)}`
+          : file.name;
+
+        batchQueue.push({
+          fileName: label,
+          client: parsed.client || '',
+          po: parsed.po || '',
+          invoice: parsed.invoice || '',
+          invDate: parsed.invDate || '',
+          items: items.map(it => ({
+            custRef: it.custRef,
+            chpRef: it.chpRef,
+            desc: it.desc,
+            position: it.position,
+            qty: `${it.qty} ${it.unit}`
+          })),
+          certNum: '',
+          issueDate: document.getElementById('issueDate').value || '',
+          saved: false
+        });
+      }
+
+      if(!foundAny) throw new Error(t.batchNoItems);
+      logBatch(`✔ ${file.name}: ${invoiceTexts.length > 1 ? invoiceTexts.length + ' notas' : '1 nota'} reconhecida(s)`);
+    }catch(err){
+      logBatch(`✘ ${file.name}: ${err.message}`);
+    }
+
+    await new Promise(r => setTimeout(r, 0)); // deixa a tela repintar o log
+  }
+
+  btn.disabled = false;
+  btn.textContent = originalText;
+
+  if(batchQueue.length > 0){
+    logBatch('---');
+    logBatch(`${batchQueue.length} ${t.batchReady}`);
+    document.getElementById('batchNav').style.display = 'block';
+    // pula pra primeira nota recém-adicionada nesta rodada (se já havia fila,
+    // não volta pro início e perde o lugar onde a pessoa estava revisando)
+    const jumpTo = queueLengthBefore < batchQueue.length ? queueLengthBefore : 0;
+    loadBatchEntry(jumpTo);
+  }
+}
+
+// carrega os dados extraídos da nota #i nos campos do formulário -
+// Nº do certificado sempre em branco (é manual, item por item); Data de
+// Emissão mantém o último valor digitado, como ponto de partida (comum o
+// lote inteiro ser emitido no mesmo dia) - a pessoa ajusta se precisar
+function loadBatchEntry(i){
+  if(i < 0 || i >= batchQueue.length) return;
+  batchIndex = i;
+  const e = batchQueue[i];
+
+  document.getElementById('client').value = e.client;
+  document.getElementById('po').value = e.po;
+  document.getElementById('invoice').value = e.invoice;
+  document.getElementById('certNum').value = e.certNum;
+  document.getElementById('issueDate').value = e.issueDate;
+
+  if(e.invDate){
+    const [d, m, y] = e.invDate.split('/');
+    document.getElementById('invDate').value = (d && m && y) ? `${y}-${m}-${d}` : '';
+  }else{
+    document.getElementById('invDate').value = '';
+  }
+
+  certItems = JSON.parse(JSON.stringify(e.items));
+  renderItemsEditor();
+  render();
+
+  renderBatchNav();
+}
+
+// salva no objeto da fila o que a pessoa digitou (Nº do certificado, Data de
+// Emissão) antes de trocar de nota - assim nada se perde ao navegar
+function syncCurrentBatchEntry(){
+  if(batchIndex < 0 || batchIndex >= batchQueue.length) return;
+  const e = batchQueue[batchIndex];
+  e.certNum = document.getElementById('certNum').value;
+  e.issueDate = document.getElementById('issueDate').value;
+}
+
+function batchGo(delta){
+  if(batchIndex < 0) return;
+  syncCurrentBatchEntry();
+  const next = batchIndex + delta;
+  if(next < 0 || next >= batchQueue.length) return;
+  loadBatchEntry(next);
+}
+
+function batchJump(i){
+  if(batchIndex < 0) return;
+  syncCurrentBatchEntry();
+  loadBatchEntry(i);
+}
+
+function renderBatchNav(){
+  const t = dict[currentLang];
+  document.getElementById('batchCounter').textContent = `${batchIndex + 1} / ${batchQueue.length}`;
+  document.getElementById('batchFileName').textContent = batchQueue[batchIndex].fileName;
+  document.getElementById('batchPrevBtn').disabled = batchIndex === 0;
+  document.getElementById('batchNextBtn').disabled = batchIndex === batchQueue.length - 1;
+
+  const listEl = document.getElementById('batchList');
+  listEl.innerHTML = batchQueue.map((e, i) => {
+    const mark = e.saved ? '✅' : (e.certNum ? '📝' : '⬜');
+    const active = i === batchIndex ? 'background:#eaf6f1; font-weight:bold;' : '';
+    return `<div onclick="batchJump(${i})" style="cursor:pointer; padding:4px 6px; border-radius:4px; ${active}">${mark} ${i + 1}. ${escapeHtml(e.fileName)}${e.certNum ? ' — ' + escapeHtml(e.certNum) : ''}</div>`;
+  }).join('');
+}
+
+// chamado depois que downloadCert()/saveToFolder() gera o PDF com sucesso -
+// marca a nota atual da fila como salva e atualiza a listinha de status
+function markCurrentBatchSaved(){
+  if(batchIndex < 0 || batchIndex >= batchQueue.length) return;
+  syncCurrentBatchEntry();
+  batchQueue[batchIndex].saved = true;
+  renderBatchNav();
+}
+
+// ---------- Importação do PDF - leitura 100% LOCAL, sem rede ----------
+let selectedPdfFile = null;
+
+function handlePdfSelect(evt){
+  selectedPdfFile = evt.target.files[0] || null;
+  document.getElementById('extractBtn').disabled = !selectedPdfFile;
+  setStatus('', '');
+}
+
+function setStatus(msg, cls){
+  const el = document.getElementById('importStatus');
+  el.textContent = msg;
+  el.className = 'import-status' + (cls ? ' ' + cls : '');
+}
+
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function loadPdfAllItems(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const allItems = [];
+
+  for(let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    content.items.forEach(it => {
+      if(it.str && it.str.trim().length > 0){
+        allItems.push({ str: it.str.trim(), x: it.transform[4], y: it.transform[5], page: p });
+      }
+    });
+  }
+  return allItems;
+}
+
+// agrupa as palavras de UMA página em linhas de texto, por proximidade vertical
+// real (não por arredondamento fixo - ver nota abaixo em linesFromItems)
+function clusterWordsIntoLines(words){
+  const LINE_TOLERANCE = 2.5; // pt - tolerância vertical dentro de uma mesma linha
+  const sorted = words.slice().sort((a, b) => b.y - a.y); // topo -> base
+  let cluster = [];
+  let anchorY = null;
+  const lines = [];
+
+  const flush = () => {
+    if(cluster.length === 0) return;
+    cluster.sort((a, b) => a.x - b.x);
+    const text = cluster.map(w => w.str).join(' ').replace(/\s+/g, ' ').trim();
+    // x0 = posição horizontal da primeira palavra da linha; words = cada
+    // palavra com sua posição X individual - uma "linha" pode juntar palavras
+    // de mais de uma COLUNA da tabela (ex.: sobra da coluna CÓDIGO e sobra da
+    // coluna DESCRIÇÃO caem na mesma altura/linha) - parseItems usa isso pra
+    // separar de novo cada pedaço pra coluna certa (ver parseItems)
+    lines.push({ text, x0: cluster[0].x, words: cluster.map(w => ({ str: w.str, x: w.x })) });
+    cluster = [];
+  };
+
+  for(const w of sorted){
+    if(anchorY === null || Math.abs(w.y - anchorY) <= LINE_TOLERANCE){
+      cluster.push(w);
+      if(anchorY === null) anchorY = w.y;
+    }else{
+      flush();
+      cluster.push(w);
+      anchorY = w.y;
+    }
+  }
+  flush();
+  return lines;
+}
+
+function groupWordsByPage(allItems){
+  const byPage = new Map();
+  allItems.forEach(it => {
+    if(!byPage.has(it.page)) byPage.set(it.page, []);
+    byPage.get(it.page).push(it);
+  });
+  const pages = Array.from(byPage.keys()).sort((a, b) => a - b);
+  return pages.map(p => byPage.get(p));
+}
+
+// devolve, por página, a lista de linhas já com {text, x0} (posição em X da
+// coluna a que a linha pertence) - base para tudo abaixo
+function pageLineMetaFromItems(allItems){
+  // Agrupamento por PROXIMIDADE, não por arredondamento fixo de posição.
+  // Em vários PDFs da Empresa Modelo, a coluna de UNIDADE (ex: "PC") sai ~0,7pt acima ou
+  // abaixo do resto da linha - o suficiente para, com arredondamento fixo,
+  // cair ora na mesma "grade", ora na grade vizinha, dependendo do item.
+  // Isso quebrava o reconhecimento de itens (às vezes perdendo o item inteiro,
+  // às vezes grudando o texto de dois itens). Clustering por distância real
+  // entre uma palavra e a "âncora" da linha corrente resolve isso: linhas
+  // diferentes de verdade continuam bem separadas (o espaçamento entre elas é
+  // bem maior que esse ruído de ~1pt), mas o ruído dentro da mesma linha não
+  // quebra mais o agrupamento.
+  const pagesWords = groupWordsByPage(allItems);
+  return pagesWords.map(words => clusterWordsIntoLines(words));
+}
+
+function linesFromItems(allItems){
+  const pages = pageLineMetaFromItems(allItems);
+  const outLines = [];
+  for(const page of pages) outLines.push(...page.map(l => l.text));
+  return outLines.join('\n');
+}
+
+// mesma extração de texto de linesFromItems, mas devolve UM TEXTO POR PÁGINA
+// (em vez de tudo junto) - usado pra detectar quando um único PDF contém
+// várias notas fiscais diferentes (uma por página, ou mais páginas quando uma
+// nota tem muitos itens e transborda)
+function pageTextsFromItems(allItems){
+  return pageLineMetaFromItems(allItems).map(page => page.map(l => l.text).join('\n'));
+}
+
+async function readPdfText(file){
+  const allItems = await loadPdfAllItems(file);
+  return linesFromItems(allItems);
+}
+
+async function readPdfPageTexts(file){
+  const allItems = await loadPdfAllItems(file);
+  return pageTextsFromItems(allItems);
+}
+
+// mesma leitura de readPdfText, mas mantém {text, x0} de cada linha (posição
+// horizontal) em vez de só o texto - usado por parseItems pra saber a que
+// COLUNA da tabela (CÓDIGO x DESCRIÇÃO) uma linha de continuação pertence
+async function readPdfLineMeta(file){
+  const allItems = await loadPdfAllItems(file);
+  const pages = pageLineMetaFromItems(allItems);
+  return [].concat(...pages);
+}
+
+// Um único PDF pode conter VÁRIAS notas fiscais diferentes, uma atrás da
+// outra (é o caso comum de arquivos consolidados tipo "NFs GE.pdf"). Cada
+// nota normalmente ocupa 1 página, mas pode ocupar mais quando tem muitos
+// itens (aí as páginas seguintes repetem o mesmo número de NF-e). Por isso
+// agrupamos por página: começa uma nota nova sempre que o número da NF-e
+// muda; quando uma página não tem número reconhecível (raro), assume que é
+// continuação da nota anterior.
+// mesmo agrupamento por nota de splitTextIntoInvoices, mas devolve por nota a
+// lista de linhas com {text, x0} em vez de só o texto - usado por parseItems
+// no fluxo de lote (várias notas por PDF) pra ter a mesma info de coluna que
+// o fluxo de nota única
+async function splitLinesIntoInvoices(file){
+  const allItems = await loadPdfAllItems(file);
+  const pagesMeta = pageLineMetaFromItems(allItems);
+  const groups = [];
+  let current = null;
+
+  for(const pageMeta of pagesMeta){
+    const pageText = pageMeta.map(l => l.text).join('\n');
+    const invNum = extractInvoiceNumber(pageText);
+    if(current && (!invNum || invNum === current.invoiceNumber)){
+      current.pages.push(pageMeta);
+    }else{
+      if(current) groups.push(current);
+      current = { invoiceNumber: invNum, pages: [pageMeta] };
+    }
+  }
+  if(current) groups.push(current);
+
+  return groups.map(g => [].concat(...g.pages));
+}
+
+async function splitTextIntoInvoices(file){
+  const lineGroups = await splitLinesIntoInvoices(file);
+  return lineGroups.map(lines => lines.map(l => l.text).join('\n'));
+}
+
+// palavras que indicam que capturamos o campo errado (rótulo de outra seção)
+const CLIENT_BLACKLIST = /FRETE|CNPJ|RAZ[ÃA]O|ENDERE[ÇC]O|MUNIC[ÍI]PIO|BAIRRO|INSCRI[ÇC][ÃA]O|TRANSPORTADOR|VEÍCULO|PLACA/i;
+
+function grab(regex, text){
+  const m = text.match(regex);
+  return m ? m[1].replace(/\s+/g,' ').trim() : '';
+}
+
+// ---------- Extração da tabela de itens - PARSER LINHA A LINHA ----------
+// Lê linha por linha em vez de tentar casar a nota inteira de uma vez.
+// Cada linha é testada contra o padrão "CÓDIGO [descrição] UNIDADE QTD VALOR VALOR";
+// se bater, é um item novo. Se não bater mas já tem um item em andamento, a linha vira
+// continuação (descrição quebrada, código do produto, ou posição do item na nota).
+// Isso lida com notas onde a descrição vem antes OU depois dos números, com códigos
+// em formatos bem diferentes (letras+números misturados, com barra, etc.) e sem
+// depender da ordem interna de colunas do PDF - só da ordem das LINHAS, que é estável.
+//
+// Aceita ou o texto puro (string, modo antigo) ou a lista de linhas com
+// {text, x0} vinda de readPdfLineMeta/splitLinesIntoInvoices - com x0 dá pra
+// saber a que COLUNA da tabela uma linha de continuação pertence: alguns
+// códigos de cliente são mais longos que a largura da coluna CÓDIGO e
+// quebram numa segunda linha (ex.: "PV4003C1500GGP0" + "30" = na verdade
+// "PV4003C1500GGP030") - sem a posição X, esse "30" solto era confundido com
+// a "posição do item" e o final do código se perdia.
+function parseItems(lineMetaOrText){
+  const rawLineMeta = Array.isArray(lineMetaOrText)
+    ? lineMetaOrText
+    : lineMetaOrText.split('\n').map(text => ({ text, x0: null }));
+  const lines = rawLineMeta
+    .map(l => {
+      const text = l.text.trim();
+      const x0 = (typeof l.x0 === 'number') ? l.x0 : null;
+      // words = cada palavra da linha com sua posição X - quando não vem do
+      // PDF (modo texto puro / compatibilidade), trata a linha inteira como
+      // se fosse uma "palavra" só, sem posição conhecida (x:null), o que faz
+      // a lógica de coluna abaixo cair de volta no comportamento antigo
+      const words = Array.isArray(l.words) && l.words.length
+        ? l.words
+        : [{ str: text, x: x0 }];
+      return { text, x0, words };
+    })
+    .filter(l => l.text.length > 0);
+  const items = [];
+  let current = null;
+  const COLUMN_TOLERANCE = 3; // pt - mesma tolerância de "mesma coluna"
+
+  // linhas que marcam o fim da tabela de produtos - para de procurar itens ao chegar nelas
+  const stopKeywords = /^(C[ÁA]LCULO DO ISSQN|DADOS ADICIONAIS|INFORMA[ÇC][ÕO]ES COMPLEMENTARES|RESERVADO AO FISCO|P\.?\s*C\.?\s*N|www\.nwsoftware\.com\.br|RECEBEMOS DE Empresa Modelo)/i;
+
+  // uma linha de item: CÓDIGO, opcionalmente descrição, depois UNIDADE QTD VALOR VALOR
+  // QTD pode vir com casas decimais (ex.: mangueira vendida em metros -> "2,00" ou "2.50"),
+  // não só número inteiro - por isso aceita uma parte decimal opcional depois da vírgula/ponto.
+  const rowRe = /^([A-Z0-9][A-Z0-9.\-\/]{0,25})\s+(.*?)\s*(PC|UN|KG|MT|CX|PCT|PÇ)\s+(\d{1,6}(?:[.,]\d{1,3})?)\s+([\d.,]+)\s+([\d.,]+)/i;
+
+  // confirma que o "código" capturado realmente parece um código de produto -
+  // a estrutura completa da linha (código + unidade + quantidade + 2 preços)
+  // já garante que não é lixo capturado à toa, então qualquer captura serve
+  function looksLikeCode(str){
+    return true;
+  }
+
+  // remove NCM/CST/CFOP caso tenham ficado grudados no fim de um trecho de descrição
+  function stripTrailingCodes(s){
+    return s.replace(/\s+\d{7,9}\s+\d{3}\s+\d{4}\s*$/, '').trim();
+  }
+
+  // algumas notas têm o código do produto com espaço no meio (ex: "JC 3/4 BSP",
+  // "CAPA R1/R2 1/2") - nesses casos, as primeiras palavras da "descrição" capturada
+  // na verdade ainda são parte do código (fração, sigla de rosca como BSP/NPT, etc.)
+  // e precisam ser puxadas de volta pro código, deixando só o nome do produto na descrição
+  function looksLikeCodeFragment(tok){
+    if(/[\d\/]/.test(tok)) return true; // tem número ou barra -> parece fração/medida
+    const knownAbbrev = ['BSP','NPT','JIC','ORB','SAE','UNF','UNC','BSPT'];
+    return knownAbbrev.includes(tok.toUpperCase());
+  }
+
+  function absorbCodeFragments(custRef, desc){
+    if(!desc) return { custRef: '', fullCode: custRef, desc };
+    const words = desc.split(' ');
+    let i = 0;
+    while(i < words.length && i < 3 && looksLikeCodeFragment(words[i])){
+      i++;
+    }
+    if(i === 0) return { custRef, fullCode: null, desc };
+    // quando o código tem espaço no meio (ex: "JC 3/4 BSP"), essa nota não tem
+    // uma referência de cliente separada - o código completo vira a Ref. interna,
+    // e a Ref. Cliente fica vazia
+    return {
+      custRef: '',
+      fullCode: `${custRef} ${words.slice(0, i).join(' ')}`,
+      desc: words.slice(i).join(' ').trim()
+    };
+  }
+
+  function finalize(it){
+    const rawDesc = it.descParts.join(' ').replace(/\s+/g, ' ').trim();
+    // regra: tudo depois do ÚLTIMO traço " - " na descrição é a Referência Empresa Modelo;
+    // quando não tem traço, a descrição inteira vira a Referência Empresa Modelo também
+    let desc = rawDesc, chpRef = '';
+    const lastDash = rawDesc.lastIndexOf(' - ');
+    if(lastDash !== -1){
+      chpRef = rawDesc.slice(lastDash + 3).trim();
+      desc = rawDesc.slice(0, lastDash).trim();
+    }else{
+      chpRef = rawDesc;
+    }
+    // quando o código do produto tinha espaço no meio (ex: "JC 3/4 BSP"), o código
+    // completo é a Referência Empresa Modelo - sobrepõe a regra do traço acima
+    if(it.fullCode){
+      chpRef = it.fullCode;
+    }
+    return {
+      custRef: it.custRef,  // coluna CÓDIGO da nota = partnumber do cliente
+      chpRef,                // extraído de dentro da descrição
+      desc,
+      position: it.position, // posição do item na nota (ex: "/20") - vazio se não houver
+      unit: it.unit,
+      qty: it.qty
+    };
+  }
+
+  for(const line of lines){
+    if(stopKeywords.test(line.text)){
+      // fim da tabela de itens NESTA página - mas em notas com 2+ páginas, a tabela
+      // continua na página seguinte após repetir o cabeçalho. Por isso não paramos
+      // de vez: só fechamos o item em andamento e seguimos procurando.
+      if(current){ items.push(finalize(current)); current = null; }
+      continue;
+    }
+
+    const m = line.text.match(rowRe);
+    if(m && looksLikeCode(m[1])){
+      if(current) items.push(finalize(current));
+      const inlineDescRaw = m[2] ? stripTrailingCodes(m[2].trim()) : '';
+      const { custRef: absorbedCustRef, fullCode, desc: inlineDesc } = absorbCodeFragments(m[1].trim(), inlineDescRaw);
+      current = {
+        custRef: absorbedCustRef,
+        fullCode,
+        descParts: inlineDesc ? [inlineDesc] : [],
+        unit: m[3].trim(),
+        qty: m[4].trim(),
+        position: '',
+        codeX0: line.x0 // posição X do início da linha do item = coluna CÓDIGO
+      };
+      continue;
+    }
+
+    if(current){
+      // uma linha de continuação pode juntar, na mesma altura, a sobra de MAIS
+      // de uma coluna (ex.: fim do código quebrado + fim da descrição quebrada
+      // caem na mesma linha) - por isso separa PALAVRA POR PALAVRA pela posição
+      // X, em vez de tratar a linha inteira como um bloco só.
+      const codeParts = [];
+      const restParts = [];
+      for(const w of line.words){
+        const nearCode = w.x !== null && current.codeX0 !== null
+          && Math.abs(w.x - current.codeX0) <= COLUMN_TOLERANCE;
+        if(nearCode) codeParts.push(w.str);
+        else restParts.push(w.str);
+      }
+
+      if(codeParts.length){
+        // mesma coluna X onde o código do item começou: não é descrição nem
+        // posição - é o código do cliente continuando numa segunda linha
+        // porque o texto não coube na largura da coluna
+        current.custRef += codeParts.join('');
+      }
+
+      if(restParts.length){
+        const restText = restParts.join(' ').trim();
+        if(restText){
+          if(/^-?\/?\d{1,4}(?:-\d{1,2})?$/.test(restText)){
+            // pode ser só a posição do item (ex: "/20") - às vezes esse
+            // número solto vem em MAIS de uma linha de continuação (ex.:
+            // nota 74352, onde aparecem "3" e depois "30" empilhados); nesse
+            // caso o valor certo é sempre o ÚLTIMO (mais próximo da posição
+            // real do pedido "-30"), então sobrescreve em vez de manter só
+            // o primeiro que apareceu
+            current.position = restText;
+          }else{
+            // ou mais um pedaço da descrição que quebrou de linha no PDF
+            current.descParts.push(restText);
+          }
+        }
+      }
+    }
+  }
+  if(current) items.push(finalize(current));
+
+  return items;
+}
+
+// ---------- Itens do certificado (editor manual + preenchimento automático) ----------
+let certItems = [{ custRef:'', chpRef:'0508 1/8 NPT', desc:'90° MALE FEMALE BRASS ELBOW', position:'', qty:'1 PEÇA' }];
+
+function renderItemsEditor(){
+  const t = dict[currentLang];
+  const wrap = document.getElementById('itemsEditor');
+  wrap.innerHTML = certItems.map((it, i) => `
+    <div class="item-row">
+      <input class="item-custref" placeholder="${t.lb_itemCustRef}" value="${escapeAttr(it.custRef)}" oninput="updateItem(${i},'custRef',this.value)">
+      <input class="item-code" placeholder="${t.lb_itemCode}" value="${escapeAttr(it.chpRef)}" oninput="updateItem(${i},'chpRef',this.value)">
+      <input class="item-desc" placeholder="${t.lb_itemDesc}" value="${escapeAttr(it.desc)}" oninput="updateItem(${i},'desc',this.value)">
+      <input class="item-pos" placeholder="${t.lb_itemPos}" value="${escapeAttr(it.position)}" oninput="updateItem(${i},'position',this.value)">
+      <input class="item-qty" placeholder="${t.lb_itemQty}" value="${escapeAttr(it.qty)}" oninput="updateItem(${i},'qty',this.value)">
+      <button type="button" class="item-remove" onclick="removeItem(${i})" title="Remover">×</button>
+    </div>
+  `).join('');
+}
+
+function escapeAttr(str){
+  return (str || '').replace(/"/g, '&quot;');
+}
+
+function updateItem(i, field, value){
+  certItems[i][field] = value;
+  render();
+}
+
+function addItem(){
+  certItems.push({ custRef:'', chpRef:'', desc:'', position:'', qty:'' });
+  renderItemsEditor();
+  render();
+}
+
+function removeItem(i){
+  certItems.splice(i, 1);
+  if(certItems.length === 0) certItems.push({ custRef:'', chpRef:'', desc:'', position:'', qty:'' });
+  renderItemsEditor();
+  render();
+}
+
+// Número da NF-e (ex: "NF-e Nº: 000.073.775 Série: 1" ou "Nº: 000.073.775 Série: 1")
+// - fica em função própria porque também é usado pra detectar, dentro de um
+// único PDF, onde termina uma nota e começa a próxima (ver splitTextIntoInvoices)
+function extractInvoiceNumber(text){
+  return grab(/NF-?e\s*N[ºO°]\s*[:.]?\s*(\d[\d.]{4,12})/i, text)
+      || grab(/\bN[ºO°]\s*[:.]?\s*(\d[\d.]{4,12})\s*S[ée]rie/i, text)
+      || grab(/INDICADA\s*AO\s*LADO\s*\n?\s*(\d[\d.]{4,12})/i, text)
+      || grab(/PROTOCOLO\s*DE\s*AUTORIZA[ÇC][ÃA]O\s*DE\s*USO\s*\n?\s*(\d[\d.]{4,12})/i, text);
+}
+
+function parseDanfe(text){
+  const result = {};
+
+  result.invoice = extractInvoiceNumber(text);
+
+  // Data/hora da emissão (a data fica na linha seguinte à do cliente+CNPJ)
+  result.invDate = grab(/EMISS[ÃA]O\s*\n[^\n]*\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\s*\n\s*(\d{2}\/\d{2}\/\d{4})/i, text)
+                 || grab(/DATA\s*\/?\s*HORA\s*DA\s*EMISS[ÃA]O\D{0,15}(\d{2}\/\d{2}\/\d{4})/i, text)
+                 || grab(/DATA\s*D[AE]\s*EMISS[ÃA]O\D{0,15}(\d{2}\/\d{2}\/\d{4})/i, text);
+
+  // Cliente / Destinatário
+  // tenta primeiro os padrões mais confiáveis (ancorados no CNPJ ou no cabeçalho da seção);
+  // o padrão mais frouxo fica por último, só como último recurso
+  let client = grab(/RAZ[ÃA]O\s*SOCIAL[\s\S]{0,80}?EMISS[ÃA]O\s*\n?\s*([A-ZÀ-Ú0-9][^\n]{3,90}?)\s+\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/i, text)
+             || grab(/DESTINAT[ÁA]RIO\s*\/\s*REMETENTE\s*\n?\s*([^\n]{5,90}?)(?:\s{2,}NOME|\s*\n)/i, text)
+             || grab(/RAZ[ÃA]O\s*SOCIAL[\s\S]{0,80}?EMISS[ÃA]O\s*\n\s*([^\n]{3,90})/i, text);
+  // nunca aceita uma data ou um valor puramente numérico como nome de cliente
+  if(client && /^\d{2}\/\d{2}\/\d{4}$/.test(client.trim())) client = '';
+  if(client && CLIENT_BLACKLIST.test(client)) client = '';
+  result.client = client;
+
+  // Pedido de compra (nas notas da Empresa Modelo aparece como "P.C Nro:" nas informações complementares)
+  result.po = grab(/P\.?\s*C\.?\s*N\.?\s*[ºRO°]{0,3}\.?\s*[:.]?\s*(\d{4,15}(?:-\d{1,4})?(?:\/\d{1,4})?)/i, text)
+           || grab(/PEDIDO\s*(?:DE\s*COMPRA)?\s*[:\-]?\s*([A-Z0-9\-\/.]{3,20})/i, text);
+
+  return result;
+}
+
+function toggleDebug(){
+  const el = document.getElementById('debugText');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function extractFromPdf(){
+  if(!selectedPdfFile) return;
+  const t = dict[currentLang];
+  const btn = document.getElementById('extractBtn');
+  btn.disabled = true;
+  setStatus(t.statusExtracting, '');
+
+  try{
+    if(!window.pdfjsLib){
+      throw new Error('Biblioteca de leitura de PDF não carregou (verifique sua conexão para baixar a biblioteca uma vez)');
+    }
+
+    const text = await readPdfText(selectedPdfFile);
+    document.getElementById('debugText').value = text;
+    document.getElementById('debugToggle').style.display = 'block';
+
+    if(!text.trim()){
+      throw new Error('PDF parece ser uma imagem escaneada (sem texto). Preencha manualmente.');
+    }
+
+    const parsed = parseDanfe(text);
+    // lineMeta traz {text, x0} de cada linha - parseItems usa a posição X pra
+    // saber se um número solto numa linha de continuação é o fim do código do
+    // cliente (mesma coluna do código) ou outra coisa (posição do item, etc.)
+    const lineMeta = await readPdfLineMeta(selectedPdfFile);
+    const foundItems = parseItems(lineMeta);
+    let foundCount = 0;
+
+    if(parsed.client){ document.getElementById('client').value = parsed.client; foundCount++; }
+    if(parsed.po){ document.getElementById('po').value = parsed.po; foundCount++; }
+    if(parsed.invoice){ document.getElementById('invoice').value = parsed.invoice; foundCount++; }
+    if(parsed.invDate){
+      const [d,m,y] = parsed.invDate.split('/');
+      if(d && m && y){ document.getElementById('invDate').value = `${y}-${m}-${d}`; foundCount++; }
+    }
+    // Nº do certificado NUNCA é preenchido automaticamente - sempre manual
+
+    if(foundItems.length > 0){
+      // TODOS os itens da nota entram automaticamente na tabela do certificado
+      certItems = foundItems.map(it => ({
+        custRef: it.custRef,
+        chpRef: it.chpRef,
+        desc: it.desc,
+        position: it.position,
+        qty: `${it.qty} ${it.unit}`
+      }));
+      renderItemsEditor();
+      foundCount++;
+    }
+
+    render();
+
+    if(foundItems.length > 1){
+      setStatus(t.statusMultiItem, 'ok');
+    }else if(foundCount > 0){
+      setStatus(t.statusPartial, 'ok');
+    }else{
+      setStatus(t.statusError, 'error');
+    }
+  }catch(err){
+    console.error('Erro ao extrair dados do PDF:', err);
+    setStatus(t.statusError + ' (' + err.message + ')', 'error');
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+// init
+document.getElementById('n2').innerHTML = `<option value="na">Não Aplicável</option><option value="approved">Aprovado</option><option value="reproved">Reprovado</option>`;
+document.getElementById('tight').innerHTML = `<option value="na">Não Aplicável</option><option value="approved">Aprovado</option><option value="reproved">Reprovado</option>`;
+// Data de Emissão já vem preenchida com a data de hoje ao abrir o gerador,
+// mas continua um campo normal de <input type="date"> - o usuário pode
+// trocar pra qualquer outra data a qualquer momento
+(function(){
+  const issueDateEl = document.getElementById('issueDate');
+  if(issueDateEl && !issueDateEl.value){
+    const hoje = new Date();
+    const yyyy = hoje.getFullYear();
+    const mm = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoje.getDate()).padStart(2, '0');
+    issueDateEl.value = `${yyyy}-${mm}-${dd}`;
+  }
+})();
+renderItemsEditor();
+render();
+</script>
+
+</body>
+</html>

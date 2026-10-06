@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Etiqueta Sedex e Declaração de Conteúdo · Empresa Modelo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E9EDF1;--panel:#FFFFFF;--ink:#17202B;--muted:#5B6776;--line:#CDD4DC;--blue:#1E4C86;--yellow:#F4C400;--hover:#EEF3F9;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161C;--panel:#1A222B;--ink:#E6EBF0;--muted:#9AA6B3;--line:#2F3A46;--blue:#7FA8DD;--hover:#22303E}}
+:root[data-theme="dark"]{--bg:#11161C;--panel:#1A222B;--ink:#E6EBF0;--muted:#9AA6B3;--line:#2F3A46;--blue:#7FA8DD;--hover:#22303E}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Archivo,"Segoe UI",Arial,sans-serif;font-size:16px;line-height:1.45}
+header{background:#1E4C86;color:#fff;padding:14px 24px 0;border-bottom:5px solid var(--yellow)}
+header .topo{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{margin:0;font-size:1.25rem;font-weight:800}
+header .topo span{opacity:.85;font-size:.9rem}
+.abas{display:flex;gap:4px;margin-top:12px}
+.abas button{background:transparent;color:#fff;border:0;border-radius:8px 8px 0 0;padding:10px 18px;font-weight:700;opacity:.8}
+.abas button.on{background:var(--yellow);color:#17202B;opacity:1}
+main{max-width:1320px;margin:0 auto;padding:22px 20px 40px;display:grid;grid-template-columns:minmax(300px,430px) 1fr;gap:22px;align-items:start}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+h2{font-size:1rem;margin:0 0 10px;font-weight:700}
+h2.sep{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px;font-weight:500}
+input[type=text]{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px}
+input[type=text]:focus,button:focus-visible{outline:3px solid var(--yellow);outline-offset:1px;border-color:var(--blue)}
+#busca{font-size:1.1rem;padding:13px 14px;border:2px solid var(--blue)}
+.dica{font-size:.82rem;color:var(--muted);margin:6px 0 0}
+#lista{list-style:none;margin:12px 0 0;padding:0;max-height:330px;overflow:auto}
+#lista li{padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer;display:grid;grid-template-columns:70px 1fr;gap:8px}
+#lista li:hover,#lista li.sel{background:var(--hover)}
+#lista .cod{font-weight:700;color:var(--blue)}
+#lista .cid{display:block;color:var(--muted);font-size:.82rem}
+.row3{display:grid;grid-template-columns:1.2fr 2fr 70px;gap:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pag{display:flex;gap:10px;margin-top:6px}
+.pag .opc{flex:1;border:2px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--ink);margin:0}
+.pag .opc:has(input:checked){border-color:var(--blue);background:var(--hover)}
+.pag .opc span{display:flex;flex-direction:column}
+.pag .opc small{font-size:.9rem}
+.acoes{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;border-radius:7px;padding:11px 18px;cursor:pointer;border:2px solid var(--blue)}
+.imp{background:var(--yellow);color:#17202B;border-color:#C9A200}
+.lim{background:transparent;color:var(--blue)}
+.mini{padding:6px 12px;font-size:.85rem}
+.aviso{background:#FFF4C2;color:#5A4500;border:1px solid #E8C94A;border-radius:7px;padding:8px 10px;font-size:.85rem;margin:8px 0 0}
+.vazio{color:var(--muted);padding:12px 4px;font-size:.9rem;display:block!important}
+.itens{width:100%;border-collapse:collapse;margin-top:6px}
+.itens th{font-size:.78rem;color:var(--muted);font-weight:600;text-align:left;padding:0 4px 4px}
+.itens td{padding:2px}
+.itens td:first-child{width:26px;color:var(--muted);font-size:.85rem;text-align:center}
+.itens input{padding:7px 8px!important}
+.itens .q{width:70px}.itens .v{width:110px}
+.num{text-align:right}
+.so-etq,.so-dec{}
+body.aba-dec .so-etq{display:none!important}
+body.aba-etq .so-dec{display:none!important}
+.papel-wrap{overflow-x:auto}
+/* etiqueta */
+#etq{background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;font-weight:700;text-align:center;width:16cm;margin:0 auto;padding:.35cm .5cm;border:1px dashed #999;text-transform:uppercase}
+#etq .nome{font-size:17pt;line-height:1.15;margin-bottom:.45cm}
+#etq .nome.comac{margin-bottom:.1cm}
+#etq #e_ac{margin-bottom:.35cm}
+#etq .end{font-size:15pt;line-height:1.2}
+#etq .sedex{font-size:14pt;display:flex;justify-content:space-around;margin:.45cm 0 .25cm;text-transform:none}
+#etq .rem{font-size:10.5pt;line-height:1.25}
+/* declaração */
+#dec{background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;width:19cm;margin:0 auto;padding:.3cm;font-size:9.5pt}
+#dec table{width:100%;border-collapse:collapse;table-layout:fixed}
+#dec td,#dec th{border:1px solid #000;padding:2px 4px;height:.55cm;vertical-align:middle;overflow:hidden;white-space:normal;word-break:break-word}
+#dec .tit{font-size:14pt;font-weight:700;text-align:center;border:1.5px solid #000;padding:4px;margin-bottom:.3cm}
+#dec .bloco{border:1.5px solid #000;margin-bottom:.3cm}
+#dec .bloco table{border:0}
+#dec th{font-weight:700;text-align:center;font-size:9.5pt}
+#dec .sub{font-size:13pt;font-weight:700;text-align:center;padding:3px;border-bottom:1px solid #000}
+#dec .cinza{background:#d9d9d9;-webkit-print-color-adjust:exact;print-color-adjust:exact;text-align:right;font-weight:700;border-left:0}
+#dec .r{text-align:right}
+#dec .c{text-align:center}
+#dec td.wrap{white-space:normal}
+#dec .txt{padding:4px 8px;font-size:9pt;line-height:1.3;text-align:justify}
+#dec .txt p{margin:0;text-indent:.6cm}
+#dec .ass{display:flex;justify-content:space-between;align-items:flex-end;padding:1.1cm 8px .25cm;font-size:9.5pt}
+#dec .ass .linha{border-top:1px solid #000;width:9.5cm;text-align:center;padding-top:3px}
+#dec .val{font-weight:400}
+@media print{
+  @page{size:A4 portrait;margin:1cm}
+  header,.box.form,.preview-titulo,.dica-imp{display:none!important}
+  :root{padding:0}
+  body{background:#fff}
+  main{display:block;padding:0;max-width:none}
+  .box{border:0;padding:0;background:#fff}
+  #etq{border:1px dashed #bbb;margin:0}
+  #dec{margin:0;padding:0}
+}
+</style>
+</head>
+<body class="aba-etq">
+<header>
+  <div class="topo"><h1>Etiqueta Sedex e Declaração de Conteúdo</h1><span>Informações automáticas · Empresa Modelo</span></div>
+  <nav class="abas">
+    <button id="abaEtq" class="on" type="button">Etiqueta Sedex</button>
+    <button id="abaDec" type="button">Declaração de conteúdo</button>
+  </nav>
+</header>
+<main>
+<section class="box form">
+  <h2>Buscar cliente</h2>
+  <input type="text" id="busca" placeholder="Digite o código ou o nome da empresa" autocomplete="off" autofocus>
+  <p class="dica">Ex.: 21163 ou brazilcoa. Aperte Enter para escolher o primeiro da lista. O cliente escolhido vale para a etiqueta e para a declaração.</p>
+  <ul id="lista"></ul>
+
+  <h2 class="sep">Dados do cliente</h2>
+  <label for="f_nome">Nome da empresa</label><input type="text" id="f_nome">
+  <p id="aviso" class="aviso" style="display:none">O nome parece ter sido cortado no ERP. Complete o nome aqui antes de imprimir: a correção fica guardada para as próximas vezes.</p>
+  <label for="f_ac">Aos cuidados de (A/C) <span style="font-weight:400">— opcional</span></label><input type="text" id="f_ac" placeholder="Ex.: Fulano de Tal">
+  <label for="f_end">Rua e número</label><input type="text" id="f_end">
+  <label for="f_bai">Bairro</label><input type="text" id="f_bai">
+  <div class="row3">
+    <div><label for="f_cep">CEP</label><input type="text" id="f_cep" inputmode="numeric"></div>
+    <div><label for="f_cid">Cidade</label><input type="text" id="f_cid"></div>
+    <div><label for="f_uf">UF</label><input type="text" id="f_uf" maxlength="2"></div>
+  </div>
+  <div class="so-dec">
+    <label for="f_doc">CNPJ/CPF do cliente</label><input type="text" id="f_doc" inputmode="numeric" placeholder="O relatório do ERP não traz o CNPJ: digite uma vez que fica salvo">
+  </div>
+
+  <div class="so-etq">
+    <label for="f_nf">Nota fiscal nº</label><input type="text" id="f_nf" inputmode="numeric" placeholder="Digite o número da nota">
+    <label>Frete</label>
+    <div class="pag">
+      <label class="opc"><input type="radio" name="pg" value="pago" checked><span>Sedex Pago (X)<small>A pagar ( )</small></span></label>
+      <label class="opc"><input type="radio" name="pg" value="apagar"><span>Sedex Pago ( )<small>A pagar (X)</small></span></label>
+    </div>
+  </div>
+
+  <div class="so-dec">
+    <h2 class="sep">O que vai na caixa</h2>
+    <table class="itens">
+      <thead><tr><th>Item</th><th>Conteúdo</th><th>Qtde</th><th>Valor (R$)</th></tr></thead>
+      <tbody id="linhas"></tbody>
+    </table>
+    <button type="button" class="lim mini" id="btLinha" style="margin-top:8px">Mais uma linha</button>
+    <div class="row2">
+      <div><label for="f_peso">Peso total (kg)</label><input type="text" id="f_peso" inputmode="decimal" placeholder="Ex.: 2,500" class="num"></div>
+      <div><label for="f_local">Cidade da assinatura</label><input type="text" id="f_local" value="São Paulo"></div>
+    </div>
+    <label for="f_data">Data</label><input type="text" id="f_data">
+    <label for="f_cnpjchp">CNPJ da Empresa Modelo (remetente)</label><input type="text" id="f_cnpjchp" inputmode="numeric" placeholder="Digite uma vez que fica salvo neste computador">
+  </div>
+
+  <div class="acoes">
+    <button class="imp" id="btImp" type="button">Imprimir etiqueta</button>
+    <button class="lim" id="btSalvar" type="button">Salvar correção</button>
+    <button class="lim" id="btLim" type="button">Limpar</button>
+  </div>
+  <p id="salvo" class="dica" style="color:var(--blue);font-weight:600"></p>
+</section>
+
+<section class="box">
+  <div class="preview-titulo"><h2>Como vai sair</h2></div>
+  <div class="papel-wrap so-etq">
+  <div id="etq">
+    <div class="nome" id="e_nome">&nbsp;</div>
+    <div class="end" id="e_ac" style="display:none"></div>
+    <div class="end" id="e_end">&nbsp;</div>
+    <div class="end" id="e_bai">&nbsp;</div>
+    <div class="end" id="e_cep">&nbsp;</div>
+    <div class="end" id="e_nf"></div>
+    <div class="sedex"><span id="e_pago"></span><span id="e_apagar"></span></div>
+    <div class="rem">Empresa Modelo Ltda<br><span style="text-transform:none">R. das Indústrias, 366 - Centro<br>CEP 01000-000 - São Paulo - SP</span></div>
+  </div>
+  </div>
+
+  <div class="papel-wrap so-dec">
+  <div id="dec">
+    <div class="tit">DECLARAÇÃO DE CONTEÚDO</div>
+    <div class="bloco" style="border:0">
+    <table>
+      <colgroup><col style="width:20%"><col style="width:22%"><col style="width:8%"><col style="width:20%"><col style="width:22%"><col style="width:8%"></colgroup>
+      <tr><th colspan="3">REMETENTE</th><th colspan="3">DESTINATÁRIO</th></tr>
+      <tr><td colspan="3">NOME: <span class="val">EMPRESA MODELO LTDA.</span></td><td colspan="3">NOME: <span class="val" id="d_nome"></span></td></tr>
+      <tr><td colspan="3">ENDEREÇO: <span class="val">R. DAS INDÚSTRIAS, 1000 - CENTRO</span></td><td colspan="3">ENDEREÇO: <span class="val" id="d_end"></span></td></tr>
+      <tr><td colspan="2">CIDADE: <span class="val">SÃO PAULO</span></td><td>UF: <span class="val">SP</span></td><td colspan="2">CIDADE: <span class="val" id="d_cid"></span></td><td>UF: <span class="val" id="d_uf"></span></td></tr>
+      <tr><td>CEP: <span class="val">01000-000</span></td><td colspan="2">CNPJ/CPF: <span class="val" id="d_cnpjchp"></span></td><td>CEP: <span class="val" id="d_cep"></span></td><td colspan="2">CNPJ/CPF: <span class="val" id="d_doc"></span></td></tr>
+    </table>
+    </div>
+    <div class="bloco">
+      <div class="sub">IDENTIFICAÇÃO DOS BENS</div>
+      <table>
+        <colgroup><col style="width:8%"><col style="width:61%"><col style="width:16%"><col style="width:15%"></colgroup>
+        <thead><tr><th style="border-top:0;border-left:0">ITEM</th><th style="border-top:0">CONTEÚDO</th><th style="border-top:0">QUANTIDADE</th><th style="border-top:0;border-right:0">VALOR</th></tr></thead>
+        <tbody id="d_itens"></tbody>
+        <tr><td colspan="2" class="cinza" style="border-bottom:0">TOTAIS</td><td class="r" id="d_tq">0</td><td class="r" style="border-right:0" id="d_tv">0,00</td></tr>
+        <tr><td colspan="2" class="cinza" style="border-bottom:0;border-top:0">PESO TOTAL(Kg)</td><td colspan="2" class="r" style="border-right:0;border-bottom:0" id="d_peso"></td></tr>
+      </table>
+    </div>
+    <div class="bloco" style="margin-bottom:0">
+      <div class="sub">DECLARAÇÃO</div>
+      <div class="txt">
+        <p>Declaro que não me enquadro no conceito de contribuinte previsto no art. 4º da Lei Complementar nº 87/1996, uma vez que não realizo, com habitualidade ou em volume que caracterize intuito comercial, operações de circulação de mercadoria, ainda que se iniciem no exterior, ou estou dispensado da emissão da nota fiscal por força da legislação tributária vigente, responsabilizando-me, nos termos da lei e a quem de direito, por informações inverídicas.</p>
+        <p>Declaro ainda que não estou postando conteúdo inflamável, explosivo, causador de combustão espontânea, tóxico, corrosivo, gás ou qualquer outro conteúdo que constitua perigo, conforme o art. 13 da Lei Postal nº 6.538/78</p>
+      </div>
+      <div class="ass"><span id="d_data"></span><div class="linha">Assinatura do Declarante/Remetente</div></div>
+    </div>
+  </div>
+  </div>
+  <p class="dica dica-imp">Tudo o que você mudar nos campos aparece aqui na hora. Os clientes vêm do relatório do ERP (base de clientes fictícia).</p>
+</section>
+</main>
+<script>
+const D0=[["1000260", "AGROINDÚSTRIA ALVORADA IND. E COM. LTDA.", "RUA DOS IPÊS, 2852 - DISTRITO INDUSTRIAL", "CONTAGEM/MG", "32572-463"], ["1001677", "AGROINDÚSTRIA COLIBRI DO BRASIL LTDA.", "RUA DAS FLORES, 2503 - JARDIM AMÉRICA", "GOIÂNIA/GO", "74112-593"], ["1000247", "AGROINDÚSTRIA GIRASSOL IND. E COM. LTDA.", "RUA SETE DE SETEMBRO, 4744 - BAIRRO DAS INDÚSTRIAS", "RIO DE JANEIRO/RJ", "20391-833"], ["1000572", "AGROINDÚSTRIA GIRASSOL LTDA", "ESTRADA MUNICIPAL, 2710 - VILA NOVA", "SALVADOR/BA", "41727-930"], ["1000884", "AGROINDÚSTRIA JAGUAR DO BRASIL LTDA.", "RUA DAS FLORES, 995 - JARDIM DAS ROSAS", "PORTO ALEGRE/RS", "90163-433"], ["1003081", "AGROINDÚSTRIA PIONEIRA IND. E COM. LTDA.", "RUA DA ESTAÇÃO, 1341 - JARDIM AMÉRICA", "CURITIBA/PR", "81115-152"], ["1000195", "AGROINDÚSTRIA PLANALTO LTDA.", "RUA DOS INDUSTRIÁRIOS, 4015 - VILA ESPERANÇA", "BELO HORIZONTE/MG", "30140-784"], ["1001521", "AGROINDÚSTRIA RIO BRANCO IND. E COM. LTDA.", "RUA DOS INDUSTRIÁRIOS, 368 - JARDIM DAS ROSAS", "GOIÂNIA/GO", "74742-539"], ["1002340", "AGROINDÚSTRIA SOLAR DO BRASIL LTDA.", "RUA DO COMÉRCIO, 3455 - JARDIM EUROPA", "RIO DE JANEIRO/RJ", "20798-505"], ["1002860", "AGROINDÚSTRIA TUPI IND. E COM. LTDA.", "RUA SETE DE SETEMBRO, 1917 - CENTRO", "MANAUS/AM", "69151-294"], ["1000156", "AGROINDÚSTRIA TUPI LTDA.", "RUA DOS INDUSTRIÁRIOS, 2009 - CENTRO", "SALVADOR/BA", "41688-407"], ["1001547", "AGROINDÚSTRIA ÁGUIA LTDA", "RUA JOÃO DE BARRO, 141 - VILA NOVA", "JOINVILLE/SC", "89187-131"], ["1003289", "ALIMENTOS ALVORADA S.A.", "AVENIDA DAS NAÇÕES, 3670 - BAIRRO DAS INDÚSTRIAS", "CURITIBA/PR", "81956-283"], ["1000442", "ALIMENTOS ARARAS S.A.", "RUA DAS PALMEIRAS, 848 - DISTRITO INDUSTRIAL", "PORTO ALEGRE/RS", "90680-254"], ["1003172", "ALIMENTOS ATLÂNTICA DO BRASIL LTDA.", "AVENIDA DO CONTORNO, 1322 - VILA NOVA", "RIO DE JANEIRO/RJ", "20735-514"], ["1003120", "ALIMENTOS AURORA LTDA", "RUA DOS INDUSTRIÁRIOS, 4279 - JARDIM AMÉRICA", "SÃO JOSÉ DOS CAMPOS/SP", "12168-211"], ["1000611", "ALIMENTOS DELTA IND. E COM. LTDA.", "RUA DAS FLORES, 247 - DISTRITO INDUSTRIAL", "BELO HORIZONTE/MG", "30909-386"], ["1004030", "ALIMENTOS GAIVOTA LTDA.", "AVENIDA BRASIL, 1689 - PARQUE INDUSTRIAL", "SOROCABA/SP", "18426-444"], ["1003601", "ALIMENTOS GIRASSOL IND. E COM. LTDA.", "ESTRADA MUNICIPAL, 1847 - VILA ESPERANÇA", "BELO HORIZONTE/MG", "30697-408"], ["1000871", "ALIMENTOS IPÊ AMARELO DO BRASIL LTDA.", "RUA DA ESTAÇÃO, 1237 - JARDIM AMÉRICA", "SALVADOR/BA", "41244-584"], ["1003406", "ALIMENTOS LITORAL S.A.", "RUA DOS IPÊS, 3748 - JARDIM AMÉRICA", "SÃO JOSÉ DOS CAMPOS/SP", "12360-614"], ["1000923", "ALIMENTOS MARACANÃ S.A.", "RUA DAS PALMEIRAS, 810 - JARDIM DAS ROSAS", "SÃO JOSÉ DOS CAMPOS/SP", "12563-675"], ["1000507", "ALIMENTOS MIRANTE DO BRASIL LTDA.", "RUA DOS INDUSTRIÁRIOS, 847 - JARDIM EUROPA", "JUNDIAÍ/SP", "13858-371"], ["1001612", "ALIMENTOS ORION LTDA.", "AVENIDA BRASIL, 3891 - PARQUE INDUSTRIAL", "JOINVILLE/SC", "89928-176"], ["1001729", "ALIMENTOS PUMA IND. E COM. LTDA.", "RUA DOS IPÊS, 3884 - DISTRITO INDUSTRIAL", "JUNDIAÍ/SP", "13396-569"], ["1003458", "ALIMENTOS SABIÁ IND. E COM. LTDA.", "RUA DA ESTAÇÃO, 2175 - CENTRO", "SALVADOR/BA", "41886-643"], ["1003783", "ALIMENTOS SABIÁ LTDA.", "AVENIDA INDUSTRIAL, 3821 - CENTRO", "RECIFE/PE", "50859-771"], ["1000000", "ALIMENTOS SERRA AZUL IND. E COM. LTDA.", "RUA DOS INDUSTRIÁRIOS, 3244 - DISTRITO INDUSTRIAL", "BELO HORIZONTE/MG", "30174-940"], ["1000026", "ALIMENTOS SÃO BENTO LTDA", "AVENIDA BRASIL, 3562 - VILA ESPERANÇA", "SÃO PAULO/SP", "01171-346"], ["1001703", "ALIMENTOS TUPI S.A.", "RUA DAS ACÁCIAS, 2392 - JARDIM DAS ROSAS", "GOIÂNIA/GO", "74392-575"], ["1001638", "AUTOPEÇAS ALFA IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 4056 - VILA ESPERANÇA", "GOIÂNIA/GO", "74178-590"], ["1000091", "AUTOPEÇAS AROEIRA LTDA.", "RUA SETE DE SETEMBRO, 4599 - JARDIM AMÉRICA", "PORTO ALEGRE/RS", "90205-695"], ["1000169", "AUTOPEÇAS BANDEIRANTES DO BRASIL LTDA.", "RUA DAS ACÁCIAS, 2823 - BAIRRO DAS INDÚSTRIAS", "JOINVILLE/SC", "89394-723"], ["1002210", "AUTOPEÇAS BOA VISTA IND. E COM. LTDA.", "RUA DAS PALMEIRAS, 1039 - VILA NOVA", "SÃO PAULO/SP", "01683-138"], ["1003380", "AUTOPEÇAS BOA VISTA S.A.", "RUA DA ESTAÇÃO, 1362 - VILA NOVA", "SÃO JOSÉ DOS CAMPOS/SP", "12167-953"], ["1000975", "AUTOPEÇAS IPÊ AMARELO LTDA.", "ESTRADA MUNICIPAL, 2136 - JARDIM DAS ROSAS", "RIO DE JANEIRO/RJ", "20307-960"], ["1003835", "AUTOPEÇAS ITAÚNA DO BRASIL LTDA.", "AVENIDA INDUSTRIAL, 4296 - PARQUE INDUSTRIAL", "GOIÂNIA/GO", "74402-757"], ["1003003", "AUTOPEÇAS JACARANDÁ IND. E COM. LTDA.", "RUA DAS FLORES, 2231 - VILA ESPERANÇA", "CONTAGEM/MG", "32390-783"], ["1001456", "AUTOPEÇAS JAGUAR LTDA", "ESTRADA MUNICIPAL, 50 - CENTRO", "RIBEIRÃO PRETO/SP", "14370-936"], ["1001937", "AUTOPEÇAS LINCE S.A.", "AVENIDA DAS NAÇÕES, 670 - DISTRITO INDUSTRIAL", "JOINVILLE/SC", "89849-520"], ["1002405", "AUTOPEÇAS MANTIQUEIRA LTDA", "RUA JOÃO DE BARRO, 1209 - VILA ESPERANÇA", "SÃO PAULO/SP", "01155-318"], ["1002808", "AUTOPEÇAS MARACANÃ DO BRASIL LTDA.", "RUA SETE DE SETEMBRO, 4747 - VILA NOVA", "SOROCABA/SP", "18434-166"], ["1000962", "AUTOPEÇAS MARACANÃ LTDA.", "ESTRADA MUNICIPAL, 4378 - BAIRRO DAS INDÚSTRIAS", "CURITIBA/PR", "81619-353"], ["1000897", "AUTOPEÇAS NOVA ERA LTDA.", "ESTRADA MUNICIPAL, 4357 - JARDIM DAS ROSAS", "GOIÂNIA/GO", "74594-903"], ["1003146", "AUTOPEÇAS NOVATEC S.A.", "RUA DOS IPÊS, 3964 - JARDIM EUROPA", "SÃO PAULO/SP", "01154-722"], ["1002483", "AUTOPEÇAS PRIMUS IND. E COM. LTDA.", "AVENIDA BRASIL, 33 - CENTRO", "SOROCABA/SP", "18386-182"], ["1003913", "AUTOPEÇAS QUERO-QUERO IND. E COM. LTDA.", "RUA JOÃO DE BARRO, 2531 - VILA NOVA", "RIBEIRÃO PRETO/SP", "14500-737"], ["1002119", "AUTOPEÇAS TIETÊ DO BRASIL LTDA.", "ESTRADA MUNICIPAL, 1779 - CENTRO", "JOINVILLE/SC", "89377-354"], ["1003666", "AUTOPEÇAS ÁGUIA LTDA.", "RUA DAS PALMEIRAS, 4616 - JARDIM EUROPA", "SÃO PAULO/SP", "01708-761"], ["1001911", "BEBIDAS ALVORADA DO BRASIL LTDA.", "ESTRADA MUNICIPAL, 2595 - VILA NOVA", "CONTAGEM/MG", "32891-482"], ["1001391", "BEBIDAS ALVORADA IND. E COM. LTDA.", "AVENIDA DAS NAÇÕES, 2410 - DISTRITO INDUSTRIAL", "PORTO ALEGRE/RS", "90570-289"], ["1003757", "BEBIDAS AURORA LTDA", "ESTRADA MUNICIPAL, 2544 - CENTRO", "SOROCABA/SP", "18407-740"], ["1002665", "BEBIDAS BANDEIRANTES LTDA", "AVENIDA DO CONTORNO, 2627 - BAIRRO DAS INDÚSTRIAS", "BELO HORIZONTE/MG", "30470-902"], ["1003133", "BEBIDAS BEM-TE-VI DO BRASIL LTDA.", "RUA DAS ACÁCIAS, 1626 - PARQUE INDUSTRIAL", "CONTAGEM/MG", "32229-957"], ["1001235", "BEBIDAS GAIVOTA IND. E COM. LTDA.", "RUA DOS INDUSTRIÁRIOS, 2155 - DISTRITO INDUSTRIAL", "JUNDIAÍ/SP", "13285-306"], ["1001313", "BEBIDAS GIRASSOL DO BRASIL LTDA.", "AVENIDA INDUSTRIAL, 4065 - JARDIM DAS ROSAS", "GOIÂNIA/GO", "74954-502"], ["1003263", "BEBIDAS JAGUAR IND. E COM. LTDA.", "AVENIDA INDUSTRIAL, 3198 - JARDIM EUROPA", "RIBEIRÃO PRETO/SP", "14557-615"], ["1002613", "BEBIDAS JEQUITIBÁ LTDA", "RUA JOÃO DE BARRO, 545 - DISTRITO INDUSTRIAL", "SALVADOR/BA", "41945-339"], ["1001352", "BEBIDAS JEQUITIBÁ S.A.", "RUA DOS INDUSTRIÁRIOS, 126 - CENTRO", "RECIFE/PE", "50740-858"], ["1003107", "BEBIDAS MANTIQUEIRA DO BRASIL LTDA.", "RUA DO COMÉRCIO, 4142 - JARDIM AMÉRICA", "MANAUS/AM", "69249-456"], ["1001859", "BEBIDAS MANTIQUEIRA S.A.", "RUA DOS IPÊS, 2384 - PARQUE INDUSTRIAL", "SÃO PAULO/SP", "01481-166"], ["1001833", "BEBIDAS TUCANO IND. E COM. LTDA.", "AVENIDA DO CONTORNO, 2724 - DISTRITO INDUSTRIAL", "JUNDIAÍ/SP", "13432-868"], ["1004147", "BEBIDAS ÔMEGA IND. E COM. LTDA.", "RUA DA ESTAÇÃO, 1521 - BAIRRO DAS INDÚSTRIAS", "RIO DE JANEIRO/RJ", "20706-455"], ["1000598", "CERÂMICA CANÁRIO LTDA.", "RUA DA ESTAÇÃO, 1867 - VILA NOVA", "RIO DE JANEIRO/RJ", "20630-604"], ["1003653", "CERÂMICA CEDRO DO BRASIL LTDA.", "AVENIDA DO CONTORNO, 2219 - VILA ESPERANÇA", "SOROCABA/SP", "18931-370"], ["1002392", "CERÂMICA FÊNIX S.A.", "RUA DOS INDUSTRIÁRIOS, 1839 - BAIRRO DAS INDÚSTRIAS", "PORTO ALEGRE/RS", "90527-781"], ["1003497", "CERÂMICA GUARANI LTDA.", "AVENIDA INDUSTRIAL, 3053 - PARQUE INDUSTRIAL", "RECIFE/PE", "50484-477"], ["1004017", "CERÂMICA IPÊ AMARELO DO BRASIL LTDA.", "RUA DA ESTAÇÃO, 726 - PARQUE INDUSTRIAL", "MANAUS/AM", "69588-202"], ["1000130", "CERÂMICA JEQUITIBÁ LTDA.", "AVENIDA CENTRAL, 4365 - VILA ESPERANÇA", "CURITIBA/PR", "81895-421"], ["1003926", "CERÂMICA ORION DO BRASIL LTDA.", "AVENIDA BRASIL, 4640 - JARDIM AMÉRICA", "PORTO ALEGRE/RS", "90248-133"], ["1004069", "CERÂMICA ORION IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 2366 - DISTRITO INDUSTRIAL", "JOINVILLE/SC", "89907-522"], ["1003939", "CERÂMICA PLANALTO S.A.", "AVENIDA BRASIL, 883 - JARDIM AMÉRICA", "SÃO PAULO/SP", "01453-245"], ["1001742", "CERÂMICA PUMA LTDA", "AVENIDA DO CONTORNO, 4160 - BAIRRO DAS INDÚSTRIAS", "JUNDIAÍ/SP", "13375-496"], ["1002236", "CERÂMICA SANTA CLARA S.A.", "AVENIDA CENTRAL, 3593 - CENTRO", "JOINVILLE/SC", "89201-172"], ["1004056", "CERÂMICA TITÃ LTDA.", "RUA DAS FLORES, 3024 - JARDIM EUROPA", "SÃO PAULO/SP", "01887-716"], ["1003874", "CERÂMICA TUCANO IND. E COM. LTDA.", "RUA DO COMÉRCIO, 1582 - VILA ESPERANÇA", "MANAUS/AM", "69436-715"], ["1000754", "CERÂMICA VALE VERDE LTDA", "ESTRADA MUNICIPAL, 4501 - JARDIM AMÉRICA", "SOROCABA/SP", "18121-114"], ["1002847", "EMBALAGENS CANÁRIO S.A.", "RUA DAS ACÁCIAS, 1903 - BAIRRO DAS INDÚSTRIAS", "SÃO PAULO/SP", "01482-141"], ["1000520", "EMBALAGENS GAIVOTA LTDA.", "AVENIDA DO CONTORNO, 1332 - JARDIM DAS ROSAS", "CURITIBA/PR", "81123-310"], ["1000104", "EMBALAGENS JAGUAR IND. E COM. LTDA.", "AVENIDA CENTRAL, 1549 - JARDIM EUROPA", "PORTO ALEGRE/RS", "90199-660"], ["1002457", "EMBALAGENS NOVA ERA IND. E COM. LTDA.", "AVENIDA CENTRAL, 4309 - BAIRRO DAS INDÚSTRIAS", "SOROCABA/SP", "18132-419"], ["1001131", "EMBALAGENS PRIMAVERA LTDA", "RUA DOS IPÊS, 1497 - PARQUE INDUSTRIAL", "SÃO PAULO/SP", "01873-232"], ["1003562", "EMBALAGENS PUMA SERVIÇOS INDUSTRIAIS LTDA.", "AVENIDA INDUSTRIAL, 3431 - JARDIM DAS ROSAS", "GOIÂNIA/GO", "74472-148"], ["1004121", "EMBALAGENS SOLAR LTDA.", "ESTRADA MUNICIPAL, 1665 - PARQUE INDUSTRIAL", "SÃO PAULO/SP", "01880-868"], ["1001586", "EMBALAGENS VECTRA DO BRASIL LTDA.", "AVENIDA DAS NAÇÕES, 4018 - PARQUE INDUSTRIAL", "GOIÂNIA/GO", "74103-567"], ["1001573", "EMBALAGENS ÁGUIA LTDA.", "ESTRADA MUNICIPAL, 425 - DISTRITO INDUSTRIAL", "CURITIBA/PR", "81741-644"], ["1003614", "ENERGIA ARARA AZUL IND. E COM. LTDA.", "RUA DOS INDUSTRIÁRIOS, 1682 - JARDIM EUROPA", "PORTO ALEGRE/RS", "90738-948"], ["1000455", "ENERGIA ATLÂNTICA DO BRASIL LTDA.", "AVENIDA BRASIL, 2988 - DISTRITO INDUSTRIAL", "JOINVILLE/SC", "89172-995"], ["1001807", "ENERGIA ATLÂNTICA IND. E COM. LTDA.", "RUA DAS PALMEIRAS, 4037 - BAIRRO DAS INDÚSTRIAS", "SOROCABA/SP", "18515-409"], ["1002717", "ENERGIA CANÁRIO LTDA.", "RUA DOS IPÊS, 871 - CENTRO", "CONTAGEM/MG", "32371-739"], ["1001066", "ENERGIA CANÁRIO S.A.", "AVENIDA INDUSTRIAL, 2788 - VILA ESPERANÇA", "JOINVILLE/SC", "89300-465"], ["1000949", "ENERGIA CRUZEIRO IND. E COM. LTDA.", "RUA JOÃO DE BARRO, 4205 - VILA NOVA", "JOINVILLE/SC", "89809-383"], ["1002730", "ENERGIA DELTA DO BRASIL LTDA.", "AVENIDA DAS NAÇÕES, 799 - VILA ESPERANÇA", "JUNDIAÍ/SP", "13610-826"], ["1003341", "ENERGIA FALCÃO LTDA", "RUA DOS IPÊS, 2580 - JARDIM DAS ROSAS", "JUNDIAÍ/SP", "13181-155"], ["1000403", "ENERGIA FÊNIX IND. E COM. LTDA.", "AVENIDA CENTRAL, 4591 - VILA ESPERANÇA", "RECIFE/PE", "50507-508"], ["1002782", "ENERGIA JACARANDÁ IND. E COM. LTDA.", "RUA SETE DE SETEMBRO, 3065 - PARQUE INDUSTRIAL", "PORTO ALEGRE/RS", "90855-366"], ["1002353", "ENERGIA LITORAL DO BRASIL LTDA.", "RUA DAS PALMEIRAS, 2402 - JARDIM DAS ROSAS", "RIBEIRÃO PRETO/SP", "14169-310"], ["1003237", "ENERGIA LITORAL LTDA", "RUA DAS PALMEIRAS, 2665 - CENTRO", "GOIÂNIA/GO", "74499-713"], ["1002080", "ENERGIA LITORAL S.A.", "AVENIDA INDUSTRIAL, 3146 - VILA ESPERANÇA", "RECIFE/PE", "50863-636"], ["1000039", "ENERGIA MONTE CLARO LTDA.", "ESTRADA MUNICIPAL, 3487 - DISTRITO INDUSTRIAL", "JUNDIAÍ/SP", "13946-679"], ["1001872", "ENERGIA ORION S.A.", "AVENIDA INDUSTRIAL, 4836 - CENTRO", "CONTAGEM/MG", "32469-538"], ["1002041", "ENERGIA PLANALTO DO BRASIL LTDA.", "AVENIDA INDUSTRIAL, 1153 - JARDIM DAS ROSAS", "CURITIBA/PR", "81297-349"], ["1001846", "ENERGIA PRIMUS DO BRASIL LTDA.", "AVENIDA DO CONTORNO, 3272 - CENTRO", "BELO HORIZONTE/MG", "30300-830"], ["1003965", "ENERGIA RIO BRANCO IND. E COM. LTDA.", "AVENIDA CENTRAL, 359 - CENTRO", "GOIÂNIA/GO", "74854-147"], ["1002691", "ENERGIA SIGMA LTDA.", "RUA DOS INDUSTRIÁRIOS, 2035 - VILA ESPERANÇA", "SALVADOR/BA", "41166-765"], ["1003770", "ENERGIA SÃO BENTO S.A.", "RUA DOS IPÊS, 3925 - JARDIM DAS ROSAS", "SÃO PAULO/SP", "01106-484"], ["1002444", "ENERGIA TIETÊ DO BRASIL LTDA.", "AVENIDA BRASIL, 660 - JARDIM AMÉRICA", "RIO DE JANEIRO/RJ", "20437-295"], ["1003588", "ENERGIA VECTRA IND. E COM. LTDA.", "RUA JOÃO DE BARRO, 2917 - PARQUE INDUSTRIAL", "SÃO PAULO/SP", "01208-635"], ["1002275", "ENERGIA ÁGUIA IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 2292 - JARDIM EUROPA", "SÃO JOSÉ DOS CAMPOS/SP", "12760-959"], ["1000117", "FARMACÊUTICA ARARAS S.A.", "AVENIDA BRASIL, 4633 - DISTRITO INDUSTRIAL", "RIO DE JANEIRO/RJ", "20733-310"], ["1002873", "FARMACÊUTICA AROEIRA LTDA", "AVENIDA DO CONTORNO, 4787 - VILA NOVA", "PORTO ALEGRE/RS", "90176-481"], ["1001664", "FARMACÊUTICA ATLÂNTICA IND. E COM. LTDA.", "AVENIDA DAS NAÇÕES, 644 - JARDIM AMÉRICA", "GOIÂNIA/GO", "74439-360"], ["1000481", "FARMACÊUTICA AURORA LTDA.", "RUA JOÃO DE BARRO, 2993 - BAIRRO DAS INDÚSTRIAS", "BELO HORIZONTE/MG", "30225-218"], ["1003393", "FARMACÊUTICA CAMPO BELO DO BRASIL LTDA.", "RUA JOÃO DE BARRO, 2076 - JARDIM AMÉRICA", "BELO HORIZONTE/MG", "30431-728"], ["1001365", "FARMACÊUTICA CEDRO LTDA.", "RUA SETE DE SETEMBRO, 3538 - JARDIM AMÉRICA", "MANAUS/AM", "69156-186"], ["1003016", "FARMACÊUTICA CERRADO LTDA.", "AVENIDA INDUSTRIAL, 430 - PARQUE INDUSTRIAL", "SÃO JOSÉ DOS CAMPOS/SP", "12863-680"], ["1001053", "FARMACÊUTICA GAIVOTA IND. E COM. LTDA.", "AVENIDA DO CONTORNO, 1842 - JARDIM AMÉRICA", "GOIÂNIA/GO", "74823-541"], ["1003419", "FARMACÊUTICA ITAÚNA LTDA.", "RUA DAS ACÁCIAS, 1716 - PARQUE INDUSTRIAL", "MANAUS/AM", "69730-618"], ["1001287", "FARMACÊUTICA MANTIQUEIRA IND. E COM. LTDA.", "ESTRADA MUNICIPAL, 4524 - VILA NOVA", "RIO DE JANEIRO/RJ", "20626-586"], ["1002496", "FARMACÊUTICA SANTA CLARA DO BRASIL LTDA.", "AVENIDA INDUSTRIAL, 1023 - JARDIM DAS ROSAS", "BELO HORIZONTE/MG", "30877-312"], ["1003302", "FARMACÊUTICA SANTA CLARA S.A.", "RUA DAS ACÁCIAS, 3289 - CENTRO", "SALVADOR/BA", "41168-231"], ["1002587", "FARMACÊUTICA SIGMA S.A.", "RUA JOÃO DE BARRO, 367 - PARQUE INDUSTRIAL", "BELO HORIZONTE/MG", "30864-833"], ["1001222", "FARMACÊUTICA TITÃ S.A.", "RUA DOS INDUSTRIÁRIOS, 363 - JARDIM DAS ROSAS", "PORTO ALEGRE/RS", "90826-344"], ["1000533", "FARMACÊUTICA TUCANO S.A.", "RUA DO COMÉRCIO, 1210 - JARDIM DAS ROSAS", "JOINVILLE/SC", "89127-876"], ["1001339", "FUNDIÇÃO AURORA LTDA", "RUA DOS IPÊS, 1154 - VILA ESPERANÇA", "RECIFE/PE", "50455-155"], ["1001950", "FUNDIÇÃO BEM-TE-VI S.A.", "RUA JOÃO DE BARRO, 1145 - PARQUE INDUSTRIAL", "CURITIBA/PR", "81597-150"], ["1001794", "FUNDIÇÃO CAMPO BELO IND. E COM. LTDA.", "AVENIDA DAS NAÇÕES, 4088 - BAIRRO DAS INDÚSTRIAS", "BELO HORIZONTE/MG", "30503-125"], ["1000559", "FUNDIÇÃO CAMPO BELO S.A.", "RUA DOS INDUSTRIÁRIOS, 2923 - VILA NOVA", "MANAUS/AM", "69645-654"], ["1001755", "FUNDIÇÃO CEDRO DO BRASIL LTDA.", "RUA DOS IPÊS, 1736 - CENTRO", "RIBEIRÃO PRETO/SP", "14695-192"], ["1000728", "FUNDIÇÃO FALCÃO LTDA.", "RUA DOS INDUSTRIÁRIOS, 235 - JARDIM AMÉRICA", "SOROCABA/SP", "18704-576"], ["1000585", "FUNDIÇÃO HORIZONTE LTDA", "RUA DA ESTAÇÃO, 1608 - VILA NOVA", "SALVADOR/BA", "41937-510"], ["1003809", "FUNDIÇÃO JACARANDÁ DO BRASIL LTDA.", "RUA DAS PALMEIRAS, 1019 - JARDIM EUROPA", "GOIÂNIA/GO", "74867-811"], ["1002756", "FUNDIÇÃO JACARANDÁ LTDA", "RUA DOS IPÊS, 1934 - JARDIM DAS ROSAS", "PORTO ALEGRE/RS", "90967-892"], ["1000689", "FUNDIÇÃO JAGUAR S.A.", "RUA DA ESTAÇÃO, 1642 - BAIRRO DAS INDÚSTRIAS", "RIO DE JANEIRO/RJ", "20282-544"], ["1000546", "FUNDIÇÃO JEQUITIBÁ IND. E COM. LTDA.", "RUA SETE DE SETEMBRO, 755 - PARQUE INDUSTRIAL", "JOINVILLE/SC", "89630-475"], ["1002704", "FUNDIÇÃO NOVATEC LTDA.", "RUA DAS ACÁCIAS, 4536 - JARDIM DAS ROSAS", "SÃO PAULO/SP", "01433-264"], ["1000819", "FUNDIÇÃO PANTANAL IND. E COM. LTDA.", "RUA DOS IPÊS, 2908 - BAIRRO DAS INDÚSTRIAS", "SÃO PAULO/SP", "01778-697"], ["1002093", "FUNDIÇÃO SABIÁ LTDA.", "AVENIDA INDUSTRIAL, 2223 - JARDIM EUROPA", "RIBEIRÃO PRETO/SP", "14870-163"], ["1000065", "FUNDIÇÃO SERRA AZUL LTDA", "RUA DAS PALMEIRAS, 1821 - DISTRITO INDUSTRIAL", "CONTAGEM/MG", "32670-979"], ["1002132", "FUNDIÇÃO VENTURA DO BRASIL LTDA.", "AVENIDA INDUSTRIAL, 3662 - VILA ESPERANÇA", "CONTAGEM/MG", "32419-969"], ["1002678", "INDÚSTRIA ALFA LTDA", "RUA JOÃO DE BARRO, 657 - JARDIM DAS ROSAS", "SALVADOR/BA", "41302-501"], ["1002301", "INDÚSTRIA ALVORADA DO BRASIL LTDA.", "RUA DAS PALMEIRAS, 3383 - PARQUE INDUSTRIAL", "RIBEIRÃO PRETO/SP", "14156-122"], ["1003198", "INDÚSTRIA ARARAS S.A.", "RUA DAS PALMEIRAS, 3284 - JARDIM DAS ROSAS", "RIBEIRÃO PRETO/SP", "14260-492"], ["1000208", "INDÚSTRIA CERRADO IND. E COM. LTDA.", "RUA DA ESTAÇÃO, 4581 - JARDIM EUROPA", "JUNDIAÍ/SP", "13448-811"], ["1000793", "INDÚSTRIA CERRADO LTDA.", "RUA SETE DE SETEMBRO, 4115 - VILA NOVA", "RIBEIRÃO PRETO/SP", "14882-700"], ["1003432", "INDÚSTRIA ESTRELA IND. E COM. LTDA.", "RUA DO COMÉRCIO, 3059 - DISTRITO INDUSTRIAL", "RIBEIRÃO PRETO/SP", "14303-286"], ["1000910", "INDÚSTRIA FÊNIX IND. E COM. LTDA.", "AVENIDA BRASIL, 4599 - DISTRITO INDUSTRIAL", "SALVADOR/BA", "41354-295"], ["1003159", "INDÚSTRIA GUARANI DO BRASIL LTDA.", "AVENIDA CENTRAL, 3187 - CENTRO", "MANAUS/AM", "69829-735"], ["1001443", "INDÚSTRIA HORIZONTE IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 2294 - JARDIM DAS ROSAS", "JUNDIAÍ/SP", "13771-305"], ["1002015", "INDÚSTRIA MARACANÃ DO BRASIL LTDA.", "RUA DOS INDUSTRIÁRIOS, 625 - VILA NOVA", "GOIÂNIA/GO", "74612-931"], ["1001105", "INDÚSTRIA NOVA ERA LTDA", "RUA SETE DE SETEMBRO, 4206 - CENTRO", "PORTO ALEGRE/RS", "90215-907"], ["1001092", "INDÚSTRIA PRIMAVERA IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 158 - VILA ESPERANÇA", "CURITIBA/PR", "81439-629"], ["1004134", "INDÚSTRIA PRIMUS LTDA.", "RUA DAS PALMEIRAS, 2859 - BAIRRO DAS INDÚSTRIAS", "SÃO PAULO/SP", "01197-603"], ["1001781", "INDÚSTRIA PUMA LTDA.", "AVENIDA DO CONTORNO, 4177 - PARQUE INDUSTRIAL", "PORTO ALEGRE/RS", "90215-820"], ["1000806", "INDÚSTRIA VECTRA LTDA.", "RUA SETE DE SETEMBRO, 4469 - VILA ESPERANÇA", "BELO HORIZONTE/MG", "30954-234"], ["1002977", "LATICÍNIOS ALFA DO BRASIL LTDA.", "AVENIDA INDUSTRIAL, 840 - VILA ESPERANÇA", "JUNDIAÍ/SP", "13779-663"], ["1003471", "LATICÍNIOS ARARA AZUL DO BRASIL LTDA.", "AVENIDA CENTRAL, 2957 - BAIRRO DAS INDÚSTRIAS", "SÃO PAULO/SP", "01668-633"], ["1001378", "LATICÍNIOS ARARAS IND. E COM. LTDA.", "AVENIDA DO CONTORNO, 3130 - JARDIM DAS ROSAS", "GOIÂNIA/GO", "74786-388"], ["1000988", "LATICÍNIOS AURORA LTDA.", "RUA DOS INDUSTRIÁRIOS, 3423 - CENTRO", "CURITIBA/PR", "81501-552"], ["1000702", "LATICÍNIOS CAMPO BELO IND. E COM. LTDA.", "AVENIDA CENTRAL, 2733 - CENTRO", "SALVADOR/BA", "41920-839"], ["1000767", "LATICÍNIOS CERRADO LTDA", "RUA DAS FLORES, 851 - JARDIM DAS ROSAS", "SALVADOR/BA", "41867-242"], ["1001274", "LATICÍNIOS CORDILHEIRA LTDA", "RUA DAS PALMEIRAS, 2061 - DISTRITO INDUSTRIAL", "SALVADOR/BA", "41115-118"], ["1003042", "LATICÍNIOS CRUZEIRO S.A.", "RUA DA ESTAÇÃO, 2990 - VILA NOVA", "SALVADOR/BA", "41500-845"], ["1000676", "LATICÍNIOS ESTRELA IND. E COM. LTDA.", "AVENIDA CENTRAL, 704 - CENTRO", "SALVADOR/BA", "41497-901"], ["1002158", "LATICÍNIOS FALCÃO S.A.", "RUA DA ESTAÇÃO, 3887 - BAIRRO DAS INDÚSTRIAS", "RIO DE JANEIRO/RJ", "20100-174"], ["1001898", "LATICÍNIOS HORIZONTE IND. E COM. LTDA.", "AVENIDA CENTRAL, 2349 - JARDIM AMÉRICA", "RECIFE/PE", "50355-372"], ["1000494", "LATICÍNIOS JACARANDÁ IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 3827 - BAIRRO DAS INDÚSTRIAS", "RECIFE/PE", "50595-419"], ["1002106", "LATICÍNIOS MARACANÃ LTDA.", "RUA SETE DE SETEMBRO, 4714 - JARDIM EUROPA", "CURITIBA/PR", "81228-803"], ["1002912", "LATICÍNIOS PANTANAL DO BRASIL LTDA.", "RUA JOÃO DE BARRO, 2874 - VILA NOVA", "RIO DE JANEIRO/RJ", "20138-477"], ["1002769", "LATICÍNIOS QUERO-QUERO DO BRASIL LTDA.", "RUA DA ESTAÇÃO, 1002 - PARQUE INDUSTRIAL", "GOIÂNIA/GO", "74400-386"], ["1002288", "LATICÍNIOS SABIÁ DO BRASIL LTDA.", "AVENIDA DAS NAÇÕES, 3903 - JARDIM DAS ROSAS", "MANAUS/AM", "69340-660"], ["1002418", "LATICÍNIOS SERRA AZUL DO BRASIL LTDA.", "RUA JOÃO DE BARRO, 1172 - VILA ESPERANÇA", "SÃO PAULO/SP", "01153-826"], ["1001326", "LATICÍNIOS SOLAR LTDA", "RUA SETE DE SETEMBRO, 1772 - VILA NOVA", "JOINVILLE/SC", "89450-303"], ["1002990", "LATICÍNIOS VECTRA IND. E COM. LTDA.", "AVENIDA CENTRAL, 4384 - CENTRO", "SOROCABA/SP", "18768-267"], ["1001690", "LATICÍNIOS VECTRA LTDA.", "RUA DAS ACÁCIAS, 2211 - CENTRO", "SÃO PAULO/SP", "01808-322"], ["1002834", "METALÚRGICA ARARA AZUL IND. E COM. LTDA.", "RUA DA ESTAÇÃO, 833 - BAIRRO DAS INDÚSTRIAS", "GOIÂNIA/GO", "74137-204"], ["1002548", "METALÚRGICA ARARAS S.A.", "AVENIDA DAS NAÇÕES, 3325 - DISTRITO INDUSTRIAL", "CONTAGEM/MG", "32484-135"], ["1003887", "METALÚRGICA CANDEIAS IND. E COM. LTDA.", "AVENIDA INDUSTRIAL, 4403 - BAIRRO DAS INDÚSTRIAS", "RIBEIRÃO PRETO/SP", "14583-959"], ["1001469", "METALÚRGICA CEDRO LTDA.", "RUA DOS INDUSTRIÁRIOS, 3282 - DISTRITO INDUSTRIAL", "JUNDIAÍ/SP", "13503-123"], ["1002626", "METALÚRGICA LUAR LTDA", "RUA DAS ACÁCIAS, 3825 - VILA ESPERANÇA", "JUNDIAÍ/SP", "13908-357"], ["1003094", "METALÚRGICA MANTIQUEIRA IND. E COM. LTDA.", "RUA DOS INDUSTRIÁRIOS, 3259 - CENTRO", "JOINVILLE/SC", "89686-737"], ["1002535", "METALÚRGICA MARACANÃ S.A.", "RUA DO COMÉRCIO, 2993 - BAIRRO DAS INDÚSTRIAS", "RIBEIRÃO PRETO/SP", "14131-746"], ["1002509", "METALÚRGICA NOVA ERA IND. E COM. LTDA.", "RUA DO COMÉRCIO, 2538 - VILA ESPERANÇA", "CONTAGEM/MG", "32189-150"], ["1002886", "METALÚRGICA PLANALTO LTDA.", "AVENIDA DO CONTORNO, 1466 - BAIRRO DAS INDÚSTRIAS", "JOINVILLE/SC", "89717-366"], ["1003952", "MINERAÇÃO ATLAS S.A.", "RUA DAS PALMEIRAS, 262 - DISTRITO INDUSTRIAL", "RIO DE JANEIRO/RJ", "20241-809"], ["1003068", "MINERAÇÃO CANDEIAS LTDA.", "AVENIDA DO CONTORNO, 751 - VILA ESPERANÇA", "JUNDIAÍ/SP", "13691-473"], ["1003900", "MINERAÇÃO CANÁRIO S.A.", "RUA DAS FLORES, 62 - DISTRITO INDUSTRIAL", "JOINVILLE/SC", "89547-842"], ["1002574", "MINERAÇÃO CORDILHEIRA DO BRASIL LTDA.", "RUA DOS IPÊS, 4971 - JARDIM EUROPA", "JUNDIAÍ/SP", "13471-378"], ["1001495", "MINERAÇÃO ITAÚNA DO BRASIL LTDA.", "RUA DA ESTAÇÃO, 1281 - VILA ESPERANÇA", "RECIFE/PE", "50882-433"], ["1002821", "MINERAÇÃO ORION IND. E COM. LTDA.", "RUA SETE DE SETEMBRO, 2024 - JARDIM DAS ROSAS", "CONTAGEM/MG", "32638-336"], ["1001768", "MINERAÇÃO PLANALTO IND. E COM. LTDA.", "RUA DAS FLORES, 4303 - PARQUE INDUSTRIAL", "SOROCABA/SP", "18468-235"], ["1003276", "MINERAÇÃO PRIMAVERA LTDA", "RUA DOS INDUSTRIÁRIOS, 201 - DISTRITO INDUSTRIAL", "CURITIBA/PR", "81733-601"], ["1001924", "MINERAÇÃO PRIMUS DO BRASIL LTDA.", "AVENIDA INDUSTRIAL, 247 - VILA ESPERANÇA", "SALVADOR/BA", "41996-667"], ["1003536", "MINERAÇÃO RIO BRANCO S.A.", "RUA SETE DE SETEMBRO, 2550 - JARDIM EUROPA", "JOINVILLE/SC", "89850-101"], ["1000637", "MINERAÇÃO SANTA CLARA LTDA.", "RUA DAS FLORES, 2873 - JARDIM EUROPA", "MANAUS/AM", "69182-325"], ["1002431", "MINERAÇÃO SERRA AZUL LTDA.", "RUA DOS INDUSTRIÁRIOS, 3232 - BAIRRO DAS INDÚSTRIAS", "SÃO PAULO/SP", "01829-421"], ["1002964", "MINERAÇÃO SIGMA DO BRASIL LTDA.", "AVENIDA DAS NAÇÕES, 267 - BAIRRO DAS INDÚSTRIAS", "JUNDIAÍ/SP", "13661-595"], ["1003211", "MINERAÇÃO SOLAR LTDA.", "AVENIDA BRASIL, 1234 - VILA NOVA", "BELO HORIZONTE/MG", "30842-935"], ["1001716", "MINERAÇÃO TUPI LTDA.", "RUA DAS ACÁCIAS, 980 - JARDIM DAS ROSAS", "CURITIBA/PR", "81304-419"], ["1003523", "MINERAÇÃO VALE VERDE IND. E COM. LTDA.", "AVENIDA DAS NAÇÕES, 1457 - DISTRITO INDUSTRIAL", "CURITIBA/PR", "81403-939"], ["1001209", "MINERAÇÃO VENTURA IND. E COM. LTDA.", "RUA DAS PALMEIRAS, 2788 - JARDIM DAS ROSAS", "CURITIBA/PR", "81527-374"], ["1000650", "PAPEL E CELULOSE ATLÂNTICA LTDA", "AVENIDA DAS NAÇÕES, 3860 - VILA NOVA", "JUNDIAÍ/SP", "13445-309"], ["1003731", "PAPEL E CELULOSE BANDEIRANTES LTDA.", "AVENIDA DAS NAÇÕES, 1175 - VILA ESPERANÇA", "GOIÂNIA/GO", "74304-630"], ["1003822", "PAPEL E CELULOSE BEM-TE-VI S.A.", "RUA SETE DE SETEMBRO, 440 - PARQUE INDUSTRIAL", "RECIFE/PE", "50751-667"], ["1003185", "PAPEL E CELULOSE BOA VISTA LTDA", "AVENIDA DO CONTORNO, 1616 - BAIRRO DAS INDÚSTRIAS", "PORTO ALEGRE/RS", "90287-678"], ["1000832", "PAPEL E CELULOSE CORDILHEIRA LTDA", "RUA DOS IPÊS, 4243 - VILA ESPERANÇA", "RECIFE/PE", "50946-999"], ["1002171", "PAPEL E CELULOSE FALCÃO IND. E COM. LTDA.", "RUA DOS IPÊS, 4334 - BAIRRO DAS INDÚSTRIAS", "CONTAGEM/MG", "32559-354"], ["1002925", "PAPEL E CELULOSE FALCÃO LTDA.", "RUA DOS INDUSTRIÁRIOS, 371 - VILA NOVA", "BELO HORIZONTE/MG", "30361-139"], ["1002054", "PAPEL E CELULOSE FÊNIX S.A.", "RUA DOS INDUSTRIÁRIOS, 2811 - JARDIM DAS ROSAS", "JUNDIAÍ/SP", "13193-426"], ["1001417", "PAPEL E CELULOSE GUARANI LTDA.", "ESTRADA MUNICIPAL, 2660 - VILA NOVA", "BELO HORIZONTE/MG", "30135-416"], ["1003549", "PAPEL E CELULOSE LINCE IND. E COM. LTDA.", "RUA DAS PALMEIRAS, 1825 - JARDIM AMÉRICA", "RIO DE JANEIRO/RJ", "20397-730"], ["1003692", "PAPEL E CELULOSE LINCE LTDA.", "RUA DOS INDUSTRIÁRIOS, 13 - DISTRITO INDUSTRIAL", "RIBEIRÃO PRETO/SP", "14163-644"], ["1001625", "PAPEL E CELULOSE LITORAL S.A.", "RUA SETE DE SETEMBRO, 1933 - VILA NOVA", "RECIFE/PE", "50336-857"], ["1003354", "PAPEL E CELULOSE MIRANTE LTDA.", "ESTRADA MUNICIPAL, 3105 - JARDIM AMÉRICA", "SALVADOR/BA", "41126-977"], ["1004082", "PAPEL E CELULOSE MONTE CLARO LTDA", "AVENIDA INDUSTRIAL, 4258 - CENTRO", "SÃO PAULO/SP", "01455-580"], ["1003978", "PAPEL E CELULOSE ORION DO BRASIL LTDA.", "AVENIDA DO CONTORNO, 4847 - JARDIM EUROPA", "JUNDIAÍ/SP", "13304-937"], ["1002197", "PAPEL E CELULOSE PANTANAL IND. E COM. LTDA.", "AVENIDA BRASIL, 3756 - CENTRO", "GOIÂNIA/GO", "74664-895"], ["1001014", "PAPEL E CELULOSE QUERO-QUERO S.A.", "RUA SETE DE SETEMBRO, 1012 - JARDIM AMÉRICA", "GOIÂNIA/GO", "74833-758"], ["1002379", "PAPEL E CELULOSE SERRA AZUL DO BRASIL LTDA.", "RUA SETE DE SETEMBRO, 2426 - CENTRO", "RIBEIRÃO PRETO/SP", "14738-607"], ["1000429", "PAPEL E CELULOSE SÃO BENTO LTDA.", "AVENIDA DAS NAÇÕES, 3619 - JARDIM AMÉRICA", "JUNDIAÍ/SP", "13212-448"], ["1000364", "PAPEL E CELULOSE TITÃ DO BRASIL LTDA.", "RUA DOS INDUSTRIÁRIOS, 2162 - PARQUE INDUSTRIAL", "PORTO ALEGRE/RS", "90104-249"], ["1001118", "PAPEL E CELULOSE TUCANO LTDA", "RUA DOS IPÊS, 868 - CENTRO", "RIBEIRÃO PRETO/SP", "14371-378"], ["1000858", "PAPEL E CELULOSE ÁGUIA S.A.", "AVENIDA DO CONTORNO, 3615 - JARDIM AMÉRICA", "SÃO PAULO/SP", "01723-104"], ["1002184", "PLÁSTICOS AROEIRA LTDA", "AVENIDA BRASIL, 1843 - JARDIM AMÉRICA", "SALVADOR/BA", "41255-634"], ["1002522", "PLÁSTICOS ATLÂNTICA LTDA.", "RUA DAS ACÁCIAS, 1613 - JARDIM EUROPA", "RIO DE JANEIRO/RJ", "20654-557"], ["1003224", "PLÁSTICOS BANDEIRANTES LTDA", "AVENIDA DAS NAÇÕES, 346 - JARDIM DAS ROSAS", "MANAUS/AM", "69962-875"], ["1003367", "PLÁSTICOS CANDEIAS IND. E COM. LTDA.", "RUA JOÃO DE BARRO, 907 - VILA NOVA", "JUNDIAÍ/SP", "13234-603"], ["1001001", "PLÁSTICOS ESTRELA DO BRASIL LTDA.", "AVENIDA BRASIL, 1981 - VILA ESPERANÇA", "BELO HORIZONTE/MG", "30174-317"], ["1000286", "PLÁSTICOS GIRASSOL DO BRASIL LTDA.", "RUA SETE DE SETEMBRO, 1069 - VILA NOVA", "SALVADOR/BA", "41507-500"], ["1000780", "PLÁSTICOS HORIZONTE LTDA.", "AVENIDA DO CONTORNO, 1605 - VILA NOVA", "CONTAGEM/MG", "32128-357"], ["1002366", "PLÁSTICOS JACARANDÁ DO BRASIL LTDA.", "AVENIDA DAS NAÇÕES, 2563 - VILA NOVA", "CURITIBA/PR", "81336-576"], ["1002223", "PLÁSTICOS JACARANDÁ IND. E COM. LTDA.", "RUA DAS FLORES, 2498 - JARDIM AMÉRICA", "GOIÂNIA/GO", "74741-357"], ["1001599", "PLÁSTICOS JACARANDÁ S.A.", "AVENIDA BRASIL, 4130 - JARDIM DAS ROSAS", "SALVADOR/BA", "41194-775"], ["1000741", "PLÁSTICOS LITORAL LTDA.", "AVENIDA CENTRAL, 1207 - BAIRRO DAS INDÚSTRIAS", "SALVADOR/BA", "41773-458"], ["1000013", "PLÁSTICOS LITORAL S.A.", "AVENIDA BRASIL, 3005 - DISTRITO INDUSTRIAL", "JOINVILLE/SC", "89619-319"], ["1001989", "PLÁSTICOS LUAR S.A.", "AVENIDA CENTRAL, 2141 - VILA ESPERANÇA", "RIO DE JANEIRO/RJ", "20771-344"], ["1000325", "PLÁSTICOS MONTE CLARO IND. E COM. LTDA.", "ESTRADA MUNICIPAL, 2290 - VILA ESPERANÇA", "RECIFE/PE", "50467-799"], ["1003315", "PLÁSTICOS PIONEIRA LTDA", "AVENIDA INDUSTRIAL, 3002 - CENTRO", "BELO HORIZONTE/MG", "30921-552"], ["1000624", "PLÁSTICOS PRIMAVERA S.A.", "RUA SETE DE SETEMBRO, 1596 - JARDIM EUROPA", "CURITIBA/PR", "81557-927"], ["1000312", "PLÁSTICOS PRIMUS LTDA.", "ESTRADA MUNICIPAL, 2286 - JARDIM AMÉRICA", "CONTAGEM/MG", "32938-540"], ["1001183", "PLÁSTICOS RIO BRANCO LTDA", "RUA DAS PALMEIRAS, 735 - PARQUE INDUSTRIAL", "SÃO JOSÉ DOS CAMPOS/SP", "12185-722"], ["1004108", "PLÁSTICOS SÃO BENTO DO BRASIL LTDA.", "AVENIDA BRASIL, 4716 - PARQUE INDUSTRIAL", "RECIFE/PE", "50274-546"], ["1002795", "PLÁSTICOS SÃO BENTO IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 2036 - JARDIM AMÉRICA", "RIBEIRÃO PRETO/SP", "14351-341"], ["1000416", "PLÁSTICOS TIETÊ LTDA", "AVENIDA BRASIL, 3954 - VILA ESPERANÇA", "CONTAGEM/MG", "32163-295"], ["1000390", "PLÁSTICOS TUPI LTDA", "ESTRADA MUNICIPAL, 452 - BAIRRO DAS INDÚSTRIAS", "RECIFE/PE", "50991-898"], ["1002899", "PLÁSTICOS ÁGUIA DO BRASIL LTDA.", "RUA DA ESTAÇÃO, 61 - CENTRO", "SALVADOR/BA", "41752-710"], ["1003796", "QUÍMICA ARARA AZUL IND. E COM. LTDA.", "RUA DOS INDUSTRIÁRIOS, 1860 - CENTRO", "CURITIBA/PR", "81367-337"], ["1003991", "QUÍMICA ARARA AZUL LTDA.", "ESTRADA MUNICIPAL, 550 - VILA ESPERANÇA", "RECIFE/PE", "50209-352"], ["1002561", "QUÍMICA BEM-TE-VI LTDA.", "AVENIDA BRASIL, 517 - PARQUE INDUSTRIAL", "CURITIBA/PR", "81299-865"], ["1000845", "QUÍMICA BEM-TE-VI S.A.", "RUA DOS INDUSTRIÁRIOS, 4366 - JARDIM AMÉRICA", "JOINVILLE/SC", "89636-622"], ["1003718", "QUÍMICA CANDEIAS DO BRASIL LTDA.", "RUA DA ESTAÇÃO, 869 - DISTRITO INDUSTRIAL", "MANAUS/AM", "69727-664"], ["1002249", "QUÍMICA CERRADO DO BRASIL LTDA.", "ESTRADA MUNICIPAL, 4785 - VILA NOVA", "SÃO JOSÉ DOS CAMPOS/SP", "12497-367"], ["1002262", "QUÍMICA CORDILHEIRA LTDA.", "RUA DA ESTAÇÃO, 4933 - DISTRITO INDUSTRIAL", "RIBEIRÃO PRETO/SP", "14110-650"], ["1002067", "QUÍMICA HORIZONTE LTDA.", "RUA DO COMÉRCIO, 2126 - VILA NOVA", "RIBEIRÃO PRETO/SP", "14120-867"], ["1000663", "QUÍMICA MANTIQUEIRA DO BRASIL LTDA.", "RUA JOÃO DE BARRO, 25 - BAIRRO DAS INDÚSTRIAS", "CURITIBA/PR", "81768-452"], ["1001482", "QUÍMICA MONTE CLARO IND. E COM. LTDA.", "RUA SETE DE SETEMBRO, 1917 - CENTRO", "SÃO JOSÉ DOS CAMPOS/SP", "12699-641"], ["1001560", "QUÍMICA PANTANAL S.A.", "RUA DOS INDUSTRIÁRIOS, 2964 - CENTRO", "SÃO PAULO/SP", "01485-955"], ["1002743", "QUÍMICA PUMA S.A.", "RUA DOS INDUSTRIÁRIOS, 1928 - JARDIM AMÉRICA", "CURITIBA/PR", "81526-571"], ["1001508", "QUÍMICA RIO BRANCO IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 1234 - PARQUE INDUSTRIAL", "RIO DE JANEIRO/RJ", "20841-733"], ["1004004", "QUÍMICA TUCANO LTDA", "AVENIDA DAS NAÇÕES, 927 - DISTRITO INDUSTRIAL", "RIBEIRÃO PRETO/SP", "14135-968"], ["1000377", "QUÍMICA TUPI S.A.", "ESTRADA MUNICIPAL, 3034 - JARDIM EUROPA", "CONTAGEM/MG", "32228-807"], ["1004043", "QUÍMICA ÁGUIA S.A.", "RUA SETE DE SETEMBRO, 181 - JARDIM EUROPA", "CONTAGEM/MG", "32362-389"], ["1000234", "SANEAMENTO AROEIRA DO BRASIL LTDA.", "RUA SETE DE SETEMBRO, 3893 - CENTRO", "JUNDIAÍ/SP", "13162-848"], ["1001170", "SANEAMENTO BANDEIRANTES LTDA", "RUA SETE DE SETEMBRO, 481 - JARDIM AMÉRICA", "JUNDIAÍ/SP", "13535-174"], ["1003250", "SANEAMENTO FALCÃO DO BRASIL LTDA.", "ESTRADA MUNICIPAL, 2518 - VILA ESPERANÇA", "CURITIBA/PR", "81415-696"], ["1001040", "SANEAMENTO HORIZONTE DO BRASIL LTDA.", "RUA DAS FLORES, 781 - VILA ESPERANÇA", "RIBEIRÃO PRETO/SP", "14598-266"], ["1000143", "SANEAMENTO IPÊ AMARELO IND. E COM. LTDA.", "RUA JOÃO DE BARRO, 3722 - JARDIM EUROPA", "CURITIBA/PR", "81406-354"], ["1000299", "SANEAMENTO JACARANDÁ LTDA", "AVENIDA DO CONTORNO, 4077 - CENTRO", "MANAUS/AM", "69270-559"], ["1000338", "SANEAMENTO JACARANDÁ LTDA.", "AVENIDA INDUSTRIAL, 1900 - JARDIM AMÉRICA", "MANAUS/AM", "69184-280"], ["1002951", "SANEAMENTO MARACANÃ IND. E COM. LTDA.", "AVENIDA CENTRAL, 3055 - JARDIM AMÉRICA", "CONTAGEM/MG", "32735-419"], ["1003627", "SANEAMENTO MONTE CLARO DO BRASIL LTDA.", "RUA DOS INDUSTRIÁRIOS, 1113 - DISTRITO INDUSTRIAL", "CURITIBA/PR", "81920-349"], ["1001027", "SANEAMENTO PRIMAVERA S.A.", "RUA DO COMÉRCIO, 1181 - PARQUE INDUSTRIAL", "GOIÂNIA/GO", "74240-578"], ["1002470", "SANEAMENTO PRIMUS S.A.", "RUA DAS FLORES, 3111 - JARDIM EUROPA", "GOIÂNIA/GO", "74439-553"], ["1002327", "SANEAMENTO QUERO-QUERO LTDA.", "AVENIDA INDUSTRIAL, 3042 - VILA NOVA", "GOIÂNIA/GO", "74604-134"], ["1000468", "SANEAMENTO SABIÁ LTDA", "RUA JOÃO DE BARRO, 3092 - JARDIM AMÉRICA", "RIBEIRÃO PRETO/SP", "14749-358"], ["1000715", "SANEAMENTO SIGMA DO BRASIL LTDA.", "RUA DAS ACÁCIAS, 3298 - CENTRO", "CONTAGEM/MG", "32842-262"], ["1002639", "SANEAMENTO TITÃ S.A.", "AVENIDA INDUSTRIAL, 4052 - JARDIM AMÉRICA", "MANAUS/AM", "69608-287"], ["1002314", "SANEAMENTO VALE VERDE LTDA", "RUA DAS ACÁCIAS, 3450 - CENTRO", "RIBEIRÃO PRETO/SP", "14363-333"], ["1001157", "TRANSPORTES ATLÂNTICA S.A.", "ESTRADA MUNICIPAL, 4684 - BAIRRO DAS INDÚSTRIAS", "MANAUS/AM", "69817-434"], ["1002028", "TRANSPORTES BOA VISTA DO BRASIL LTDA.", "ESTRADA MUNICIPAL, 1812 - BAIRRO DAS INDÚSTRIAS", "CURITIBA/PR", "81440-877"], ["1003445", "TRANSPORTES CANDEIAS DO BRASIL LTDA.", "RUA DOS INDUSTRIÁRIOS, 2288 - JARDIM EUROPA", "CONTAGEM/MG", "32485-272"], ["1002600", "TRANSPORTES CEDRO S.A.", "RUA DO COMÉRCIO, 2267 - PARQUE INDUSTRIAL", "RIO DE JANEIRO/RJ", "20103-838"], ["1001261", "TRANSPORTES IPÊ AMARELO LTDA.", "RUA DAS ACÁCIAS, 4106 - JARDIM AMÉRICA", "SÃO JOSÉ DOS CAMPOS/SP", "12377-455"], ["1003744", "TRANSPORTES PANTANAL S.A.", "AVENIDA CENTRAL, 4162 - VILA ESPERANÇA", "PORTO ALEGRE/RS", "90932-727"], ["1001885", "TRANSPORTES SOLAR DO BRASIL LTDA.", "RUA SETE DE SETEMBRO, 405 - PARQUE INDUSTRIAL", "SALVADOR/BA", "41204-152"], ["1002145", "TRANSPORTES TUCANO DO BRASIL LTDA.", "AVENIDA DO CONTORNO, 188 - JARDIM AMÉRICA", "RECIFE/PE", "50133-535"], ["1001976", "TRANSPORTES VECTRA LTDA.", "RUA DO COMÉRCIO, 2318 - PARQUE INDUSTRIAL", "CONTAGEM/MG", "32361-856"], ["1001820", "TRANSPORTES VENTURA LTDA.", "RUA DOS INDUSTRIÁRIOS, 3419 - JARDIM EUROPA", "RIO DE JANEIRO/RJ", "20485-423"], ["1003848", "TÊXTIL COLIBRI S.A.", "RUA DOS IPÊS, 1787 - CENTRO", "MANAUS/AM", "69619-115"], ["1000078", "TÊXTIL CONDOR S.A.", "RUA SETE DE SETEMBRO, 3443 - JARDIM AMÉRICA", "SOROCABA/SP", "18653-220"], ["1003679", "TÊXTIL DELTA LTDA", "RUA DAS ACÁCIAS, 4940 - JARDIM DAS ROSAS", "PORTO ALEGRE/RS", "90851-604"], ["1000936", "TÊXTIL FALCÃO S.A.", "RUA DA ESTAÇÃO, 529 - BAIRRO DAS INDÚSTRIAS", "SÃO PAULO/SP", "01433-727"], ["1001651", "TÊXTIL FÊNIX IND. E COM. LTDA.", "AVENIDA CENTRAL, 2363 - DISTRITO INDUSTRIAL", "MANAUS/AM", "69731-747"], ["1002002", "TÊXTIL ITAÚNA LTDA.", "RUA DAS ACÁCIAS, 4575 - VILA ESPERANÇA", "SÃO JOSÉ DOS CAMPOS/SP", "12222-271"], ["1003705", "TÊXTIL JACARANDÁ LTDA", "AVENIDA INDUSTRIAL, 1530 - VILA NOVA", "SÃO PAULO/SP", "01263-159"], ["1001534", "TÊXTIL MARACANÃ LTDA.", "RUA DAS FLORES, 4151 - JARDIM AMÉRICA", "RIO DE JANEIRO/RJ", "20636-870"], ["1001079", "TÊXTIL MIRANTE S.A.", "AVENIDA BRASIL, 3007 - DISTRITO INDUSTRIAL", "BELO HORIZONTE/MG", "30446-667"], ["1003055", "TÊXTIL QUERO-QUERO IND. E COM. LTDA.", "AVENIDA DAS NAÇÕES, 58 - VILA ESPERANÇA", "CONTAGEM/MG", "32260-533"], ["1001404", "TÊXTIL TUPI LTDA", "RUA SETE DE SETEMBRO, 3662 - DISTRITO INDUSTRIAL", "SOROCABA/SP", "18369-472"], ["1003029", "TÊXTIL VENTURA LTDA.", "RUA DO COMÉRCIO, 3402 - VILA ESPERANÇA", "MANAUS/AM", "69118-984"], ["1000351", "TÊXTIL VENTURA S.A.", "AVENIDA DAS NAÇÕES, 1921 - DISTRITO INDUSTRIAL", "SOROCABA/SP", "18596-951"], ["1003861", "USINA AROEIRA DO BRASIL LTDA.", "RUA SETE DE SETEMBRO, 1944 - VILA NOVA", "SOROCABA/SP", "18263-864"], ["1001248", "USINA AURORA DO BRASIL LTDA.", "RUA SETE DE SETEMBRO, 2508 - JARDIM DAS ROSAS", "MANAUS/AM", "69877-310"], ["1003575", "USINA BEM-TE-VI IND. E COM. LTDA.", "RUA DAS ACÁCIAS, 1871 - DISTRITO INDUSTRIAL", "SOROCABA/SP", "18122-155"], ["1001963", "USINA CANDEIAS LTDA", "RUA DOS IPÊS, 4516 - JARDIM AMÉRICA", "MANAUS/AM", "69274-583"], ["1003510", "USINA CERRADO LTDA", "RUA DOS INDUSTRIÁRIOS, 2961 - JARDIM EUROPA", "PORTO ALEGRE/RS", "90882-183"], ["1000221", "USINA CERRADO LTDA.", "RUA JOÃO DE BARRO, 4078 - BAIRRO DAS INDÚSTRIAS", "BELO HORIZONTE/MG", "30170-960"], ["1001196", "USINA CONDOR LTDA", "AVENIDA DAS NAÇÕES, 555 - PARQUE INDUSTRIAL", "RECIFE/PE", "50983-224"], ["1000052", "USINA CORDILHEIRA S.A.", "AVENIDA DAS NAÇÕES, 4785 - DISTRITO INDUSTRIAL", "JUNDIAÍ/SP", "13690-699"], ["1001144", "USINA CRUZEIRO LTDA.", "AVENIDA INDUSTRIAL, 2128 - VILA ESPERANÇA", "RECIFE/PE", "50252-649"], ["1000273", "USINA ESTRELA LTDA", "RUA JOÃO DE BARRO, 969 - BAIRRO DAS INDÚSTRIAS", "SOROCABA/SP", "18160-323"], ["1003328", "USINA GIRASSOL LTDA.", "ESTRADA MUNICIPAL, 343 - DISTRITO INDUSTRIAL", "JOINVILLE/SC", "89751-233"], ["1001430", "USINA JAGUAR IND. E COM. LTDA.", "RUA DO COMÉRCIO, 1508 - DISTRITO INDUSTRIAL", "RIBEIRÃO PRETO/SP", "14443-490"], ["1001300", "USINA MARACANÃ IND. E COM. LTDA.", "RUA DOS IPÊS, 3672 - CENTRO", "RIBEIRÃO PRETO/SP", "14774-938"], ["1002652", "USINA MARACANÃ LTDA.", "RUA DA ESTAÇÃO, 2494 - JARDIM AMÉRICA", "SÃO PAULO/SP", "01721-341"], ["1000182", "USINA MIRANTE LTDA", "AVENIDA BRASIL, 4203 - VILA ESPERANÇA", "JUNDIAÍ/SP", "13268-875"], ["1002938", "USINA MIRANTE S.A.", "RUA DAS FLORES, 1676 - DISTRITO INDUSTRIAL", "PORTO ALEGRE/RS", "90938-435"], ["1004095", "USINA PANTANAL IND. E COM. LTDA.", "RUA DAS PALMEIRAS, 4416 - VILA NOVA", "RIO DE JANEIRO/RJ", "20831-982"], ["1003484", "USINA RIO BRANCO DO BRASIL LTDA.", "RUA DAS FLORES, 866 - PARQUE INDUSTRIAL", "PORTO ALEGRE/RS", "90648-744"], ["1003640", "USINA VENTURA IND. E COM. LTDA.", "RUA DOS INDUSTRIÁRIOS, 3703 - CENTRO", "RIO DE JANEIRO/RJ", "20165-753"]];
+const FIXOS={};
+D0.forEach(r=>{if(FIXOS[r[0]])r[1]=FIXOS[r[0]];});
+function lerJ(k,pad){try{return JSON.parse(localStorage.getItem(k)||pad);}catch(e){return JSON.parse(pad);}}
+function gravar(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
+let CORR=lerJ('sedex_correcoes','{}');
+const D=D0.map(r=>{const c=CORR[r[0]];return c?[r[0],c.nome,r[2],r[3],r[4],c]:r;});
+const $=id=>document.getElementById(id);
+const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+let IDX=D.map(r=>norm(r[1]));
+let atual=null, aba='etq';
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function hoje(){const d=new Date();return d.getDate()+' de '+MESES[d.getMonth()]+' de '+d.getFullYear();}
+$('f_data').value=hoje();
+$('f_cnpjchp').value=lerJ('sedex_cnpj_chp','""');
+
+function limpaEnd(e){
+  e=(e||'').replace(/\.{3,}/g,'').replace(/\b(AVENIDA|RUA|ESTRADA|RODOVIA|ALAMEDA)\s+\1\b/g,'$1').trim();
+  let p=e.split(' - ').map(s=>s.trim()).filter(s=>s&&!/^[.\s-]*$/.test(s));
+  if(p.length<=1) return [p[0]||'', ''];
+  const bai=p.pop();
+  return [p.join(' - '), bai];
+}
+function fmtCep(c){const d=(c||'').replace(/\D/g,'');return d.length===8?d.slice(0,5)+'-'+d.slice(5):(c||'');}
+function fmtNF(v){const d=(v||'').replace(/\D/g,'');if(!d)return '';return d.padStart(6,'0').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function fmtDoc(v){const d=(v||'').replace(/\D/g,'');
+  if(d.length===14)return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+  if(d.length===11)return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,'$1.$2.$3-$4');return (v||'').trim();}
+function lerNum(v){v=(v||'').trim();if(!v)return 0;v=v.replace(/\s|R\$/g,'');if(v.includes(','))v=v.replace(/\./g,'').replace(',','.');else if(/^\d{1,3}(\.\d{3})+$/.test(v))v=v.replace(/\./g,'');const n=parseFloat(v);return isNaN(n)?0:n;}
+const fmtBR=(n,c=2)=>n.toLocaleString('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c});
+function fmtQtd(n){return Number.isInteger(n)?n.toLocaleString('pt-BR'):fmtBR(n,3).replace(/0+$/,'').replace(/,$/,'');}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ---- busca ---- */
+let achados=[],sel=0;
+function buscar(){
+  const q=$('busca').value.trim();const L=$('lista');L.innerHTML='';achados=[];sel=0;
+  if(!q)return;
+  const dig=q.replace(/\D/g,'');
+  if(/^\d+$/.test(q)){
+    const alvo=dig.padStart(7,'0');achados=D.filter(r=>r[0]===alvo);
+    if(!achados.length)achados=D.filter(r=>r[0].replace(/^0+/,'').startsWith(dig.replace(/^0+/,''))).slice(0,40);
+  }else{
+    const fracas=['LTDA','LTDA.','ME','EPP','S/A','SA','DE','DA','DO','DAS','DOS','E','&','-'];
+    let ps=norm(q).split(/\s+/).filter(p=>p&&!fracas.includes(p));
+    if(!ps.length)ps=norm(q).split(/\s+/).filter(Boolean);
+    while(ps.length){for(let i=0;i<D.length&&achados.length<60;i++){if(ps.every(p=>IDX[i].includes(p)))achados.push(D[i]);}if(achados.length)break;ps=ps.slice(0,-1);}
+  }
+  if(!achados.length){L.innerHTML='<li class="vazio">Nenhum cliente com esse código ou nome. Confira a digitação ou tente só uma parte do nome.</li>';return;}
+  achados.forEach((r,i)=>{const li=document.createElement('li');if(i===0)li.className='sel';
+    li.innerHTML='<span class="cod">'+r[0]+'</span><span>'+esc(r[1])+'<span class="cid">'+esc(r[3])+'</span></span>';
+    li.onclick=()=>escolher(r);L.appendChild(li);});
+}
+function escolher(r){
+  const [rua,bai]=limpaEnd(r[2]);const m=(r[3]||'').match(/^(.*)\/([A-Z]{2})$/);
+  $('f_nome').value=r[1];$('f_end').value=rua;$('f_bai').value=bai;$('f_cep').value=fmtCep(r[4]);
+  $('f_cid').value=m?m[1].trim():r[3];$('f_uf').value=m?m[2]:'';$('f_doc').value='';
+  const c=r[5];
+  if(c){$('f_nome').value=c.nome;$('f_end').value=c.end;$('f_bai').value=c.bai;$('f_cep').value=c.cep;$('f_cid').value=c.cid;$('f_uf').value=c.uf;$('f_doc').value=c.doc||'';}
+  atual=r[0];$('f_nf').value='';$('f_ac').value='';
+  const n=$('f_nome').value.trim();
+  const cortado=!c&&!FIXOS[r[0]]&&(/\s(DE|DA|DO|DAS|DOS|E|EM|P\/|COM\.?|IND\.?)$/i.test(n)||n.length>=42);
+  $('aviso').style.display=cortado?'block':'none';
+  $('salvo').textContent=c?'Este cliente já tem dados corrigidos salvos neste computador.':'';
+  $('lista').innerHTML='';$('busca').value=r[0]+' - '+r[1];
+  atualiza();(aba==='etq'?$('f_nf'):($('f_doc').value?$('linhas').querySelector('input'):$('f_doc'))).focus();
+}
+$('busca').addEventListener('input',buscar);
+$('busca').addEventListener('keydown',e=>{
+  const lis=[...$('lista').querySelectorAll('li:not(.vazio)')];
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!lis.length)return;lis[sel]&&lis[sel].classList.remove('sel');sel=(sel+(e.key==='ArrowDown'?1:-1)+lis.length)%lis.length;lis[sel].classList.add('sel');lis[sel].scrollIntoView({block:'nearest'});}
+  if(e.key==='Enter'&&achados[sel]){e.preventDefault();escolher(achados[sel]);}
+});
+
+/* ---- itens da declaração ---- */
+function addLinha(){
+  const n=$('linhas').children.length+1;if(n>15)return;
+  const tr=document.createElement('tr');
+  tr.innerHTML='<td>'+n+'</td><td><input type="text" class="it_c"></td><td class="q"><input type="text" class="it_q num" inputmode="decimal"></td><td class="v"><input type="text" class="it_v num" inputmode="decimal"></td>';
+  tr.querySelectorAll('input').forEach(i=>i.addEventListener('input',atualiza));
+  tr.querySelector('.it_v').addEventListener('blur',e=>{const t=e.target.value.trim();if(t){e.target.value=fmtBR(lerNum(t));atualiza();}});
+  $('linhas').appendChild(tr);
+}
+for(let i=0;i<6;i++)addLinha();
+$('btLinha').onclick=()=>{addLinha();atualiza();};
+
+/* ---- desenhar ---- */
+function atualiza(){
+  const v=id=>$(id).value.trim();
+  const ac=v('f_ac');
+  // etiqueta
+  $('e_nome').textContent=v('f_nome')||'\u00a0';
+  $('e_ac').style.display=ac?'block':'none';$('e_ac').textContent=ac?'A/C: '+ac:'';
+  $('e_nome').classList.toggle('comac',!!ac);
+  $('e_end').textContent=v('f_end')||'\u00a0';
+  $('e_bai').textContent=v('f_bai')?'Bairro: '+v('f_bai'):'\u00a0';
+  const cid=[v('f_cid'),v('f_uf')].filter(Boolean).join(' - ');
+  $('e_cep').textContent=(v('f_cep')||cid)?('CEP: '+v('f_cep')+'\u00a0\u00a0'+cid):'\u00a0';
+  $('e_nf').textContent='Nota fiscal N° '+(fmtNF(v('f_nf'))||'____________');
+  const pago=document.querySelector('input[name=pg]:checked').value==='pago';
+  $('e_pago').innerHTML='Sedex&nbsp; Pago ('+(pago?'X':'&nbsp;&nbsp;')+')';
+  $('e_apagar').innerHTML='A pagar ('+(pago?'&nbsp;&nbsp;':'X')+')';
+  // declaração
+  $('d_nome').textContent=(v('f_nome')+(ac?' - A/C: '+ac:'')).toUpperCase();
+  $('d_end').textContent=[v('f_end'),v('f_bai')].filter(Boolean).join(' - ').toUpperCase();
+  $('d_cid').textContent=v('f_cid').toUpperCase();$('d_uf').textContent=v('f_uf').toUpperCase();
+  $('d_cep').textContent=v('f_cep');$('d_doc').textContent=fmtDoc(v('f_doc'));
+  $('d_cnpjchp').textContent=fmtDoc(v('f_cnpjchp'));
+  const trs=[...$('linhas').children];let tq=0,tv=0,html='';let usadas=0;
+  trs.forEach((tr,i)=>{const c=tr.querySelector('.it_c').value.trim(),qs=tr.querySelector('.it_q').value.trim(),vs=tr.querySelector('.it_v').value.trim();
+    if(c||qs||vs)usadas=i+1;});
+  const nlin=Math.max(6,usadas);
+  for(let i=0;i<nlin;i++){
+    const tr=trs[i];let c='',qs='',vs='',tem=false;
+    if(tr){c=tr.querySelector('.it_c').value.trim();qs=tr.querySelector('.it_q').value.trim();vs=tr.querySelector('.it_v').value.trim();tem=!!(c||qs||vs);}
+    const q=lerNum(qs),val=lerNum(vs);tq+=q;tv+=val;
+    html+='<tr><td class="c" style="border-left:0">'+(tem?i+1:'')+'</td><td>'+esc(c.toUpperCase())+'</td><td class="r">'+(qs?fmtQtd(q):'')+'</td><td class="r" style="border-right:0">'+(vs?fmtBR(val):'')+'</td></tr>';
+  }
+  $('d_itens').innerHTML=html;
+  $('d_tq').textContent=fmtQtd(tq);$('d_tv').textContent=fmtBR(tv);
+  const ps=v('f_peso');$('d_peso').textContent=ps?fmtBR(lerNum(ps),3):'';
+  $('d_data').textContent=(v('f_local')||'________________')+', '+(v('f_data')||'____ de ____________ de _______');
+}
+['f_nome','f_ac','f_end','f_bai','f_cep','f_cid','f_uf','f_nf','f_doc','f_peso','f_local','f_data','f_cnpjchp'].forEach(id=>$(id).addEventListener('input',atualiza));
+$('f_nf').addEventListener('blur',()=>{$('f_nf').value=fmtNF($('f_nf').value);atualiza();});
+$('f_cep').addEventListener('blur',()=>{$('f_cep').value=fmtCep($('f_cep').value);atualiza();});
+$('f_doc').addEventListener('blur',()=>{$('f_doc').value=fmtDoc($('f_doc').value);atualiza();});
+$('f_peso').addEventListener('blur',()=>{const t=$('f_peso').value.trim();if(t)$('f_peso').value=fmtBR(lerNum(t),3);atualiza();});
+$('f_cnpjchp').addEventListener('blur',()=>{$('f_cnpjchp').value=fmtDoc($('f_cnpjchp').value);gravar('sedex_cnpj_chp',$('f_cnpjchp').value);atualiza();});
+document.querySelectorAll('input[name=pg]').forEach(r=>r.addEventListener('change',atualiza));
+
+/* ---- salvar correções do cliente ---- */
+function salvarCorr(){
+  if(!atual)return;
+  const v=id=>$(id).value.trim();
+  const orig=D0.find(r=>r[0]===atual);if(!orig)return;
+  const [rua,bai]=limpaEnd(orig[2]);const m=(orig[3]||'').match(/^(.*)\/([A-Z]{2})$/);
+  const novo={nome:v('f_nome'),end:v('f_end'),bai:v('f_bai'),cep:v('f_cep'),cid:v('f_cid'),uf:v('f_uf'),doc:fmtDoc(v('f_doc'))};
+  const igual=novo.nome===orig[1]&&novo.end===rua&&novo.bai===bai&&novo.cep===fmtCep(orig[4])&&novo.cid===(m?m[1].trim():orig[3])&&novo.uf===(m?m[2]:'')&&!novo.doc;
+  if(igual)return;
+  CORR[atual]=novo;
+  if(gravar('sedex_correcoes',CORR)){
+    const i=D.findIndex(r=>r[0]===atual);D[i]=[orig[0],novo.nome,orig[2],orig[3],orig[4],novo];IDX[i]=norm(novo.nome);
+    $('salvo').textContent='Correção salva. Da próxima vez este cliente já vem assim.';$('aviso').style.display='none';
+  }
+}
+$('btSalvar').onclick=salvarCorr;
+$('btImp').onclick=()=>{
+  $('f_nf').value=fmtNF($('f_nf').value);
+  if($('f_cnpjchp').value.trim())gravar('sedex_cnpj_chp',fmtDoc($('f_cnpjchp').value));
+  salvarCorr();atualiza();window.print();
+};
+$('btLim').onclick=()=>{
+  atual=null;$('aviso').style.display='none';$('salvo').textContent='';
+  ['busca','f_nome','f_ac','f_end','f_bai','f_cep','f_cid','f_uf','f_nf','f_doc','f_peso'].forEach(id=>$(id).value='');
+  $('linhas').innerHTML='';for(let i=0;i<6;i++)addLinha();
+  $('f_data').value=hoje();$('lista').innerHTML='';
+  document.querySelector('input[value=pago]').checked=true;atualiza();$('busca').focus();
+};
+
+/* ---- abas ---- */
+function trocaAba(a){
+  aba=a;document.body.className='aba-'+a;
+  $('abaEtq').classList.toggle('on',a==='etq');$('abaDec').classList.toggle('on',a==='dec');
+  $('btImp').textContent=a==='etq'?'Imprimir etiqueta':'Imprimir declaração';
+}
+$('abaEtq').onclick=()=>trocaAba('etq');
+$('abaDec').onclick=()=>trocaAba('dec');
+atualiza();
+</script>
+</body>
+</html>

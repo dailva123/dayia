@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Estratégia de vendas por carteira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8ECEE; --surface:#F6F8F9; --surface2:#FFFFFF; --ink:#16222A; --muted:#5A6A74; --line:#C8D1D6;
+  --blue:#1D5E8C; --blue-soft:#DCE8F1;
+  --c-chave:#1D5E8C; --c-crescer:#6FA3C7; --c-esfriando:#D09A1C; --c-reativar:#BF512C; --c-adormecido:#8A7968; --c-nunca:#B9C2C8; --c-fora:#4E7D5B;
+  --good:#2F7A4A; --bad:#B23F2A;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10171C; --surface:#172229; --surface2:#1C2931; --ink:#E4EBEF; --muted:#94A4AE; --line:#2C3C46;
+    --blue:#5EA2D4; --blue-soft:#1C3444; --c-chave:#4E93C8; --c-crescer:#86B6D8; --c-nunca:#56646C; --c-adormecido:#8F7F70;
+    --good:#5DB47E; --bad:#E0735C;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10171C; --surface:#172229; --surface2:#1C2931; --ink:#E4EBEF; --muted:#94A4AE; --line:#2C3C46;
+  --blue:#5EA2D4; --blue-soft:#1C3444; --c-chave:#4E93C8; --c-crescer:#86B6D8; --c-nunca:#56646C; --c-adormecido:#8F7F70;
+  --good:#5DB47E; --bad:#E0735C;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+h1,h2,h3,.cond{font-family:"Barlow Condensed","Arial Narrow",sans-serif}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:14px}
+header.top h1{margin:0;font-size:clamp(28px,4vw,40px);font-weight:700;line-height:1.05;letter-spacing:.2px}
+header.top p{margin:4px 0 0;color:var(--muted);font-size:14px}
+nav.tabs{display:flex;gap:4px;margin:22px 0 0;overflow-x:auto;border-bottom:1px solid var(--line)}
+nav.tabs button{font:600 22px/1 "Barlow Condensed",sans-serif;background:none;border:0;color:var(--muted);padding:10px 16px 12px;cursor:pointer;border-bottom:4px solid transparent;margin-bottom:-1px;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--blue)}
+nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.lead{font-family:"Barlow Condensed",sans-serif;font-size:clamp(24px,3vw,32px);font-weight:600;line-height:1.15;margin:26px 0 6px;max-width:30ch}
+.sub{color:var(--muted);margin:0 0 20px;max-width:75ch}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.kpi{background:var(--surface);padding:14px 16px}
+.kpi .v{font:700 30px/1.1 "Barlow Condensed",sans-serif}
+.kpi .l{color:var(--muted);font-size:13.5px}
+.kpi .d{font-size:13.5px;font-weight:600}
+.up{color:var(--good)} .down{color:var(--bad)}
+/* faixa da carteira */
+.band-wrap{margin:30px 0 8px}
+.band-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.band-head h3{margin:0;font-size:22px;font-weight:600}
+.band-head span{color:var(--muted);font-size:13.5px}
+.band{display:flex;height:84px;margin-top:10px;border-radius:3px;overflow:hidden;gap:2px}
+.band button{border:0;cursor:pointer;color:#fff;text-align:left;padding:8px 9px;min-width:0;display:flex;flex-direction:column;justify-content:space-between;transition:filter .15s}
+.band button:hover{filter:brightness(1.08)}
+.band button.dim{filter:saturate(.35) brightness(1.1);opacity:.55}
+.band button b{font:700 26px/1 "Barlow Condensed",sans-serif}
+.band button small{font-size:12.5px;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.band button.light{color:#16222A}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:13.5px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+/* colunas */
+.cols{display:grid;grid-template-columns:1.15fr .85fr;gap:28px;margin-top:30px}
+.panel h3{font-size:22px;margin:0 0 10px;font-weight:600}
+ol.focus{margin:0;padding:0;list-style:none;counter-reset:f}
+ol.focus li{counter-increment:f;position:relative;padding:10px 0 10px 44px;border-top:1px solid var(--line)}
+ol.focus li::before{content:counter(f);position:absolute;left:0;top:9px;width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--bg);font:700 17px/30px "Barlow Condensed",sans-serif;text-align:center}
+ol.focus li b{font-weight:600}
+table.cad{width:100%;border-collapse:collapse;font-size:14px}
+table.cad td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+table.cad td:first-child{white-space:nowrap;font-weight:600}
+table.cad .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+.alloc{display:flex;height:12px;border-radius:2px;overflow:hidden;margin:12px 0 4px}
+.alloc-l{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);gap:6px;flex-wrap:wrap}
+/* gráfico */
+.chart{margin-top:34px;background:var(--surface);border:1px solid var(--line);padding:16px 16px 10px}
+.chart h3{margin:0 0 2px;font-size:22px;font-weight:600}
+.chart p{margin:0 0 8px;color:var(--muted);font-size:13.5px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:"Barlow",sans-serif;font-size:11px}
+/* tabela */
+.list{margin-top:34px}
+.list-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.list-head h3{margin:0;font-size:22px;font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:20px;padding:5px 12px;font:500 14px "Barlow",sans-serif;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+input.search{border:1px solid var(--line);background:var(--surface2);color:var(--ink);padding:7px 12px;border-radius:4px;font:15px "Barlow",sans-serif;min-width:220px}
+.tscroll{overflow-x:auto;border:1px solid var(--line);background:var(--surface2)}
+table.cl{width:100%;border-collapse:collapse;font-size:14.5px;min-width:780px}
+table.cl th{position:sticky;top:0;background:var(--surface);text-align:left;font:600 14px "Barlow",sans-serif;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+table.cl th.num,table.cl td.num{text-align:right}
+table.cl td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.cl tr.row{cursor:pointer}
+table.cl tr.row:hover td{background:var(--blue-soft)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 7px;border-radius:3px;color:#fff;white-space:nowrap}
+.tag.light{color:#16222A}
+.flag{font-size:12px;font-weight:600;color:var(--bad);margin-left:6px;white-space:nowrap}
+.flag.f{color:var(--c-fora)}
+.nm{font-weight:500}
+.cc{color:var(--muted);font-size:12.5px}
+tr.det td{background:var(--surface);padding:12px 14px 16px}
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.det-grid h4{margin:0 0 4px;font-size:13.5px;color:var(--muted);font-weight:600}
+.det-grid ul{margin:0;padding-left:18px}
+.obs{margin-top:10px;padding:8px 10px;border-left:3px solid var(--c-esfriando);background:var(--surface2);font-size:14px}
+.script{margin-top:10px;font-size:14px;color:var(--ink)}
+.more{margin:12px auto 0;display:block}
+.note{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px;max-width:85ch}
+/* empresa */
+table.cmp{width:100%;border-collapse:collapse;font-size:15px;min-width:640px}
+table.cmp th,table.cmp td{padding:10px;border-bottom:1px solid var(--line);text-align:right}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left}
+table.cmp th{color:var(--muted);font-weight:600;font-size:14px}
+.house{margin-top:28px}
+.house li{margin:4px 0}
+
+/* itens */
+.items{margin-top:34px}
+.items h3{margin:0;font-size:22px;font-weight:600}
+.fam{display:grid;grid-template-columns:minmax(150px,210px) 1fr auto;gap:5px 12px;align-items:center;margin:14px 0 18px;font-size:14px}
+.fam .bar{height:14px;background:var(--line);border-radius:2px;overflow:hidden}
+.fam .bar div{height:100%;background:var(--c-chave)}
+.fam .val{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.fam .val small{color:var(--muted);margin-left:6px}
+table.it{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+table.it th{background:var(--surface);text-align:left;font-weight:600;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+table.it td{padding:7px 10px;border-bottom:1px solid var(--line)}
+table.it .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.it .cod{font-weight:600;white-space:nowrap}
+@media (max-width:820px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cols{grid-template-columns:1fr}
+  .band{height:72px}
+  .band button b{font-size:21px}
+  .det-grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Estratégia de vendas por carteira</h1>
+      <p>Empresa Modelo. Notas fiscais de jan/2008 a 24/09/2026 cruzadas com as carteiras do ERP em 24/09/2026.</p>
+    </div>
+  </header>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <main id="view"></main>
+</div>
+<script>
+const SOLO = "CARLA";
+const DATA = {"months": [202410, 202411, 202412, 202501, 202502, 202503, 202504, 202505, 202506, 202507, 202508, 202509, 202510, 202511, 202512, 202601, 202602, 202603, 202604, 202605, 202606, 202607, 202608, 202609], "sellers": {"CARLA": [{"c": "1000000", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "crescer", "k": 1, "u": "SP", "l": "2026-08-27", "dd": 28, "f": 2008, "s": 4145, "p": 38736, "m": 1, "nf": 2, "lt": 456075, "pt": 25152, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 38736, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4145, 0], "t": ["CONJUNTO ENG.RAPIDO LATAO 3/4\"BSP", "VAL.GLOBO A 25.0 PTFE PONTA SOLDA+", "768FB - CONECTOR MACHO EM LATAO"], "q": 1}, {"c": "1000007", "n": "LATICÍNIOS SÃO BENTO LTDA", "g": "adormecido", "k": 1, "u": "CE", "l": "2018-11-05", "dd": 2880, "f": 2014, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 605, "pt": 162, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["MANOMETRO DN50 TRAS 1/4NPT ABS 14BAR (cód. 6333-36)"]}, {"c": "1000014", "n": "USINA CORDILHEIRA S.A.", "g": "nunca", "k": 1}, {"c": "1000021", "n": "LATICÍNIOS CAMPO BELO LTDA", "g": "adormecido", "k": 1, "u": "SP", "l": "2016-08-19", "dd": 3688, "f": 2008, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 36551, "pt": 2786, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["AMORTECEDOR AGV 2029 LS MAGRAL (cód. 2029LS)", "VALV.ESF.3/2V L INOX 316 PN63 1 1/2BSP (cód. 2040 08)"]}, {"c": "1000031", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "reativar", "k": 1, "u": "SP", "l": "2025-01-23", "dd": 609, "f": 2008, "s": 0, "p": 3015, "m": 0, "nf": 0, "lt": 144279, "pt": 17671, "mo": [0, 0, 0, 3015, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["VAL.SOL.BASE FB02 T 2.0 NBR 24DC+FEED (cód. 0331-156500 LATAO)", "VAL.SOL. A 65.0 EPDM G2.1/2 24VCC + FEED (cód. 5282-153154 LATAO)", "VAL.SOL.BASE FB02 T 2.0 EPDM 24DC+FEED (cód. 0331-153155 LATAO)"]}, {"c": "1000041", "n": "METALÚRGICA GIRASSOL DO BRASIL LTDA.", "g": "adormecido", "k": 1, "u": "MG", "l": "2018-05-24", "dd": 3045, "f": 2008, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 32901, "pt": 10071, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["KIT DE VEDACAO P/VAL.5282-DN50/65-NBR (cód. 624052)"]}, {"c": "1000043", "n": "TÊXTIL NOVATEC LTDA.", "g": "reativar", "k": 1, "u": "SP", "l": "2025-07-15", "dd": 436, "f": 2008, "s": 0, "p": 66924, "m": 0, "nf": 0, "lt": 109873, "pt": 33496, "mo": [0, 0, 8532, 0, 0, 19346, 0, 0, 17008, 11080, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["VAL.SOL.A 13.0 EPDM G1/2 PN0.2-16 (cód. 6281EV-221898 LATAO)", "LF ATUADOR PNEUMATICO AIR TORQUE PT300 RM S12", "LF ATUADOR PNEUMATICO AIR TORQUE PT300 RM"]}, {"c": "1000049", "n": "AGROINDÚSTRIA ALFA LTDA", "g": "nunca", "k": 1}, {"c": "1000056", "n": "AUTOPEÇAS BANDEIRANTES DO BRASIL LTDA.", "g": "nunca", "k": 1}, {"c": "1000065", "n": "TRANSPORTES DELTA LTDA", "g": "nunca", "k": 1}, {"c": "1000070", "n": "INDÚSTRIA CERRADO IND. E COM. LTDA.", "g": "reativar", "k": 1, "u": "SP", "l": "2024-08-02", "dd": 783, "f": 2008, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 10297, "pt": 2307, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["ELEMENTO FILTRANTE WILKERSON (cód. MTP-95-562)", "MANGUEIRA HIDRAULICA (cód. MANGUEIRA Empresa Modelo)"]}, {"c": "1000083", "n": "PLÁSTICOS IPÊ AMARELO DO BRASIL LTDA.", "g": "adormecido", "k": 1, "u": "MG", "l": "2018-01-09", "dd": 3180, "f": 2011, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 33202, "pt": 10462, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["SOPRADOR DE AR 1/2BSP (cód. 751-S)", "SOPRADOR DE AR 1/2BSP C/BICO INOX (cód. 753 L)"]}, {"c": "1000089", "n": "AGROINDÚSTRIA GIRASSOL IND. E COM. LTDA.", "g": "adormecido", "k": 1, "u": "SP", "l": "2014-07-15", "dd": 4454, "f": 2012, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 2911, "pt": 1148, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["FEMEA DO ENGATE 1/2NPT ISO A AEROQUIP", "TOMADA C/FEMEA S21 BSPP-1/4 (cód. 21KBIW13MPN)", "VAL.SOL. A 13.0 NBR G1/2 PN0-10 24VAC"]}, {"c": "1000096", "n": "FARMACÊUTICA BOA VISTA LTDA", "g": "crescer", "k": 1, "u": "SC", "l": "2026-07-22", "dd": 64, "f": 2008, "s": 2169, "p": 2948, "m": 1, "nf": 1, "lt": 29402, "pt": 2403, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 1239, 0, 1708, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2169, 0, 0], "t": ["VAL.SOL. B 3.0 FKM 1/4NPT PN0-10 24VDC (cód. 6013-260002 INOX)", "VALV.ANTI-RETORNO DE LATAO (cód. VARC 10)", "TUBO DE COBRE 18.0X13.6X2.2 S/C (cód. SP TK180136)"]}, {"c": "1000102", "n": "INDÚSTRIA CERRADO IND. E COM. LTDA.", "g": "esfriando", "k": 1, "u": "SP", "l": "2025-09-25", "dd": 364, "f": 2008, "s": 19402, "p": 561, "m": 1, "nf": 1, "lt": 69475, "pt": 17084, "mo": [0, 0, 561, 0, 0, 0, 0, 0, 0, 0, 0, 19402, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["TOMADOR DE PRESSAO STAUFF SMK-20-M12X1.5-VC- (cód. 1210002732)", "TOMADOR DE PRESSAO STAUFF (cód. SMK-20-M12X1.5-VCC6F)", "SENSOR DE PRESSAO DC10.8-30V (cód. MPS-P1N-PC)"]}, {"c": "1000106", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "nunca", "k": 1}, {"c": "1000114", "n": "LATICÍNIOS LITORAL IND. E COM. LTDA.", "g": "adormecido", "k": 1, "u": "SP", "l": "2016-07-27", "dd": 3711, "f": 2016, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 2290, "pt": 2290, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["VAL.SOL. A 10.0 NBR G3/8 PN0-10 24VCC (cód. 6213-125653 LATAO)"]}, {"c": "1000125", "n": "INDÚSTRIA CERRADO LTDA.", "g": "reativar", "k": 1, "u": "SP", "l": "2024-03-07", "dd": 931, "f": 2017, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 15114, "pt": 3402, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["SENSOR DE FLUXO 1\"BSP 100L/MIN C/CONECTOR (cód. FC10B02-M12)", "SENSOR DE FLUXO 1 BSP 100L/MIN (cód. FC10B04-M12)"]}, {"c": "1000129", "n": "FARMACÊUTICA ATLÂNTICA S.A.", "g": "adormecido", "k": 1, "u": "BA", "l": "2019-06-19", "dd": 2654, "f": 2008, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 63322, "pt": 20653, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["POSICIONADOR 4-20MA 24DC S/PID MULTIPOLO (cód. 8692-227308)", "VALULA GLOBO FEMEA 2BSP CLASSE 150#"]}, {"c": "1000137", "n": "INDÚSTRIA CERRADO IND. E COM. LTDA.", "g": "reativar", "k": 1, "u": "SP", "l": "2024-10-09", "dd": 715, "f": 2008, "s": 0, "p": 84395, "m": 0, "nf": 0, "lt": 107665, "pt": 31607, "mo": [5076, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["VALVULA SCHMALZ TVR 20 3 3.4 (cód. 10.01.14.00996)", "PN: F302CFCF222212-700MM 180º (cód. 7623712)", "MANGUEIRA HIDRAULICA (cód. MANGUEIRA Empresa Modelo)"]}, {"c": "1000142", "n": "TÊXTIL ARARA AZUL DO BRASIL LTDA.", "g": "reativar", "k": 1, "u": "SP", "l": "2025-03-12", "dd": 561, "f": 2008, "s": 0, "p": 2589, "m": 0, "nf": 0, "lt": 95987, "pt": 5417, "mo": [0, 857, 0, 527, 0, 1205, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["DIAFRAGMA DN15 EPDM BOTAO (cód. 688422)", "NIPLE CURTO INOX 1/2 NPT (cód. 112SS08)", "BUCHA REDUCAO 1/2 NPT X 3/8 NPT (cód. 110SS0806)"]}, {"c": "1000152", "n": "INDÚSTRIA CERRADO IND. E COM. LTDA.", "g": "adormecido", "k": 1, "u": "SP", "l": "2020-05-13", "dd": 2325, "f": 2008, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 11101, "pt": 241, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["SENSOR DE NIVEL EM POLIFTALAMIDA P/125ºC (cód. LA36M-40)"]}, {"c": "1000156", "n": "QUÍMICA MARACANÃ LTDA", "g": "reativar", "k": 1, "u": "SP", "l": "2023-03-20", "dd": 1284, "f": 2009, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 157556, "pt": 52308, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["VAL.SOL 2/2 NF 1.1/4BSP LATAO/NBR 110VCA (cód. 2W350-35E)", "VAL.ESFERA MOTORIZADA DE LATAO DN32 (cód. 562FR4TJQD9)", "VAL.SOL.NF G.1.1/4 VITON 0A10BAR 110VCA (cód. VD-007-110VCA)"]}, {"c": "1000166", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "esfriando", "k": 1, "u": "SP", "l": "2025-12-15", "dd": 283, "f": 2008, "s": 15319, "p": 9574, "m": 1, "nf": 1, "lt": 515392, "pt": 24255, "mo": [0, 0, 0, 0, 0, 9574, 0, 0, 0, 0, 0, 0, 0, 0, 15319, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["PISTOLA DE AGUA DINGA 1/2\" (cód. 117670)"]}, {"c": "1000172", "n": "TRANSPORTES DELTA LTDA", "g": "adormecido", "k": 1, "u": "AM", "l": "2010-02-23", "dd": 6057, "f": 2009, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 20332, "pt": 17767, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["ELEMENTO FILTRANTE (FP40-025M) (cód. 014.193)"]}, {"c": "1000176", "n": "TRANSPORTES DELTA LTDA", "g": "adormecido", "k": 1, "u": "RJ", "l": "2010-11-03", "dd": 5804, "f": 2010, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 3088, "pt": 3088, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["KIT PARA VALVULA 1066 (cód. 1066-193359 KIT)", "REFRIGERADOR DE AR R-900 (cód. R-900)", "SILENCIADOR P/REFRIGERADOR DE AR (cód. SILENC. R900/1500)"]}, {"c": "1000183", "n": "FARMACÊUTICA ATLÂNTICA S.A.", "g": "adormecido", "k": 1, "u": "MG", "l": "2017-02-14", "dd": 3509, "f": 2010, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 4278, "pt": 845, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["KIT DE VEDACAO P/VAL.5282-DN50/65-NBR (cód. 624052)"]}, {"c": "1000189", "n": "INDÚSTRIA CEDRO S.A.", "g": "esfriando", "k": 1, "u": "MG", "l": "2026-02-18", "dd": 218, "f": 2011, "s": 35098, "p": 8472, "m": 3, "nf": 3, "lt": 454581, "pt": 24258, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 8472, 0, 8472, 19365, 0, 0, 0, 7262, 0, 0, 0, 0, 0, 0, 0], "t": ["BICO CORTINA DE AR Empresa Modelo 1/4\"NPT", "BICO CORTINA DE AR 1/4\"NPT", "FILTRO DE SUCCAO 1.1/2\"NPT 30GPM (cód. FTS110A)"]}, {"c": "1000202", "n": "ENERGIA ATLÂNTICA DO BRASIL LTDA.", "g": "adormecido", "k": 1, "u": "SP", "l": "2012-09-19", "dd": 5118, "f": 2012, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 2076, "pt": 2076, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["CONEXAO RETA FEMEA G1/4 P/TUBO 8MM", "VALV.REDUTORA DE PRESSÃO 3/4\"", "CONEX RETA FEMEA BSPP-8-1/8 LN"]}, {"c": "1000206", "n": "ENERGIA ATLÂNTICA DO BRASIL LTDA.", "g": "adormecido", "k": 1, "u": "SP", "l": "2021-06-02", "dd": 1940, "f": 2012, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 8889, "pt": 565, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["CHAVE VERTICAL DE 1 PONTO COM 250MM (cód. LE251-M12)", "ELEMENTO FILTRANTE HDA (114148) (cód. FP20 010FV)"]}, {"c": "1000214", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "adormecido", "k": 1, "u": "RJ", "l": "2014-01-16", "dd": 4634, "f": 2014, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 319, "pt": 319, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["TEE ROSCA LATERAL G1/4 PARA TUBO 8MM (cód. S6440 8-1/4)"]}, {"c": "1000217", "n": "ALIMENTOS JACARANDÁ IND. E COM. LTDA.", "g": "reativar", "k": 1, "u": "SP", "l": "2025-07-22", "dd": 429, "f": 2014, "s": 0, "p": 2384, "m": 0, "nf": 0, "lt": 23333, "pt": 1574, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2384, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["DRENO MANUAL MACHO 1/4BSP", "TOMADA C/FEMEA S21 BSPP-1/4 (cód. 21KBIW13MPN)", "ENGATE RAPIDO C/ROSCA FEMEA DE G1/4"]}, {"c": "1000227", "n": "EMBALAGENS GAIVOTA LTDA.", "g": "adormecido", "k": 1, "u": "SP", "l": "2015-02-19", "dd": 4235, "f": 2015, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 222, "pt": 222, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["\"REGULADOR DE PRESSAO DE 0-10 BAR G3/8\"\" (cód. MC238-R00)"]}, {"c": "1000236", "n": "FARMACÊUTICA TUCANO S.A.", "g": "adormecido", "k": 1, "u": "ES", "l": "2016-03-22", "dd": 3838, "f": 2015, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 1907, "pt": 1562, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["BICO CORTINA DE AR SILVENT 920A 1/4BSP (cód. 920A 1/4BSP)", "VALV. ESF. MINI 2/2 - M - BSPP - 10-3/8"]}, {"c": "1000238", "n": "BEBIDAS TUCANO LTDA", "g": "reativar", "k": 1, "u": "BA", "l": "2024-08-06", "dd": 779, "f": 2015, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 21233, "pt": 2633, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["REG FLUXO COMP.C/PARAF. EXTERNO-E-10- 3/", "REG FLUXO COMP.C/PARAF.EXTERNO-E-10- 3/8", "TORNEIRA PAREDE BICA 1/4\""]}, {"c": "1000247", "n": "EMBALAGENS HORIZONTE LTDA", "g": "nunca", "k": 1}, {"c": "1000252", "n": "INDÚSTRIA CEDRO S.A.", "g": "esfriando", "k": 1, "u": "MG", "l": "2026-01-23", "dd": 244, "f": 2017, "s": 2525, "p": 0, "m": 1, "nf": 1, "lt": 54448, "pt": 2876, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2525, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["BICO LOCKLINE 1/8\" (cód. 49423)", "TUBO DE COBRE RECOZIDO 20.0X17.0X1.5 S/C (cód. TZ200170)", "BICO CORTINA DE AR Empresa Modelo 1/4\"NPT"]}, {"c": "1000261", "n": "INDÚSTRIA CEDRO S.A.", "g": "adormecido", "k": 1, "u": "ES", "l": "2019-04-12", "dd": 2722, "f": 2019, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 721, "pt": 721, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["BICO CORTINA DE AR 1/4 BSP", "VALV. ESFERA DUPLA FEMEA-1/2 LN"]}, {"c": "1000272", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "nunca", "k": 1}, {"c": "1000274", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "adormecido", "k": 1, "u": "SP", "l": "2017-01-23", "dd": 3531, "f": 2017, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 1550, "pt": 1550, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["MANG DO CILINDRO DE ELEVACAO STILL FME (cód. NR0002307559)"]}, {"c": "1000284", "n": "USINA SANTA CLARA DO BRASIL LTDA.", "g": "adormecido", "k": 1, "u": "RJ", "l": "2017-06-27", "dd": 3376, "f": 2017, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 1732, "pt": 1732, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["VAL.SOL. A 1.5.0 PTFE G1/8 0-20BAR 24VCC", "VAL.SOL. A 3.0 FKM G1/4 0-6BAR 24VCC (cód. 6013-125301 LATAO)"]}, {"c": "1000293", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "adormecido", "k": 1, "u": "MG", "l": "2019-10-09", "dd": 2542, "f": 2019, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 2579, "pt": 2579, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["VAL.SOL. 2/2 NF NBR 3/4NPT 24VDC (cód. 8210D003 24VDC)"]}, {"c": "1000295", "n": "FARMACÊUTICA MARACANÃ S.A.", "g": "chave", "k": 1, "u": "MG", "l": "2026-08-20", "dd": 35, "f": 2019, "s": 31816, "p": 108686, "m": 4, "nf": 4, "lt": 174559, "pt": 52611, "mo": [1604, 2779, 0, 0, 0, 68725, 0, 0, 0, 0, 17789, 17789, 0, 0, 0, 24706, 408, 0, 0, 0, 525, 0, 6177, 0], "t": ["VALVULA AXIAL NF FKM FEMEA BSPP-3/8 LN.", "VALVULA AXIAL NF FEMEA BSPP-3/8 LN.", "750302539 DISPLAY MXLE+PODS"], "q": 1}, {"c": "1000304", "n": "LATICÍNIOS ESTRELA IND. E COM. LTDA.", "g": "nunca", "k": 1}, {"c": "1000312", "n": "ENERGIA CORDILHEIRA LTDA", "g": "nunca", "k": 1}, {"c": "1000320", "n": "TÊXTIL LUAR DO BRASIL LTDA.", "g": "reativar", "k": 1, "u": "MG", "l": "2024-06-04", "dd": 842, "f": 2023, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 103642, "pt": 72799, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["ENG.FACE PLANA BOBCAT (cód. FFH08-34SAEF)", "PINO FACE PLANA BOBCAT (cód. 3FFH08-34SAEM)"]}, {"c": "1000327", "n": "AGROINDÚSTRIA LINCE LTDA", "g": "reativar", "k": 1, "u": "MG", "l": "2024-02-05", "dd": 962, "f": 2024, "s": 0, "p": 0, "m": 0, "nf": 0, "lt": 7084, "pt": 7084, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "t": ["GRAMPO \"U\" 90/15 P/GRAMPEDOR PNEUMATICO (cód. 90/15)"]}, {"c": "1000330", "n": "PLÁSTICOS ATLÂNTICA IND. E COM. LTDA.", "g": "nunca", "k": 1}, {"c": "1000340", "n": "PLÁSTICOS LITORAL LTDA.", "g": "nunca", "k": 1}, {"c": "1000348", "n": "INDÚSTRIA VECTRA LTDA.", "g": "nunca", "k": 1}, {"c": "1000352", "n": "PAPEL E CELULOSE CORDILHEIRA LTDA", "g": "crescer", "k": 1, "u": "SP", "l": "2026-08-21", "dd": 34, "f": 2026, "s": 243, "p": 0, "m": 1, "nf": 1, "lt": 243, "pt": 243, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 243, 0], "t": ["CORPO PP 26.7MM"]}, {"c": "1000361", "n": "MINERAÇÃO BEM-TE-VI S.A.", "g": "crescer", "k": 1, "u": "SP", "l": "2026-08-17", "dd": 38, "f": 2026, "s": 43, "p": 0, "m": 1, "nf": 1, "lt": 43, "pt": 43, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 43, 0], "t": ["SOLENOIDE 12 VDC - 5W (cód. G72)"]}, {"c": "1000370", "n": "ENERGIA PLANALTO LTDA.", "g": "nunca", "k": 1}, {"c": "1000374", "n": "BEBIDAS TUCANO LTDA", "g": "nunca", "k": 1}, {"c": "1000381", "n": "AUTOPEÇAS NOVA ERA LTDA.", "g": "nunca", "k": 1}, {"c": "1000390", "n": "CERÂMICA JEQUITIBÁ S.A.", "g": "nunca", "k": 1}, {"c": "1000396", "n": "AUTOPEÇAS TIETÊ DO BRASIL LTDA.", "g": "nunca", "k": 1}, {"c": "1000402", "n": "PLÁSTICOS BOA VISTA DO BRASIL LTDA.", "g": "nunca", "k": 1}, {"c": "1000412", "n": "LATICÍNIOS IPÊ AMARELO LTDA.", "g": "nunca", "k": 1}, {"c": "1000417", "n": "METALÚRGICA SÃO BENTO S.A.", "g": "nunca", "k": 1}, {"c": "1000423", "n": "PAPEL E CELULOSE CORDILHEIRA DO BRASIL LTDA.", "g": "nunca", "k": 1}, {"c": "1000428", "n": "SANEAMENTO HORIZONTE DO BRASIL LTDA.", "g": "nunca", "k": 1}, {"c": "1000440", "n": "AUTOPEÇAS CANDEIAS DO BRASIL LTDA.", "g": "nunca", "k": 1}, {"c": "1000446", "n": "LATICÍNIOS CANÁRIO S.A.", "g": "crescer", "k": 1, "u": "SP", "l": "2026-09-15", "dd": 9, "f": 2026, "s": 118, "p": 0, "m": 1, "nf": 1, "lt": 118, "pt": 118, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 118], "t": ["TUBO EM PU ESPIRAL 10MM C/ 10 METROS (cód. PUE10-10)"]}, {"c": "1000449", "n": "INDÚSTRIA PRIMAVERA IND. E COM. LTDA.", "g": "nunca", "k": 1}, {"c": "1000459", "n": "PAPEL E CELULOSE TUCANO LTDA", "g": "nunca", "k": 1}, {"c": "1000466", "n": "USINA CRUZEIRO LTDA.", "g": "nunca", "k": 1}, {"c": "1000474", "n": "PLÁSTICOS FÊNIX LTDA.", "g": "nunca", "k": 1}, {"c": "1000480", "n": "PLÁSTICOS RIO BRANCO LTDA", "g": "nunca", "k": 1}, {"c": "1000488", "n": "MINERAÇÃO VENTURA IND. E COM. LTDA.", "g": "nunca", "k": 1}, {"c": "1000495", "n": "CERÂMICA PANTANAL IND. E COM. LTDA.", "g": "nunca", "k": 1}, {"c": "1000502", "n": "BEBIDAS GAIVOTA IND. E COM. LTDA.", "g": "nunca", "k": 1}, {"c": "1000504", "n": "METALÚRGICA GAIVOTA LTDA", "g": "crescer", "k": 0, "u": "SP", "l": "2026-09-16", "dd": 8, "f": 2020, "s": 826, "p": 523, "m": 1, "nf": 1, "lt": 2625, "pt": 449, "mo": [0, 523, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 826], "t": ["TUBO ACO INOX 304 10.0X1.50 A269 S/C (cód. TI100070 AI304)", "TUBO ACO INOX 304 A269 10.0X1.50 S/C (cód. TI100070 AI304)"], "sh": 61}, {"c": "1000511", "n": "USINA CORDILHEIRA LTDA", "g": "crescer", "k": 0, "u": "SP", "l": "2026-09-17", "dd": 7, "f": 2020, "s": 100, "p": 0, "m": 1, "nf": 1, "lt": 694, "pt": 33, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100], "t": ["VALV.REGULADORA FLUXO G1/4 (cód. ASC08S)", "CONECTOR RETO EM LATAO 8MM X 1/4\"BSP (cód. APC-08G02)", "COTOVELO MACHO 8MM X 1/4\"BSP (cód. APL-08G02)"], "sh": 100}, {"c": "1000520", "n": "USINA MARACANÃ IND. E COM. LTDA.", "g": "crescer", "k": 0, "u": "RS", "l": "2026-08-21", "dd": 34, "f": 2017, "s": 2363, "p": 0, "m": 1, "nf": 1, "lt": 2779, "pt": 788, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2363, 0], "t": ["BICO SOPRADOR REG DE AR Empresa Modelo 1/4BSP (cód. B01R-A)"], "sh": 100}, {"c": "1000528", "n": "LATICÍNIOS SOLAR LTDA", "g": "crescer", "k": 0, "u": "SP", "l": "2026-09-16", "dd": 8, "f": 2015, "s": 179, "p": 0, "m": 1, "nf": 2, "lt": 486, "pt": 60, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 179], "t": ["REGULADOR DE PRESSAO G1/4 DE 0A16BAR (cód. OR02)", "CON.FORMA A 3P+T FORMA A PT IP65 0A220V (cód. 4801 08)", "CONECTOR RETO EM LATAO 8MM X 1/4\"BSP (cód. APC-08G02)"], "sh": 84}, {"c": "1000538", "n": "FUNDIÇÃO AURORA LTDA", "g": "crescer", "k": 0, "u": "SP", "l": "2026-09-10", "dd": 14, "f": 2026, "s": 144, "p": 0, "m": 1, "nf": 1, "lt": 144, "pt": 144, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 144], "t": ["SENSOR DE NIVEL COMPACTO EM POLIFTALAMIDA (cód. LF322E-40)"], "sh": 100}, {"c": "1000544", "n": "ALIMENTOS TIETÊ IND. E COM. LTDA.", "g": "crescer", "k": 0, "u": "SP", "l": "2026-09-01", "dd": 23, "f": 2026, "s": 402, "p": 0, "m": 1, "nf": 1, "lt": 402, "pt": 402, "mo": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 402], "t": ["TUBO ACO CARBONO 12.0X8.0X2.0 (cód. TN120080)", "ANEL DE PENETRACAO EM ACO CARBONO (cód. AA 14)", "PORCA DE DE APERTO EM ACO"], "sh": 100}]}};
+const ITEMS = {"CARLA": {"top": [{"k": "BCA 1/4 NPT", "d": "BICO CORTINA DE AR Empresa Modelo 1/4\"NPT", "u": "PC", "q": 58.0, "v": 25404, "c": 1, "pv": 6132, "f": "Bicos e sopradores"}, {"k": "4202 10 17 20", "d": "VALVULA AXIAL NF FKM FEMEA BSPP-3/8 LN.", "u": "PC", "q": 5.0, "v": 21900, "c": 1, "pv": 54429, "f": "Válvulas"}, {"k": "1210002732", "d": "TOMADOR DE PRESSAO STAUFF SMK-20-M12X1.5-VC-", "u": "PC", "q": 20.0, "v": 12629, "c": 1, "pv": 0, "f": "Sensores e instrumentos"}, {"k": "1000546", "d": "PISTOLA DE AGUA DINGA 1/2\"", "u": "PC", "q": 8.0, "v": 10804, "c": 1, "pv": 6752, "f": "Bicos e sopradores"}, {"k": "6500EB-12-12 BSP V", "d": "CONJUNTO ENG.RAPIDO LATAO 3/4\"BSP", "u": "PC", "q": 2.0, "v": 2672, "c": 1, "pv": 16031, "f": "Engates rápidos"}, {"k": "TZ200170", "d": "TUBO DE COBRE RECOZIDO 20.0X17.0X1.5 S/C", "u": "MT", "q": 12.0, "v": 2190, "c": 1, "pv": 0, "f": "Tubos"}, {"k": "B01R-A", "d": "BICO SOPRADOR REG DE AR Empresa Modelo 1/4BSP", "u": "PC", "q": 20.0, "v": 2187, "c": 1, "pv": 0, "f": "Bicos e sopradores"}, {"k": "6013-260002 INOX", "d": "VAL.SOL. B 3.0 FKM 1/4NPT PN0-10 24VDC", "u": "PC", "q": 1.0, "v": 1821, "c": 1, "pv": 1434, "f": "Válvulas"}, {"k": "11003E", "d": "PISTOLA DE AR ZAMAK 1/4BSP", "u": "PC", "q": 20.0, "v": 661, "c": 1, "pv": 0, "f": "Bicos e sopradores"}, {"k": "TI100070 AI304", "d": "TUBO ACO INOX 304 10.0X1.50 A269 S/C", "u": "MT", "q": 6.0, "v": 435, "c": 1, "pv": 275, "f": "Tubos"}, {"k": "TN120080", "d": "TUBO ACO CARBONO 12.0X8.0X2.0", "u": "MT", "q": 6.0, "v": 223, "c": 1, "pv": 0, "f": "Tubos"}, {"k": "CORPO PP 26.7MM", "d": "CORPO PP 26.7MM", "u": "PC", "q": 12.0, "v": 175, "c": 1, "pv": 0, "f": "Kits e reparos"}, {"k": "OR02", "d": "REGULADOR DE PRESSAO G1/4 DE 0A16BAR", "u": "PC", "q": 1.0, "v": 127, "c": 1, "pv": 0, "f": "Reguladores e FRL"}, {"k": "PUE10-10", "d": "TUBO EM PU ESPIRAL 10MM C/ 10 METROS", "u": "PC", "q": 1.0, "v": 73, "c": 1, "pv": 0, "f": "Tubos"}, {"k": "LF322E-40", "d": "SENSOR DE NIVEL COMPACTO EM POLIFTALAMIDA", "u": "PC", "q": 1.0, "v": 73, "c": 1, "pv": 0, "f": "Sensores e instrumentos"}, {"k": "AA 12*", "d": "ANEL DE PENETRACAO EM ACO CARBONO", "u": "PC", "q": 20.0, "v": 67, "c": 1, "pv": 0, "f": "Conexões"}, {"k": "PA 12S*", "d": "PORCA DE DE APERTO EM ACO", "u": "PC", "q": 20.0, "v": 67, "c": 1, "pv": 0, "f": "Conexões"}, {"k": "G72", "d": "SOLENOIDE 12 VDC - 5W", "u": "PC", "q": 1.0, "v": 47, "c": 1, "pv": 0, "f": "Válvulas"}, {"k": "ASC08S", "d": "VALV.REGULADORA FLUXO G1/4", "u": "PC", "q": 1.0, "v": 42, "c": 1, "pv": 0, "f": "Válvulas"}, {"k": "4801 08", "d": "CON.FORMA A 3P+T FORMA A PT IP65 0A220V", "u": "PC", "q": 1.0, "v": 26, "c": 1, "pv": 0, "f": "Conexões"}, {"k": "0869 1/4X1/8 NPT", "d": "768FB - COTOVELO MACHO EM LATAO", "u": "PC", "q": 1.0, "v": 17, "c": 1, "pv": 0, "f": "Outros"}, {"k": "APC-08G02", "d": "CONECTOR RETO EM LATAO 8MM X 1/4\"BSP", "u": "PC", "q": 3.0, "v": 13, "c": 2, "pv": 0, "f": "Conexões"}, {"k": "APL-08G02", "d": "COTOVELO MACHO 8MM X 1/4\"BSP", "u": "PC", "q": 1.0, "v": 4, "c": 1, "pv": 0, "f": "Conexões"}], "lost": [{"k": "2W350-35E", "d": "VAL.SOL 2/2 NF 1.1/4BSP LATAO/NBR 110VCA", "u": "PC", "v": 23847, "c": 1, "f": "Válvulas"}, {"k": "BCA 1/4 NPT", "d": "BICO CORTINA DE AR Empresa Modelo 1/4\"NPT", "u": "PC", "v": 17520, "c": 2, "f": "Bicos e sopradores"}, {"k": "1000546", "d": "PISTOLA DE AGUA DINGA 1/2\"", "u": "PC", "v": 17106, "c": 1, "f": "Bicos e sopradores"}, {"k": "562FR4TJQD9", "d": "VAL.ESFERA MOTORIZADA DE LATAO DN32", "u": "PC", "v": 15330, "c": 1, "f": "Válvulas"}, {"k": "FFH08-34SAEF", "d": "ENG.FACE PLANA BOBCAT", "u": "PC", "v": 14921, "c": 1, "f": "Engates rápidos"}, {"k": "10.01.14.00996", "d": "VALVULA SCHMALZ TVR 20 3 3.4", "u": "PC", "v": 14069, "c": 1, "f": "Válvulas"}, {"k": "CELULOSE LTDA                 SP 6281EV-221898 LATAO", "d": "VAL.SOL.A 13.0 EPDM G1/2 PN0.2-16", "u": "PC", "v": 8444, "c": 1, "f": "Válvulas"}, {"k": "3FFH08-34SAEM", "d": "PINO FACE PLANA BOBCAT", "u": "PC", "v": 5587, "c": 1, "f": "Engates rápidos"}, {"k": "0331-156500 LATAO", "d": "VAL.SOL.BASE FB02 T 2.0 NBR 24DC+FEED", "u": "PC", "v": 5492, "c": 1, "f": "Válvulas"}, {"k": "CELULOSE LTDA             SP 1165635", "d": "LF ATUADOR PNEUMATICO AIR TORQUE PT300 RM S12", "u": "PC", "v": 4833, "c": 1, "f": "Outros"}, {"k": "CELULOSE LTDA               SP 20490419", "d": "LF ATUADOR PNEUMATICO AIR TORQUE PT300 RM", "u": "PC", "v": 4833, "c": 1, "f": "Outros"}, {"k": "5282-153154 LATAO", "d": "VAL.SOL. A 65.0 EPDM G2.1/2 24VCC + FEED", "u": "PC", "v": 4374, "c": 1, "f": "Válvulas"}, {"k": "1210002732", "d": "TOMADOR DE PRESSAO STAUFF SMK-20-M12X1.5-VC-", "u": "PC", "v": 4210, "c": 1, "f": "Sensores e instrumentos"}, {"k": "0331-153155 LATAO", "d": "VAL.SOL.BASE FB02 T 2.0 EPDM 24DC+FEED", "u": "PC", "v": 3251, "c": 1, "f": "Válvulas"}, {"k": "MPS-P1N-PC", "d": "SENSOR DE PRESSAO DC10.8-30V", "u": "PC", "v": 3176, "c": 1, "f": "Sensores e instrumentos"}, {"k": "CELULOSE LTDA                SP 6752", "d": "ATUADOR LINEAR KTC-LA-G-F-24-800-8-3", "u": "PC", "v": 3148, "c": 1, "f": "Cilindros e atuadores"}, {"k": "CELULOSE LTDA             SP 7449", "d": "BOMBA DOSADORA DE DIAFRAGMA EMEC - B DOS FGM 516", "u": "PC", "v": 3115, "c": 1, "f": "Bombas"}, {"k": "FC10B04-M12", "d": "SENSOR DE FLUXO 1 BSP 100L/MIN", "u": "PC", "v": 2847, "c": 2, "f": "Sensores e instrumentos"}, {"k": "SMK-20-M12X1.5-VCC6F", "d": "TOMADOR DE PRESSAO STAUFF", "u": "PC", "v": 2008, "c": 1, "f": "Sensores e instrumentos"}, {"k": "MTP-95-562", "d": "ELEMENTO FILTRANTE WILKERSON", "u": "PC", "v": 1618, "c": 1, "f": "Filtros e elementos"}, {"k": "1000553", "d": "BICO LOCKLINE 1/8\"", "u": "PC", "v": 1618, "c": 1, "f": "Bicos e sopradores"}, {"k": "MANGUEIRA Empresa Modelo", "d": "MANGUEIRA HIDRAULICA", "u": "PC", "v": 1611, "c": 2, "f": "Mangueiras"}, {"k": "7060 10 17", "d": "REG FLUXO COMP.C/PARAF.EXTERNO-E-10- 3/8", "u": "PC", "v": 1296, "c": 1, "f": "Reguladores e FRL"}, {"k": "90/15", "d": "GRAMPO \"U\" 90/15 P/GRAMPEDOR PNEUMATICO", "u": "PC", "v": 1192, "c": 1, "f": "Braçadeiras e fixação"}, {"k": "1000565", "d": "DIAFRAGMA DN15 EPDM BOTAO", "u": "PC", "v": 1133, "c": 1, "f": "Outros"}, {"k": "CELULOSE LTDA                 SP 6281EV-221853 LATAO", "d": "VAL.SOL.A 20.0 NBR G1 PN0.2-16 24VCC", "u": "PC", "v": 1095, "c": 1, "f": "Válvulas"}, {"k": "1000571", "d": "PN: F302CFCF222212-700MM 180º", "u": "PC", "v": 900, "c": 1, "f": "Outros"}, {"k": "SMK-20-M16X1.5-VC-W3", "d": "TOMADOR DE PRESSAO STAUFF", "u": "PC", "v": 867, "c": 1, "f": "Sensores e instrumentos"}, {"k": "P3A-EA92BGBGNP", "d": "FILTRO REGULADOR PARKER", "u": "PC", "v": 791, "c": 1, "f": "Filtros e elementos"}, {"k": "TZ200170", "d": "TUBO DE COBRE RECOZIDO 20.0X17.0X1.5 S/C", "u": "MT", "v": 730, "c": 1, "f": "Tubos"}], "fam": [{"f": "Bicos e sopradores", "v": 39056, "pv": 12884, "c": 4}, {"f": "Válvulas", "v": 23810, "pv": 107165, "c": 4}, {"f": "Sensores e instrumentos", "v": 12702, "pv": 365, "c": 2}, {"f": "Tubos", "v": 2921, "pv": 4347, "c": 4}, {"f": "Engates rápidos", "v": 2672, "pv": 16031, "c": 1}, {"f": "Conexões", "v": 177, "pv": 8937, "c": 3}, {"f": "Kits e reparos", "v": 175, "pv": 0, "c": 1}, {"f": "Reguladores e FRL", "v": 127, "pv": 0, "c": 1}, {"f": "Outros", "v": 17, "pv": 52375, "c": 1}]}};
+let ist={mode:'top',sort:null,q:'',limit:40};
+const INFO = {"CARLA": {"nome": "Carla", "full": "Carla Mendes", "lead": "Sua carteira é nova, com contas grandes que ficaram sem acompanhamento.", "focus": ["<b>Faça a transição com a Ana.<\/b> As últimas vendas de contas da sua carteira (Itaúna, Primus Montes Claros, Cordilheira) saíram pela Ana. Visite essas contas junto com ela e se apresente como novo responsável.", "<b>Recupere a Primus.<\/b> Somando as unidades, caiu de R$ 152 mil para R$ 49 mil em 12 meses. A unidade 0023923 (Montes Claros) ainda compra e é a porta de entrada.", "<b>Reative as contas que pagavam bem.<\/b> Litoral (média de R$ 54 mil por ano até 2023), Orion (R$ 39 mil por ano, parou em jul/25), Itaúna Pioneira e Cordilheira.", "<b>Prospecção de longo prazo.<\/b> 31 cadastros nunca compraram e P&G e Puma estão paradas há anos. Mapeie os compradores e trabalhe a homologação da Empresa Modelo como fornecedor.", "<b>Use a vantagem da carteira pequena.<\/b> Com 72 cadastros, dá para falar com todos os ativos e esfriando a cada 15 dias."]}};
+const SEG = {
+  chave:{t:"Clientes-chave",d:"compram hoje e somam 80% do faturamento, ou compram 6+ meses por ano",light:false},
+  crescer:{t:"Crescer",d:"compraram nos últimos 6 meses, volume menor",light:false},
+  esfriando:{t:"Esfriando",d:"6 a 12 meses sem comprar",light:true},
+  reativar:{t:"Reativar",d:"1 a 4 anos sem comprar",light:false},
+  adormecido:{t:"Adormecidos",d:"mais de 4 anos sem comprar",light:false},
+  nunca:{t:"Nunca compraram",d:"cadastro sem nenhuma nota",light:true}
+};
+const ORDER=["chave","crescer","esfriando","reativar","adormecido","nunca"];
+const CAD = {
+  chave:["Contato semanal, visita mensal","Antecipar a reposição dos itens que eles compram sempre. Nenhum cliente-chave pode passar 45 dias sem pedido."],
+  crescer:["Contato quinzenal","Oferecer a linha complementar (quem compra conexão leva tubo, válvula, mangueira). Mandar o catálogo técnico."],
+  esfriando:["Ligar esta semana","Descobrir o motivo: preço, prazo, concorrente, comprador novo ou projeto encerrado. Voltar com uma oferta."],
+  reativar:["Campanha de 90 dias","Três toques por cliente: ligação, WhatsApp e e-mail com os itens que ele comprava. Visita nos 10 de maior potencial."],
+  adormecido:["Disparo trimestral","Validar se a empresa e o comprador ainda existem. Quem responder vai para \"reativar\"."],
+  nunca:["Qualificar em 60 dias","Quem tiver perfil vira prospecção ativa. Quem não tiver sai da carteira."]
+};
+const MN=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const brl=v=>v==null?"–":"R$ "+Math.round(v).toLocaleString("pt-BR");
+const kbrl=v=>{if(v==null)return"–";const a=Math.abs(v);if(a>=1e6)return"R$ "+(v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:2})+" mi";if(a>=1e3)return"R$ "+Math.round(v/1e3).toLocaleString("pt-BR")+" mil";return"R$ "+Math.round(v)};
+const fdate=s=>{if(!s)return"–";const[y,m,d]=s.split("-");return d+"/"+m+"/"+y};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const segColor=g=>`var(--c-${g})`;
+
+const tabsEl=document.getElementById("tabs"), view=document.getElementById("view");
+const TABS=[["ANA", "Ana"], ["DIEGO", "Diego"], ["BRUNO", "Bruno"], ["CARLA", "Carla"], ["EMPRESA", "Visão da empresa"]];
+let state={tab:"ANA",seg:null,fora:false,q:"",sort:null,limit:60,open:new Set()};
+try{const t=localStorage.getItem("dm-tab");if(t&&TABS.some(x=>x[0]===t))state.tab=t}catch(e){}
+
+function renderTabs(){
+  tabsEl.innerHTML=TABS.map(([k,l])=>`<button role="tab" aria-selected="${state.tab===k}" data-k="${k}">${l}</button>`).join("");
+  tabsEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{state={...state,tab:b.dataset.k,seg:null,fora:false,q:"",sort:null,limit:60,open:new Set()};try{localStorage.setItem("dm-tab",state.tab)}catch(e){};renderTabs();render()});
+}
+
+function stats(S){
+  const L=DATA.sellers[S], K=L.filter(c=>c.k), F=L.filter(c=>!c.k);
+  const s12=K.reduce((a,c)=>a+(c.s||0),0), p12=K.reduce((a,c)=>a+(c.p||0),0);
+  const ativos=K.filter(c=>c.dd!=null&&c.dd<=180).length;
+  const top5=K.map(c=>c.s||0).sort((a,b)=>b-a).slice(0,5).reduce((a,b)=>a+b,0);
+  const potR=K.filter(c=>(c.g==="reativar"||c.g==="esfriando")&&c.c!=="0021006").reduce((a,c)=>a+(c.pt||0),0);
+  const bySeg={};ORDER.forEach(g=>{const x=K.filter(c=>c.g===g);bySeg[g]={n:x.length,s:x.reduce((a,c)=>a+(c.s||0),0),pt:x.reduce((a,c)=>a+(c.pt||0),0)}});
+  const monK=DATA.months.map((_,i)=>K.reduce((a,c)=>a+(c.mo?c.mo[i]:0),0));
+  const monF=DATA.months.map((_,i)=>F.reduce((a,c)=>a+(c.mo?c.mo[i]:0),0));
+  return{L,K,F,s12,p12,ativos,top5,potR,bySeg,monK,monF,fs12:F.reduce((a,c)=>a+(c.s||0),0)};
+}
+
+function render(){ if(state.tab==="EMPRESA") return renderEmpresa(); renderSeller(state.tab); }
+
+function renderSeller(S){
+  const I=INFO[S], st=stats(S);
+  const var12=st.p12?((st.s12/st.p12-1)*100):null;
+  const total=st.K.length;
+  const band=ORDER.map(g=>{const b=st.bySeg[g];if(!b.n)return"";const w=Math.max(b.n/total*100,12);
+    const money=g==="reativar"||g==="adormecido"?`${kbrl(b.pt)}/ano`:g==="nunca"?"Prospecção":`${kbrl(b.s)}/12m`;
+    return `<button style="flex:${w} 1 0;background:${segColor(g)}" class="${SEG[g].light?"light":""} ${state.seg&&state.seg!==g?"dim":""}" data-g="${g}" aria-pressed="${state.seg===g}" title="${SEG[g].t}: ${b.n} clientes"><b>${b.n}</b><small>${SEG[g].t}</small><small>${money}</small></button>`}).join("");
+  const alloc=[["chave", 50, "Chave 50%"], ["esfriando", 20, "Esfriando e quedas 20%"], ["reativar", 20, "Reativar 20%"], ["crescer", 10, "Crescer e prospecção 10%"]];
+  view.innerHTML=`
+  <p class="lead">${I.lead}</p>
+  <p class="sub">${SOLO?`Sua carteira: ${total} cadastros no ERP, mais ${st.F.length} clientes que você atende e que estão fora da carteira.`:`Carteira de ${esc(I.full)}: ${total} cadastros no ERP, mais ${st.F.length} clientes atendidos por ${I.nome} que estão fora da carteira.`}</p>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Faturamento da carteira, últimos 12 meses</div><div class="v">${kbrl(st.s12)}</div><div class="d ${var12>=0?"up":"down"}">${var12==null?"":(var12>=0?"+":"")+var12.toFixed(0)+"% vs 12 meses anteriores ("+kbrl(st.p12)+")"}</div></div>
+    <div class="kpi"><div class="l">Clientes comprando (últimos 6 meses)</div><div class="v">${st.ativos} <span style="font-size:18px;font-weight:500">de ${total}</span></div><div class="d" style="color:var(--muted);font-weight:500">${Math.round(st.ativos/total*100)}% da carteira ativa</div></div>
+    <div class="kpi"><div class="l">Peso dos 5 maiores clientes</div><div class="v">${st.s12?Math.round(st.top5/st.s12*100):0}%</div><div class="d" style="color:var(--muted);font-weight:500">Do faturamento de 12 meses</div></div>
+    <div class="kpi"><div class="l">Potencial para recuperar</div><div class="v">${kbrl(st.potR)}<span style="font-size:18px;font-weight:500">/ano</span></div><div class="d" style="color:var(--muted);font-weight:500">Média anual de quem esfriou ou parou há até 4 anos</div></div>
+  </div>
+  <section class="band-wrap">
+    <div class="band-head"><h3>A carteira por situação</h3><span>Largura pela quantidade de clientes. Clique numa faixa para filtrar a lista.</span></div>
+    <div class="band" id="band">${band}</div>
+    <div class="legend">${ORDER.map(g=>`<span><i style="background:${segColor(g)}"></i>${SEG[g].t}: ${SEG[g].d}</span>`).join("")}</div>
+  </section>
+  <div class="cols">
+    <section class="panel"><h3>Onde colocar energia, em ordem</h3><ol class="focus">${I.focus.map(f=>`<li>${f}</li>`).join("")}</ol></section>
+    <section class="panel"><h3>Rotina por situação</h3>
+      <table class="cad">${ORDER.map(g=>`<tr><td><span class="sw" style="background:${segColor(g)}"></span>${SEG[g].t}<br><span style="font-weight:400;color:var(--muted)">${CAD[g][0]}</span></td><td>${CAD[g][1]}</td></tr>`).join("")}</table>
+      <p style="margin:18px 0 0;font-weight:600">Divisão sugerida do tempo na semana</p>
+      <div class="alloc">${alloc.map(a=>`<div style="flex:${a[1]};background:${segColor(a[0])}"></div>`).join("")}</div>
+      <div class="alloc-l">${alloc.map(a=>`<span>${a[2]}</span>`).join("")}</div>
+    </section>
+  </div>
+  <section class="chart"><h3>${SOLO?"Faturamento mensal dos seus clientes":"Faturamento mensal dos clientes do "+I.nome}</h3><p>Últimos 24 meses. Azul: carteira no ERP. Verde: ${SOLO?"clientes que você atende fora da carteira":"clientes atendidos por "+I.nome+" fora da carteira"}.</p><div id="chart"></div></section>
+  <section class="items"><div class="list-head"><h3>Itens que mais vendem</h3><input class="search" type="search" id="iq" placeholder="Buscar código ou descrição" aria-label="Buscar item"></div>
+    <p class="sub" style="margin:6px 0 0">Por família nos últimos 12 meses (barra) e comparação com os 12 meses anteriores.</p>
+    <div class="fam" id="fam"></div>
+    <div class="filters" id="imode"></div>
+    <div class="tscroll"><table class="it" id="itbl"></table></div><div id="imore"></div></section>
+  <section class="list">
+    <div class="list-head"><h3>Clientes para trabalhar</h3><input class="search" type="search" id="q" placeholder="Buscar por nome ou código" value="${esc(state.q)}" aria-label="Buscar cliente"></div>
+    <div class="filters" id="filters"></div>
+    <div class="tscroll"><table class="cl" id="tbl"></table></div>
+    <div id="morebox"></div>
+  </section>
+  <p class="note">Como ler: "Potencial/ano" é a média anual que o cliente comprou nos 3 anos antes da última compra (cliente novo: dividida pelo tempo em que comprou, mínimo de 1 ano). "Meses c/ compra" conta em quantos dos últimos 12 meses houve nota. O faturamento considera todas as notas do cliente, qualquer que seja o vendedor que emitiu. Clientes fora da carteira só aparecem aqui quando ${SOLO?"você emitiu":I.nome+" emitiu"} pelo menos metade do faturamento deles nos últimos 24 meses.</p>`;
+  view.querySelectorAll("#band button").forEach(b=>b.onclick=()=>{state.seg=state.seg===b.dataset.g?null:b.dataset.g;state.fora=false;state.limit=60;state.sort=null;renderSeller(S)});
+  const q=view.querySelector("#q");q.oninput=()=>{state.q=q.value;state.limit=60;drawTable(S,st)};
+  drawChart(st);drawFilters(S,st);drawTable(S,st);ist={mode:'top',sort:null,q:'',limit:40};drawItems(S);
+}
+
+function drawChart(st){
+  const W=900,H=240,pl=48,pb=26,pt=10,n=DATA.months.length,bw=(W-pl-10)/n;
+  const tot=st.monK.map((v,i)=>v+st.monF[i]);const mx=Math.max(...tot,1);
+  const step=[1e3,2e3,5e3,1e4,2e4,5e4,1e5,2e5,5e5].find(s=>mx/s<=5)||1e6;const top=Math.ceil(mx/step)*step;
+  const y=v=>pt+(H-pt-pb)*(1-v/top);
+  let g="";for(let v=0;v<=top;v+=step){g+=`<line x1="${pl}" x2="${W-6}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${v>=1e3?(v/1e3)+" mil":v}</text>`}
+  DATA.months.forEach((m,i)=>{const x=pl+i*bw+2,w=bw-4;const k=st.monK[i],f=st.monF[i];
+    g+=`<rect x="${x}" y="${y(k)}" width="${w}" height="${y(0)-y(k)}" fill="var(--c-chave)"><title>${MN[m%100-1]}/${String(m).slice(2,4)}: carteira ${brl(k)}, fora ${brl(f)}</title></rect>`;
+    g+=`<rect x="${x}" y="${y(k+f)}" width="${w}" height="${y(k)-y(k+f)}" fill="var(--c-fora)"><title>${MN[m%100-1]}/${String(m).slice(2,4)}: carteira ${brl(k)}, fora ${brl(f)}</title></rect>`;
+    if(i%3===0)g+=`<text x="${x+w/2}" y="${H-8}" text-anchor="middle">${MN[m%100-1]}/${String(m).slice(2,4)}</text>`});
+  document.getElementById("chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Faturamento mensal">${g}</svg>`;
+}
+
+function drawFilters(S,st){
+  const el=document.getElementById("filters");
+  const chips=[["",`Todos (${st.K.length})`]].concat(ORDER.filter(g=>st.bySeg[g].n).map(g=>[g,`${SEG[g].t} (${st.bySeg[g].n})`]));
+  const qn=st.K.filter(c=>c.q).length;
+  el.innerHTML=chips.map(([g,l])=>`<button class="chip" data-g="${g}" aria-pressed="${!state.fora&&!state.queda&&(state.seg||"")===g}">${g?`<i style="background:${segColor(g)}"></i>`:""}${l}</button>`).join("")+
+    (qn?`<button class="chip" data-x="queda" aria-pressed="${!!state.queda}"><i style="background:var(--bad)"></i>Em queda (${qn})</button>`:"")+
+    `<button class="chip" data-x="fora" aria-pressed="${state.fora}"><i style="background:var(--c-fora)"></i>Fora da carteira (${st.F.length})</button>`;
+  el.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    if(b.dataset.x==="fora"){state.fora=!state.fora;state.queda=false;state.seg=null}
+    else if(b.dataset.x==="queda"){state.queda=!state.queda;state.fora=false;state.seg=null}
+    else{state.seg=b.dataset.g||null;state.fora=false;state.queda=false}
+    state.limit=60;state.sort=null;renderSeller(S)});
+}
+
+function defaultSort(){
+  if(state.fora||state.queda) return ["s",-1];
+  if(state.seg==="reativar"||state.seg==="adormecido"||state.seg==="esfriando") return ["pt",-1];
+  if(state.seg==="nunca") return ["n",1];
+  return ["s",-1];
+}
+const COLS=[["n", "Cliente", 0], ["g", "Situação", 0], ["s", "12 meses", 1], ["p", "12 m anteriores", 1], ["m", "Meses c/ compra", 1], ["l", "Última compra", 1], ["pt", "Potencial/ano", 1]];
+
+function drawTable(S,st){
+  let L=state.fora?st.F:st.K.slice();
+  if(state.seg)L=L.filter(c=>c.g===state.seg);
+  if(state.queda)L=L.filter(c=>c.q);
+  if(state.q){const q=state.q.toLowerCase();L=L.filter(c=>c.n.toLowerCase().includes(q)||c.c.includes(q))}
+  const[sk,sd]=state.sort||defaultSort();
+  L.sort((a,b)=>{let x=a[sk],y=b[sk];if(sk==="n"||sk==="g"||sk==="l"){x=x||"";y=y||"";return x<y?-sd:x>y?sd:0}return((x||0)-(y||0))*sd});
+  const shown=L.slice(0,state.limit);
+  const head=`<thead><tr>${COLS.map(([k,l,num])=>`<th class="${num?"num":""}" data-k="${k}" aria-sort="${sk===k?(sd>0?"ascending":"descending"):"none"}">${l}${sk===k?(sd>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>`;
+  const body=shown.map(c=>{
+    const open=state.open.has(c.c);
+    const tag=`<span class="tag ${SEG[c.g].light?"light":""}" style="background:${segColor(c.g)}">${SEG[c.g].t}</span>`;
+    let r=`<tr class="row" data-c="${c.c}" tabindex="0" aria-expanded="${open}"><td><div class="nm">${esc(c.n)}${c.q?`<span class="flag">Em queda</span>`:""}${!c.k?`<span class="flag f">Fora da carteira</span>`:""}</div><div class="cc">${c.c}${c.u?" · "+c.u:""}</div></td><td>${tag}</td><td class="num">${c.s!=null?brl(c.s):"–"}</td><td class="num">${c.p!=null?brl(c.p):"–"}</td><td class="num">${c.m!=null?c.m:"–"}</td><td class="num">${fdate(c.l)}</td><td class="num">${c.pt?brl(c.pt):"–"}</td></tr>`;
+    if(open)r+=`<tr class="det"><td colspan="7">${detail(c,S)}</td></tr>`;
+    return r}).join("");
+  const tbl=document.getElementById("tbl");
+  tbl.innerHTML=head+`<tbody>${body||`<tr><td colspan="7" style="padding:18px;color:var(--muted)">Nenhum cliente neste filtro. Limpe a busca ou escolha outra situação.</td></tr>`}</tbody>`;
+  tbl.querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;const[ck,cd]=state.sort||defaultSort();state.sort=[k,ck===k?-cd:(k==="n"||k==="g"?1:-1)];drawTable(S,st)});
+  tbl.querySelectorAll("tr.row").forEach(tr=>{const t=()=>{const c=tr.dataset.c;state.open.has(c)?state.open.delete(c):state.open.add(c);drawTable(S,st)};tr.onclick=t;tr.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();t()}}});
+  document.getElementById("morebox").innerHTML=L.length>state.limit?`<button class="chip more" id="more">Mostrar mais ${Math.min(60,L.length-state.limit)} de ${L.length-state.limit} restantes</button>`:`<p style="color:var(--muted);font-size:13.5px;margin:8px 0 0">${L.length} clientes neste filtro.</p>`;
+  const m=document.getElementById("more");if(m)m.onclick=()=>{state.limit+=60;drawTable(S,st)};
+}
+
+
+function drawItems(K){
+  const D=ITEMS[K];
+  const fm=document.getElementById("fam");
+  const mx=Math.max(...D.fam.map(f=>f.v),1);
+  fm.innerHTML=D.fam.filter(f=>f.v>0).map(f=>{const v=f.pv?((f.v/f.pv-1)*100):null;return `<div>${esc(f.f)}</div><div class="bar"><div style="width:${f.v/mx*100}%"></div></div><div class="val">${kbrl(f.v)}<small class="${v==null?"":v>=0?"up":"down"}">${v==null?"Novo":(v>=0?"+":"")+v.toFixed(0)+"%"}</small></div>`}).join("");
+  const md=document.getElementById("imode");
+  const modes=[["top","Mais vendidos nos últimos 12 meses"]];if(D.lost&&D.lost.length)modes.push(["lost","O que os clientes parados compravam"]);
+  md.innerHTML=modes.map(([k,l])=>`<button class="chip" data-m="${k}" aria-pressed="${ist.mode===k}">${l}</button>`).join("")+
+    (ist.mode==="top"?`<button class="chip" data-s="v" aria-pressed="${!ist.sort||ist.sort[0]==="v"}">Ordenar por faturamento</button><button class="chip" data-s="c" aria-pressed="${ist.sort&&ist.sort[0]==="c"}">Ordenar por nº de clientes</button>`:"");
+  md.querySelectorAll("button").forEach(b=>b.onclick=()=>{if(b.dataset.m){ist.mode=b.dataset.m;ist.sort=null}else ist.sort=[b.dataset.s,-1];ist.limit=40;drawItems(K)});
+  const iq=document.getElementById("iq");iq.value=ist.q;iq.oninput=()=>{ist.q=iq.value;ist.limit=40;drawItems(K)};
+  let L=(ist.mode==="lost"?D.lost:D.top).slice();
+  if(ist.q){const q=ist.q.toLowerCase();L=L.filter(x=>x.k.toLowerCase().includes(q)||x.d.toLowerCase().includes(q))}
+  const[sk,sd]=ist.sort||["v",-1];
+  L.sort((a,b)=>{let x=a[sk],y=b[sk];if(typeof x==="string")return x<y?-sd:x>y?sd:0;return((x||0)-(y||0))*sd||(b.v-a.v)});
+  const cols=ist.mode==="lost"?[["k","Código"],["d","Descrição"],["f","Família"],["c","Clientes parados",1],["v","Média/ano",1]]
+    :[["k","Código"],["d","Descrição"],["f","Família"],["q","Qtd 12m",1],["c","Clientes",1],["v","12 meses",1],["pv","12 m anteriores",1]];
+  const sh=L.slice(0,ist.limit);
+  const tb=document.getElementById("itbl");
+  tb.innerHTML=`<thead><tr>${cols.map(([k,l,n])=>`<th class="${n?"num":""}" data-k="${k}">${l}${sk===k?(sd>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead><tbody>${sh.map(x=>`<tr>${cols.map(([k,,n])=>{let v=x[k];
+    if(k==="q")v=(v%1?v.toLocaleString("pt-BR",{maximumFractionDigits:2}):v.toLocaleString("pt-BR"))+(x.u?" "+x.u:"");else if(k==="v"||k==="pv")v=v?brl(v):"–";
+    return `<td class="${n?"num":""} ${k==="k"?"cod":""}">${esc(v)}</td>`}).join("")}</tr>`).join("")||`<tr><td colspan="7" style="padding:16px;color:var(--muted)">Nenhum item encontrado. Limpe a busca.</td></tr>`}</tbody>`;
+  tb.querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;ist.sort=[k,sk===k?-sd:(["k","d","f"].includes(k)?1:-1)];drawItems(K)});
+  const mb=document.getElementById("imore");
+  mb.innerHTML=L.length>ist.limit?`<button class="chip more" id="imb">Mostrar mais ${Math.min(40,L.length-ist.limit)} itens</button>`:`<p style="color:var(--muted);font-size:13.5px;margin:8px 0 0">${L.length} itens. ${ist.mode==="lost"?"Média anual dos 3 anos antes de o cliente parar: são os itens para oferecer na reativação.":(K==="EMPRESA"?"A lista junta os 80 de maior faturamento e os 40 comprados pelo maior número de clientes.":"A lista junta os 50 de maior faturamento e os 30 comprados pelo maior número de clientes.")}</p>`;
+  const b=document.getElementById("imb");if(b)b.onclick=()=>{ist.limit+=40;drawItems(K)};
+}
+
+function spark(mo){
+  if(!mo||!mo.some(v=>v))return`<p style="margin:0;font-size:14px;color:var(--muted)">Nenhuma compra nos últimos 24 meses.</p>`;const mx=Math.max(...mo,1),W=240,H=40,bw=W/mo.length;
+  return `<svg viewBox="0 0 ${W} ${H}" width="240" height="40" aria-hidden="true">${mo.map((v,i)=>`<rect x="${i*bw+1}" y="${H-(v/mx)*(H-2)}" width="${bw-2}" height="${(v/mx)*(H-2)}" fill="${v?"var(--c-chave)":"var(--line)"}"/>`).join("")}<rect x="0" y="${H-1}" width="${W}" height="1" fill="var(--line)"/></svg>`;
+}
+function script(c){
+  const it=c.t&&c.t.length?c.t[0].toLowerCase():"os itens de sempre";
+  if(c.g==="esfriando") return `Abordagem: "Faz alguns meses que não recebemos pedido de vocês. Mudou algo no fornecimento de ${esc(it)}? Quero entender e trazer uma condição melhor."`;
+  if(c.g==="reativar"||c.g==="adormecido") return `Abordagem: "Vocês compravam ${esc(it)} com a gente. Temos estoque e condição nova. Quem cuida dessa compra hoje?"`;
+  if(c.g==="nunca") return `Abordagem: identificar a manutenção e o comprador, apresentar a Empresa Modelo e o catálogo técnico.`;
+  if(c.q) return `Abordagem: pedir reunião com o comprador. O volume caiu mais da metade em relação aos 12 meses anteriores.`;
+  if(c.g==="chave") return `Abordagem: antecipar a reposição de ${esc(it)} e oferecer pedido programado.`;
+  return `Abordagem: oferecer a linha complementar ao que já compram (${esc(it)}).`;
+}
+function detail(c,S){
+  if(c.g==="nunca") return `<div>${script(c)}</div>`;
+  return `<div class="det-grid"><div><h4>Compras por mês, últimos 24 meses</h4>${spark(c.mo)}<p style="margin:6px 0 0;font-size:14px">Cliente desde ${c.f}. ${c.nf||0} notas nos últimos 12 meses. Total histórico: ${brl(c.lt)}.${c.sh?` ${SOLO?"Você emitiu":INFO[S].nome+" emitiu"} ${c.sh}% das notas dos últimos 24 meses.`:""}</p></div>
+  <div><h4>O que mais comprava (3 anos até a última compra)</h4><ul>${(c.t||[]).map(t=>`<li>${esc(t)}</li>`).join("")||"<li>Sem descrição</li>"}</ul></div></div>
+  ${c.ob?`<div class="obs">${esc(c.ob)}</div>`:""}<div class="script">${script(c)}</div>`;
+}
+
+function renderEmpresa(){}
+
+if(SOLO){state.tab=SOLO;tabsEl.style.display="none";document.querySelector("header.top h1").textContent="Sua estratégia de vendas, "+INFO[SOLO].nome;document.title="Estratégia de vendas · "+INFO[SOLO].nome;render()}else{renderTabs();render();}
+</script>
+
+<style>
+.prtBar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#FFF6D6;border:1px solid #E5C65A;border-radius:8px;padding:8px 12px;margin:10px auto;max-width:1180px;font:14px Arial,sans-serif;color:#1C2630}
+.prtBar button{font:700 14px Arial;background:#16324F;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer}
+@media print{@page{size:A4 landscape;margin:10mm}.prtBar,button,input,select,.chip,.agir{display:none!important}body{background:#fff!important}}
+</style>
+<script>
+(function(){
+ const st0=document.createElement('style');
+ st0.textContent=`.prtHead{display:none}
+.potAj{max-width:1180px;margin:0 auto 10px;background:#fff;border:1px solid #cfd8e3;border-radius:8px;padding:0 12px;font:14px/1.5 Arial,sans-serif;color:#1C2630}
+.potAj summary{cursor:pointer;font-weight:700;padding:9px 0;color:#16324F}
+.potAj ul{margin:0 0 10px;padding-left:18px}.potAj li{margin-bottom:4px}
+@media print{.prtHead{display:block!important;font-family:Arial,sans-serif;color:#1C2630;margin:0 0 8px;padding-bottom:6px;border-bottom:3px solid #16324F}
+.prtHead .t{font-size:24pt;font-weight:700;color:#16324F;margin:0}
+.prtHead .s{font-size:10pt;margin:2px 0 6px}
+.prtHead .pot{font-size:9pt;border:1px solid #cfd8e3;border-radius:6px;padding:6px 8px;margin-top:4px}
+header.top,nav.tabs,.potAj{display:none!important}}`;
+ document.head.appendChild(st0);
+ const POT=`<b>O que é o Potencial/ano?</b> É quanto o cliente costuma comprar por ano quando está ativo. A conta: soma do que ele comprou nos 3 anos antes da última compra, dividida pelo tempo em que ele comprou nesse período. Cliente antigo: divide por 3. Cliente novo: divide pelo tempo desde a primeira compra, com mínimo de 1 ano.`;
+ const POT2=[
+  `<b>Por que pode ser menor do que um ano que já vendemos?</b> Porque é uma média. Exemplo: cliente antigo que comprou R$ 19 mil num ano e R$ 13 mil em cada um dos outros dois: (19 + 13 + 13) ÷ 3 = R$ 15 mil por ano. O ano de R$ 19 mil foi acima do normal dele.`,
+  `<b>Cliente novo:</b> quem começou a comprar há 2 anos tem o total dividido por 2, e não por 3. Quem comprou tudo em menos de 1 ano conta como 1 ano: o potencial é o próprio total.`,
+  `<b>Atenção:</b> em cliente novo, uma compra grande e isolada (um projeto que não se repete) entra inteira no potencial. Antes de contar com esse valor, confirme com o cliente se vai haver recompra.`];
+ const bar=document.createElement('div');bar.className='prtBar';
+ bar.innerHTML='<span><b>Como usar:</b> escolha a carteira nas abas, filtre pela situação (em queda, esfriando, crescer, cliente-chave) e clique em <b>Imprimir</b>. A impressão sai com o nome do vendedor no topo e a lista inteira, já com o código e a descrição dos itens.</span><button type="button" id="prtBtn">🖨 Imprimir esta carteira</button>';
+ const aj=document.createElement('details');aj.className='potAj';
+ aj.innerHTML='<summary>O que é o "Potencial/ano"? (clique para ler)</summary><ul><li>'+POT.replace('<b>O que é o Potencial/ano?</b> ','')+'</li><li>'+POT2.join('</li><li>')+'</li></ul>';
+ const head=document.createElement('div');head.className='prtHead';
+ const h=document.querySelector('header.top');
+ if(h&&h.parentNode){h.parentNode.insertBefore(bar,h.nextSibling);bar.parentNode.insertBefore(aj,bar.nextSibling);h.parentNode.insertBefore(head,h)}else{document.body.prepend(aj);document.body.prepend(bar);document.body.prepend(head)}
+ function nomeCarteira(){
+  let S=null;try{S=(typeof SOLO!=="undefined"&&SOLO)?SOLO:state.tab}catch(e){}
+  if(!S)return "Carteira";
+  if(S==="EMPRESA")return "Visão da empresa (todas as carteiras)";
+  try{const I=INFO[S];if(I)return "Carteira: "+I.nome+(I.full&&I.full!==I.nome?" ("+I.full+")":"")}catch(e){}
+  return "Carteira: "+S}
+ function filtro(){const f=[];try{if(state.seg&&typeof SEG!=="undefined"&&SEG[state.seg])f.push(SEG[state.seg].t);if(state.queda)f.push("Em queda");if(state.fora)f.push("Fora da carteira");if(state.q)f.push('Busca: "'+state.q+'"')}catch(e){}return f.length?f.join(" · "):"Todos os clientes"}
+ function montaCab(){
+  const d=new Date();const dt=String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();
+  head.innerHTML='<div class="t">'+nomeCarteira()+'</div><div class="s">Empresa Modelo · Estratégia de vendas · Filtro: '+filtro()+' · Impresso em '+dt+'</div><div class="pot">'+POT+'<br>'+POT2.join('<br>')+'</div>'}
+ window.addEventListener('beforeprint',montaCab);
+ document.getElementById('prtBtn').onclick=()=>{const old=state.limit;state.limit=1e9;try{render()}catch(e){}montaCab();setTimeout(()=>{window.print();state.limit=old;try{render()}catch(e){}},300)};
+ const dica='Média anual dos 3 anos antes da última compra. Cliente com menos de 3 anos: divide pelo tempo em que comprou (mínimo 1 ano). Por ser média, pode ficar abaixo de um ano bom.';
+ const marca=()=>document.querySelectorAll('th[data-k="pt"]').forEach(t=>{if(t.title!==dica)t.title=dica});
+ new MutationObserver(marca).observe(document.body,{childList:true,subtree:true});marca();
+})();
+</script>
+<script>
+(function(){
+ if(typeof DATA==="undefined"||typeof SEG==="undefined")return;
+ const SOLOK=(typeof SOLO!=="undefined"&&SOLO)?SOLO:null;
+ const CARTS=["ANA","DIEGO","BRUNO","CARLA"].filter(k=>DATA.sellers[k]);
+ const SIT=[["chave"], ["crescer"], ["esfriando"], ["reativar"], ["adormecido"], ["nunca"], ["queda", "Em queda", "compraram menos da metade do ano anterior"], ["fora", "Fora da carteira", "atendidos, mas fora da carteira no ERP"]]
+   .map(([k,t,d])=>({k,t:t||SEG[k].t,d:d||SEG[k].d}));
+ const css=document.createElement('style');
+ css.textContent=`#psMod{position:fixed;inset:0;background:rgba(10,20,35,.55);display:none;align-items:flex-start;justify-content:center;z-index:9999;overflow:auto;padding:30px 10px}
+#psMod.on{display:flex}
+#psBox{background:#fff;border-radius:10px;max-width:720px;width:100%;padding:18px 20px;font:14px/1.45 Arial,sans-serif;color:#1C2630;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+#psBox h2{margin:0 0 4px;font-size:20px;color:#16324F}#psBox .sub{margin:0 0 12px;color:#55606c}
+#psBox fieldset{border:1px solid #d6dee8;border-radius:8px;margin:0 0 12px;padding:8px 12px}
+#psBox legend{font-weight:700;color:#16324F;padding:0 4px}
+#psBox label{display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer}
+#psBox label small{color:#6a7580}#psBox .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+#psBox .n{margin-left:auto;font-weight:700;color:#16324F;white-space:nowrap}
+#psBox .row{display:flex;gap:8px;align-items:center;border-bottom:1px solid #eef1f4}
+#psBox .row label{flex:1}
+#psBox .qt{font:14px Arial;padding:4px;border:1px solid #b9c4d0;border-radius:5px;min-width:96px}
+#psBox .qn{width:64px;font:14px Arial;padding:4px;border:1px solid #b9c4d0;border-radius:5px;display:none}
+#psBox .qn.on{display:inline-block}
+#psBox .lnk{background:none;border:0;color:#1d5fa8;text-decoration:underline;cursor:pointer;font:13px Arial;padding:0 8px 0 0}
+#psBox .act{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:6px;flex-wrap:wrap}
+#psBox .act b{margin-right:auto;color:#16324F}
+#psBox .go{font:700 15px Arial;background:#16324F;color:#fff;border:0;border-radius:6px;padding:10px 16px;cursor:pointer}
+#psBox .go:disabled{opacity:.4;cursor:default}
+#psBox .cx{font:14px Arial;background:#eef2f6;border:0;border-radius:6px;padding:10px 14px;cursor:pointer}
+.prtBar .ps2{background:#2E6B3F!important}
+#prtDoc{display:none}
+@media print{body.psel>*:not(#prtDoc){display:none!important}body.psel #prtDoc{display:block!important}
+#prtDoc{font:9.5pt/1.35 Arial,sans-serif;color:#1C2630;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#prtDoc .cart{page-break-after:always}#prtDoc .cart:last-child{page-break-after:auto}
+#prtDoc .ph{border-bottom:3px solid #16324F;padding-bottom:5px;margin-bottom:8px}
+#prtDoc .ph .t{font-size:22pt;font-weight:700;color:#16324F}
+#prtDoc .ph .s{font-size:9.5pt;margin-top:2px}
+#prtDoc .res{display:flex;gap:8px;margin:6px 0 8px}#prtDoc .res div{flex:1;border:1px solid #cfd8e3;border-radius:6px;padding:4px 7px}
+#prtDoc .res b{display:block;font-size:12pt;color:#16324F}
+#prtDoc h3{font-size:13pt;margin:12px 0 2px;padding:3px 8px;border-radius:4px;color:#fff;page-break-after:avoid}
+#prtDoc h3.light{color:#1C2630}
+#prtDoc .rot{font-size:9pt;margin:0 0 4px;color:#333}
+#prtDoc table{width:100%;border-collapse:collapse;margin-bottom:6px}
+#prtDoc th{text-align:left;font-size:8.5pt;border-bottom:1.5px solid #16324F;padding:3px 4px}
+#prtDoc td{border-bottom:1px solid #dde3ea;padding:3px 4px;vertical-align:top}
+#prtDoc tr{page-break-inside:avoid}#prtDoc .num{text-align:right;white-space:nowrap}
+#prtDoc .cc{color:#666;font-size:8pt}#prtDoc .it{font-size:8pt;color:#333}
+#prtDoc .fl{font-size:7.5pt;border:1px solid #b33;color:#b33;border-radius:3px;padding:0 3px;margin-left:4px}
+#prtDoc .ck{display:inline-block;width:11px;height:11px;border:1.2px solid #333;border-radius:2px}
+#prtDoc .pot{font-size:8.5pt;border:1px solid #cfd8e3;border-radius:6px;padding:5px 8px;margin-top:8px;page-break-inside:avoid}
+#prtDoc table.cmp td,#prtDoc table.cmp th{font-size:9pt}}`;
+ document.head.appendChild(css);
+
+ const mod=document.createElement('div');mod.id='psMod';
+ mod.innerHTML=`<div id="psBox" role="dialog" aria-modal="true" aria-labelledby="psT">
+ <h2 id="psT">Escolher o que imprimir</h2><p class="sub">Marque uma ou mais situações e escolha quantos clientes de cada uma. "Todos" imprime a lista inteira; "Os 10 maiores" imprime só os 10 primeiros da situação, em cada carteira marcada.</p>
+ <fieldset id="psCF"><legend>Carteiras</legend><div><button type="button" class="lnk" data-all="c">Marcar todas</button><button type="button" class="lnk" data-none="c">Limpar</button></div><div class="grid" id="psC"></div></fieldset>
+ <fieldset><legend>Situações</legend><div><button type="button" class="lnk" data-all="s">Marcar todas</button><button type="button" class="lnk" data-none="s">Limpar</button></div><div id="psS"></div></fieldset>
+ <fieldset><legend>Opções</legend>
+  <label id="psEmpL"><input type="checkbox" id="psEmp"> Quadro comparativo das carteiras (para a direção)</label>
+  <label><input type="checkbox" id="psRes" checked> Resumo da carteira no topo (faturamento, clientes comprando, potencial)</label>
+  <label><input type="checkbox" id="psIt" checked> Itens que cada cliente compra</label>
+  <label><input type="checkbox" id="psChk" checked> Coluna "Feito" para marcar à mão</label>
+  <label><input type="checkbox" id="psPot" checked> Explicação do Potencial/ano no fim</label>
+  <label><input type="checkbox" id="psPg"> Cada situação começa numa página nova</label>
+ </fieldset>
+ <div class="act"><b id="psTot"></b><button type="button" class="cx" id="psX">Cancelar</button><button type="button" class="go" id="psGo">🖨 Imprimir seleção</button></div></div>`;
+ document.body.appendChild(mod);
+ const doc=document.createElement('div');doc.id='prtDoc';document.body.appendChild(doc);
+
+ const nomeC=S=>{const I=INFO[S];return I?I.nome+(I.full&&I.full!==I.nome?" ("+I.full+")":""):S};
+ const $=s=>mod.querySelector(s);
+ function lista(S,k){const st=stats(S);let L;
+  if(k==="fora")L=st.F.slice();else if(k==="queda")L=st.K.filter(c=>c.q);else L=st.K.filter(c=>c.g===k);
+  const pot=k==="esfriando"||k==="reativar"||k==="adormecido";
+  L.sort((a,b)=>k==="nunca"?a.n.localeCompare(b.n):pot?((b.pt||0)-(a.pt||0)):k==="queda"?((b.p-b.s)-(a.p-a.s)):((b.s||0)-(a.s||0)));
+  return L}
+ const marcadosC=()=>SOLOK?[SOLOK]:[...mod.querySelectorAll('#psC input:checked')].map(i=>i.value);
+ const marcadosS=()=>[...mod.querySelectorAll('#psS input:checked')].map(i=>i.value);
+ function qtd(k){const sel=mod.querySelector(`[data-q="${k}"]`);if(!sel)return 0;if(sel.value==="x"){const v=parseInt(mod.querySelector(`[data-qn="${k}"]`).value,10);return v>0?v:0}return +sel.value||0}
+ function conta(){const C=marcadosC();let tot=0;
+  SIT.forEach(s=>{const n=C.reduce((a,S)=>a+lista(S,s.k).length,0);const el=mod.querySelector(`#psS [data-n="${s.k}"]`);if(el)el.textContent=n+" clientes";if(marcadosS().includes(s.k)){const q=qtd(s.k);tot+=C.reduce((a,S)=>{const m=lista(S,s.k).length;return a+(q?Math.min(q,m):m)},0)}});
+  const emp=$('#psEmp').checked&&!SOLOK;
+  $('#psTot').textContent=tot?tot+" clientes na impressão":(emp?"Só o quadro comparativo":"Nada marcado");
+  $('#psGo').disabled=!(tot||emp)||(!C.length&&!emp)}
+ function abrir(){
+  const cur=SOLOK||(state&&state.tab);
+  $('#psCF').style.display=SOLOK?"none":"";$('#psEmpL').style.display=SOLOK?"none":"";
+  $('#psC').innerHTML=CARTS.map(S=>`<label><input type="checkbox" value="${S}" ${(cur==="EMPRESA"||cur===S)?"checked":""}> ${esc(nomeC(S))}</label>`).join("");
+  const pre=new Set();if(state&&state.seg)pre.add(state.seg);if(state&&state.queda)pre.add("queda");if(state&&state.fora)pre.add("fora");
+  $('#psS').innerHTML=SIT.map(s=>`<div class="row"><label><input type="checkbox" value="${s.k}" ${pre.has(s.k)?"checked":""}><span><b>${s.t}</b><br><small>${s.d}</small></span><span class="n" data-n="${s.k}"></span></label><select class="qt" data-q="${s.k}" aria-label="Quantos clientes de ${s.t}"><option value="0">Todos</option>${[5,10,15,20,25,30,40,50,100].map(n=>`<option value="${n}">Os ${n} maiores</option>`).join("")}<option value="x">Outro número…</option></select><input class="qn" type="number" min="1" data-qn="${s.k}" placeholder="nº" aria-label="Quantidade de ${s.t}"></div>`).join("");
+  mod.querySelectorAll('.qt').forEach(sel=>sel.onchange=()=>{const k=sel.dataset.q,inp=mod.querySelector(`[data-qn="${k}"]`);inp.classList.toggle('on',sel.value==="x");if(sel.value==="x")inp.focus();const cb=mod.querySelector(`#psS input[value="${k}"]`);if(cb&&sel.value!=="0")cb.checked=true;conta()});
+  mod.querySelectorAll('.qn').forEach(i=>i.oninput=conta);
+  $('#psEmp').checked=!SOLOK&&cur==="EMPRESA";
+  mod.querySelectorAll('input[type=checkbox]').forEach(i=>i.onchange=conta);conta();
+  mod.classList.add('on');setTimeout(()=>$('#psGo').focus(),50)}
+ const fechar=()=>mod.classList.remove('on');
+ $('#psX').onclick=fechar;mod.addEventListener('click',e=>{if(e.target===mod)fechar()});
+ document.addEventListener('keydown',e=>{if(e.key==="Escape"&&mod.classList.contains('on'))fechar()});
+ mod.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{mod.querySelectorAll(b.dataset.all==="c"?'#psC input':'#psS input').forEach(i=>i.checked=true);conta()});
+ mod.querySelectorAll('[data-none]').forEach(b=>b.onclick=()=>{mod.querySelectorAll(b.dataset.none==="c"?'#psC input':'#psS input').forEach(i=>i.checked=false);conta()});
+
+ function hoje(){const d=new Date();return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear()}
+ function potTxt(){const p=document.querySelector('.potAj ul');return p?'<b>O que é o Potencial/ano?</b> '+[...p.querySelectorAll('li')].map(l=>l.innerHTML).join('<br>'):''}
+ function tabela(L,k,o){
+  const chk=o.chk?'<th style="width:34px">Feito</th>':'';
+  const h=`<tr>${chk}<th>Cliente</th>${k==="fora"?'<th>Situação</th>':''}<th class="num">12 meses</th><th class="num">12 m anteriores</th><th class="num">Meses c/ compra</th><th class="num">Última compra</th><th class="num">Potencial/ano</th>${o.it?'<th>Itens que compra</th>':''}</tr>`;
+  const b=L.map(c=>`<tr>${o.chk?'<td><span class="ck"></span></td>':''}<td><b>${esc(c.n)}</b>${c.q&&k!=="queda"?'<span class="fl">em queda</span>':''}<div class="cc">${c.c}${c.u?" · "+c.u:""}</div></td>${k==="fora"?`<td>${SEG[c.g]?SEG[c.g].t:""}</td>`:''}<td class="num">${c.s!=null?brl(c.s):"–"}</td><td class="num">${c.p!=null?brl(c.p):"–"}</td><td class="num">${c.m!=null?c.m:"–"}</td><td class="num">${fdate(c.l)}</td><td class="num">${c.pt?brl(c.pt):"–"}</td>${o.it?`<td class="it">${(c.t||[]).slice(0,3).map(esc).join("<br>")||"–"}</td>`:''}</tr>`).join("");
+  return `<table><thead>${h}</thead><tbody>${b}</tbody></table>`}
+ function bloco(S,s,o,first){
+  const LL=lista(S,s.k),q=qtd(s.k),L=q?LL.slice(0,q):LL;if(!L.length)return `<h3 style="background:#8a94a0">${s.t}</h3><p class="rot">Nenhum cliente nesta situação.</p>`;
+  const sum=L.reduce((a,c)=>a+(c.s||0),0),pt=L.reduce((a,c)=>a+(c.pt||0),0);
+  const cor=SEG[s.k]?`background:${segColor(s.k)}`:(s.k==="queda"?"background:var(--bad,#b33)":"background:var(--c-fora,#3a8a5a)");
+  const light=SEG[s.k]&&SEG[s.k].light?"light":"";
+  const rot=typeof CAD!=="undefined"&&CAD[s.k]?`<p class="rot"><b>${CAD[s.k][0]}.</b> ${CAD[s.k][1]}</p>`:(s.k==="queda"?'<p class="rot"><b>Reunião com o comprador.</b> O volume caiu mais da metade em relação aos 12 meses anteriores.</p>':'');
+  const tot=(sum?` · 12 meses: ${kbrl(sum)}`:"")+(pt&&s.k!=="nunca"?` · Potencial: ${kbrl(pt)}/ano`:"");
+  const crit=s.k==="nunca"?"em ordem alfabética":(s.k==="esfriando"||s.k==="reativar"||s.k==="adormecido")?"os de maior potencial":s.k==="queda"?"os de maior queda":"os de maior faturamento em 12 meses";
+  const qt=L.length<LL.length?`${L.length} de ${LL.length} clientes <span style="font-weight:400;font-size:10pt">(${crit})</span>`:`${L.length} cliente${L.length>1?"s":""}`;
+  return `<div style="${o.pg&&!first?'page-break-before:always':''}"><h3 class="${light}" style="${cor}">${s.t} · ${qt}<span style="font-weight:400;font-size:10pt">${tot}</span></h3>${rot}${tabela(L,s.k,o)}</div>`}
+ function empresa(C){
+  const rows=C.map(S=>{const st=stats(S);const v=st.p12?(st.s12/st.p12-1)*100:0;
+   const q=st.K.filter(c=>c.q).length;
+   return `<tr><td><b>${esc(nomeC(S))}</b></td><td class="num">${st.K.length}</td><td class="num">${st.ativos}</td><td class="num">${kbrl(st.s12)}</td><td class="num">${(v>=0?"+":"")+v.toFixed(0)}%</td>${["chave","esfriando","reativar"].map(g=>`<td class="num">${st.bySeg[g].n}</td>`).join("")}<td class="num">${q}</td><td class="num">${kbrl(st.potR)}/ano</td><td class="num">${kbrl(st.fs12)} (${st.F.length})</td></tr>`}).join("");
+  return `<table class="cmp"><thead><tr><th>Carteira</th><th class="num">Cadastros</th><th class="num">Comprando (6m)</th><th class="num">12 meses</th><th class="num">Variação</th><th class="num">Chave</th><th class="num">Esfriando</th><th class="num">Reativar</th><th class="num">Em queda</th><th class="num">Potencial a recuperar</th><th class="num">Fora da carteira (12m)</th></tr></thead><tbody>${rows}</tbody></table>`}
+ function monta(){
+  const C=marcadosC(),Sk=marcadosS();
+  const o={it:$('#psIt').checked,chk:$('#psChk').checked,pg:$('#psPg').checked,res:$('#psRes').checked,pot:$('#psPot').checked};
+  const sits=SIT.filter(s=>Sk.includes(s.k)),nomes=sits.map(s=>{const q=qtd(s.k);return s.t+(q?` (${q} maiores)`:"")}).join(", ");
+  let h="";
+  if($('#psEmp').checked&&!SOLOK){
+   const CC=C.length?C:CARTS;
+   h+=`<div class="cart"><div class="ph"><div class="t">Visão da empresa: comparativo das carteiras</div><div class="s">Empresa Modelo · Impresso em ${hoje()}</div></div>${empresa(CC)}${sits.length?`<p class="rot">Situações impressas nas páginas seguintes: ${nomes}.</p>`:''}</div>`}
+  if(sits.length)C.forEach(S=>{const st=stats(S);
+   const res=o.res?`<div class="res"><div>Faturamento 12 meses<b>${kbrl(st.s12)}</b></div><div>Comprando (6 meses)<b>${st.ativos} de ${st.K.length}</b></div><div>Potencial para recuperar<b>${kbrl(st.potR)}/ano</b></div><div>Fora da carteira (12m)<b>${kbrl(st.fs12)}</b></div></div>`:'';
+   h+=`<div class="cart"><div class="ph"><div class="t">Carteira: ${esc(nomeC(S))}</div><div class="s">Empresa Modelo · Estratégia de vendas · Situações: ${nomes} · Impresso em ${hoje()}</div></div>${res}${sits.map((s,i)=>bloco(S,s,o,i===0)).join("")}${o.pot?`<div class="pot">${potTxt()}</div>`:''}</div>`});
+  doc.innerHTML=h}
+ $('#psGo').onclick=()=>{monta();fechar();document.body.classList.add('psel');setTimeout(()=>window.print(),200)};
+ window.addEventListener('afterprint',()=>document.body.classList.remove('psel'));
+
+ const bar=document.querySelector('.prtBar');
+ if(bar){const b=document.createElement('button');b.type='button';b.className='ps2';b.id='psBtn';b.textContent='🖨 Escolher situações para imprimir';b.onclick=abrir;bar.appendChild(b);
+  const sp=bar.querySelector('span');if(sp)sp.innerHTML=SOLOK?'<b>Como imprimir:</b> <b>Imprimir esta carteira</b> sai com a lista que está na tela. <b>Escolher situações</b> deixa marcar várias de uma vez (por exemplo Esfriando, Reativar e Clientes-chave), cada uma num bloco.':'<b>Como imprimir:</b> <b>Imprimir esta carteira</b> sai com a lista que está na tela. <b>Escolher situações</b> deixa marcar várias carteiras e várias situações de uma vez, e incluir o quadro comparativo para a direção.';}
+ window.__psAbrir=abrir;window.__psMonta=monta;
+})();
+</script>
+
+<script>
+/* ===== Trazer cliente para a minha carteira (sincroniza com a Central de Vendas) ===== */
+(function(){
+ if(typeof DATA==="undefined"||typeof detail!=="function")return;
+ const NM={ANA:"Ana",DIEGO:"Diego",BRUNO:"Bruno",CARLA:"Carla"};
+ const KS={Ana:"ANA",Diego:"DIEGO",Bruno:"BRUNO",Carla:"CARLA"};
+ const SOLOK=(typeof SOLO!=="undefined"&&SOLO)?SOLO:null;
+ const BASE=JSON.parse(JSON.stringify(DATA.sellers));
+ let TR={};
+ const le=()=>{try{TR=JSON.parse(localStorage.getItem("dm_tr")||"{}")||{}}catch(e){TR={}}};
+ const grava=()=>{try{localStorage.setItem("dm_tr",JSON.stringify(TR))}catch(e){}};
+ function aplica(){le();
+  Object.keys(BASE).forEach(S=>DATA.sellers[S]=JSON.parse(JSON.stringify(BASE[S])));
+  Object.entries(TR).forEach(([k,t])=>{if(!t||!k.startsWith("v|"))return;const cod=k.slice(2),de=KS[t.de],para=KS[t.para];
+   const achaRow=()=>{for(const S of Object.keys(BASE)){const r=BASE[S].find(x=>x.c===cod);if(r)return r}return null};
+   if(de&&DATA.sellers[de])DATA.sellers[de]=DATA.sellers[de].filter(x=>!(x.c===cod&&x.k));
+   if(para&&DATA.sellers[para]){const L=DATA.sellers[para];let r=L.find(x=>x.c===cod);
+    if(r){r.k=1;r._tr=1}else{const o=achaRow();if(o){const c=JSON.parse(JSON.stringify(o));c.k=1;c._tr=1;L.push(c)}}}});}
+ aplica();
+ const _det=detail;
+ window.detail=detail=function(c,S){let h=_det(c,S);
+  const k="v|"+c.c,t=TR[k],nome=NM[S]||S;
+  let b=`<div class="trB">`;
+  if(t)b+=`<span class="trQ">Transferido de ${esc(t.de)} para ${esc(t.para)}${t.nw?" · ERP atualizado":" · <b>falta atualizar no ERP</b>"}</span>`;
+  if(!c.k)b+=`<button type="button" class="trBt main" data-trv="${c.c}" data-para="${nome}">Este cliente é ${SOLOK?"meu":"do "+nome}: trazer para a carteira de ${nome}</button><span class="trD">Use quando o cliente está na carteira de outro vendedor (ou sem vendedor) no ERP, mas quem atende é ${SOLOK?"você":nome}.</span>`;
+  else if(!SOLOK)b+=`<label>Passar para a carteira de <select data-trm="${c.c}" data-de="${nome}"><option value="">escolha</option>${Object.values(NM).filter(v=>v!==nome).concat(["Eduardo"]).map(v=>`<option>${v}</option>`).join("")}</select></label>`;
+  if(t&&!t.nw)b+=`<label class="trN"><input type="checkbox" data-trnw="${c.c}"> Já atualizei no ERP (cadastro do cliente, campo vendedor)</label>`;
+  if(t)b+=`<button type="button" class="trBt" data-trun="${c.c}">Desfazer</button>`;
+  return h+b+`</div>`};
+ const css=document.createElement("style");css.textContent=`.trB{margin-top:10px;padding:8px 10px;border:1px dashed var(--line);background:var(--surface2);display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.trBt{font:600 14px "Barlow",Arial,sans-serif;border:1px solid var(--blue);color:var(--blue);background:var(--surface2);border-radius:6px;padding:6px 10px;cursor:pointer}.trBt.main{background:var(--blue);color:#fff}
+.trQ{background:#FFF1B8;color:#5a4500;border-radius:4px;padding:2px 6px}.trD{color:var(--muted);font-size:13px}.trN{display:flex;gap:6px;align-items:center;font-weight:600}
+@media print{.trB{display:none!important}}`;document.head.appendChild(css);
+ const redesenha=()=>{try{render()}catch(e){}};
+ function transf(cod,de,para){le();const k="v|"+cod,o=TR[k];
+  const orig=o?o.de:de;
+  if(orig===para){delete TR[k]}else TR[k]={de:orig,para,at:new Date().toISOString(),nw:false,k:cod,n:(Object.values(BASE).flat().find(x=>x.c===cod)||{}).n||""};
+  grava();aplica();redesenha()}
+ document.addEventListener("click",e=>{const b=e.target.closest("[data-trv],[data-trun]");if(!b)return;e.stopPropagation();
+  if(b.dataset.trv){const cod=b.dataset.trv;let de=SOLOK?"Outra carteira":"Eduardo";for(const S of Object.keys(BASE)){const r=BASE[S].find(x=>x.c===cod&&x.k);if(r){de=NM[S];break}}transf(cod,de,b.dataset.para);alert(`Pronto: o cliente foi para a carteira de ${b.dataset.para}.\n\nAgora atualize no ERP (cadastro do cliente, campo vendedor) e marque "Já atualizei no ERP".`)}
+  else{le();delete TR["v|"+b.dataset.trun];grava();aplica();redesenha()}},true);
+ document.addEventListener("change",e=>{const s=e.target.closest("[data-trm]");if(s&&s.value){transf(s.dataset.trm,s.dataset.de,s.value);return}
+  const n=e.target.closest("[data-trnw]");if(n){le();const t=TR["v|"+n.dataset.trnw];if(t){t.nw=true;grava();aplica();redesenha()}}});
+ document.addEventListener("click",e=>{if(e.target.closest(".trB"))e.stopPropagation()},true);
+ window.addEventListener("storage",ev=>{if(ev.key==="dm_tr"){aplica();redesenha()}});
+ if(typeof drawTable==="function"){const _dt=drawTable;drawTable=function(S,st){_dt(S,st);try{const tb=document.getElementById("tbl");const box=tb&&tb.closest(".tscroll");let n=document.getElementById("trNote");
+  if(state.fora&&box){if(!n){n=document.createElement("div");n.id="trNote";box.parentNode.insertBefore(n,box)}const nome=NM[S]||S;
+   n.innerHTML=`<div class="trB" style="display:block;border-style:solid;border-color:#E5C65A;background:#FFF6D6;margin-bottom:8px"><b>Estes clientes são atendidos por ${SOLOK?"você":nome}, mas no ERP estão em outra carteira (quase sempre a do Eduardo, código 0000002).</b><ol style="margin:4px 0 0;padding-left:20px"><li>Clique no cliente e em <b>"trazer para a carteira de ${nome}"</b>.</li><li>No ERP, troque o representante do cliente para ${nome}.</li><li>Volte e marque <b>"Já atualizei no ERP"</b>.</li></ol>Se o cliente for mesmo uma conta da casa do Eduardo, deixe como está.</div>`}
+  else if(n)n.remove()}catch(e){}}}
+ redesenha();
+})();
+
+</script>
+</body>
+</html>

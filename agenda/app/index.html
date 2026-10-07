@@ -195,6 +195,8 @@ main{max-width:1280px;margin:0 auto;padding:16px}
 .resp{display:flex;gap:8px;margin-top:6px}
 .resp input{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
 .meu small{display:block;color:var(--mute)}
+.faixa-teste{background:var(--warnbg);color:#7A5410;border:1.5px solid #E6CF9A;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
+.faixa-teste a{color:#7A5410;font-weight:800}
 </style>
 </head>
 <body>
@@ -263,9 +265,11 @@ if(Q.get("s"))ls("ag-s",Q.get("s"));
 if(Q.get("api"))ls("ag-api",Q.get("api"));
 var SID=SID_FIXO||Q.get("s")||ls("ag-s")||"";
 var API=Q.get("api")||(SID_FIXO?"":ls("ag-api"))||(SID?"https://script.google.com/macros/s/"+SID+"/exec":"");
-function base(){var u=location.origin+location.pathname;if(SID_FIXO)return u;return SID?u+"?s="+SID:(Q.get("api")?u+"?api="+encodeURIComponent(API):u)}
+var NEG=(Q.get("n")||"").toLowerCase().trim();
+function linkPara(n){var u=location.origin+location.pathname,q=[];if(!SID_FIXO){if(Q.get("api"))q.push("api="+encodeURIComponent(API));else if(SID)q.push("s="+SID)}if(n)q.push("n="+encodeURIComponent(n));return u+(q.length?"?"+q.join("&"):"")}
+function base(){return linkPara(NEG)}
 function api(acao,dados){
-  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({acao:acao},dados||{})),redirect:"follow"})
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({acao:acao,n:NEG},dados||{})),redirect:"follow"})
    .then(function(r){return r.json()})
    .then(function(j){$("#offline").hidden=true;if(j&&j.erro&&!j.ocupado){var e=new Error(j.erro);e.servidor=true;throw e}return j},
      function(e){if(!e.servidor)$("#offline").hidden=false;throw e});
@@ -317,24 +321,59 @@ function convHtml(conv,lado){
     return '<div class="cm '+(eu?"eu":"ele")+'">'+esc(m.x)+'<small>'+(m.de==="cli"?(lado==="cli"?"Você":"Cliente"):(lado==="neg"?"Você":esc(DB.negocio.nome)))+' · '+dataCurta(m.t)+' '+hm(m.t)+'</small></div>'}).join("")+'</div>';
 }
 
+var WA_DAYIA="5519999389118";
+function waDayia(msg){return "https://wa.me/"+((P.lic&&P.lic.whatsapp)||WA_DAYIA)+"?text="+encodeURIComponent(msg)}
+function telaBloqueada(L){
+  var venc=L.situacao==="teste_vencido";
+  $("#app").innerHTML='<div class="caixa card" style="text-align:center"><div style="font-size:40px">'+(venc?"⏳":"⏸️")+'</div><h2>'+(venc?"Seu período de teste terminou":"Sua agenda está pausada")+'</h2><p class="sub">'+(venc?"Gostou da Agenda Fácil? Fale com a DayIA para continuar. Seus horários, clientes e serviços continuam guardados.":"Fale com a DayIA para reativar. Seus horários, clientes e serviços continuam guardados.")+'</p><a class="btn wa" target="_blank" rel="noopener" href="'+waDayia("Olá! Quero "+(venc?"continuar usando":"reativar")+" a Agenda Fácil ("+NEG+").")+'">💬 Falar com a DayIA</a><p></p><button class="btn sec min" onclick="P.sair()">Sair</button></div>';
+}
+var SEGS_CAD=[["manicure","💅 Manicure e unhas"],["estetica","✨ Clínica de estética"],["salao","💈 Salão e barbearia"],["medico","🩺 Consultório médico"],["odonto","🦷 Consultório odontológico"],["psico","🧠 Psicologia e terapia"],["pet","🐶 Pet shop · banho e tosa"],["fisio","🧘 Fisioterapia e pilates"],["outro","📅 Outro ramo"]];
+function telaInicio(){
+  $("#hNome").textContent="Agenda Fácil";document.title="Agenda Fácil by DayIA";
+  $("#rodape").innerHTML='Agenda Fácil by DayIA';
+  $("#app").innerHTML='<div class="cli"><div class="vitrine"><h2>📅 Crie a agenda online do seu negócio</h2><p>Suas clientes agendam sozinhas pelo celular, e você acompanha tudo no painel. Pronto em 1 minuto.</p></div>'+
+   '<div class="card"><h2>Criar minha agenda</h2><form id="fCad"><div class="g2">'+
+   '<label class="f full">Nome do negócio<input name="nome" required maxlength="60" placeholder="Ex.: Studio Bella Unhas"></label>'+
+   '<label class="f full">Ramo<select name="segmento">'+SEGS_CAD.map(function(s){return '<option value="'+s[0]+'">'+s[1]+'</option>'}).join("")+'</select></label>'+
+   '<label class="f full">Seu nome<input name="dono" required maxlength="60" autocomplete="name"></label>'+
+   '<label class="f">Seu WhatsApp<input name="whatsapp" required inputmode="tel" autocomplete="tel" placeholder="(19) 99999-9999"></label>'+
+   '<label class="f">Seu e-mail<input name="email" type="email" autocomplete="email"></label>'+
+   '<label class="f">Crie uma senha<input name="senha" type="password" required minlength="4" autocomplete="new-password"></label>'+
+   '<label class="f">Repita a senha<input name="senha2" type="password" required minlength="4" autocomplete="new-password"></label>'+
+   '</div><p class="sub" style="margin-top:10px">Os serviços e horários do seu ramo já vêm prontos. Você ajusta tudo depois, no painel.</p><button class="btn sol larg" id="bCad">Criar minha agenda grátis</button></form></div>'+
+   '<div class="card"><h3>Já tenho agenda</h3><form id="fEnt" class="resp"><input name="n" required placeholder="Endereço da agenda (ex.: studio-bella-unhas)"><button class="btn pri">Entrar</button></form></div></div>';
+  $("#fCad").onsubmit=function(e){e.preventDefault();var f=this;if(f.senha.value!==f.senha2.value){alert("As duas senhas estão diferentes.");return}
+    var b=$("#bCad");b.disabled=true;b.textContent="Criando…";
+    api("cadastro",{dados:{nome:f.nome.value.trim(),segmento:f.segmento.value,dono:f.dono.value.trim(),whatsapp:f.whatsapp.value.trim(),email:f.email.value.trim(),senha:f.senha.value},base:linkPara("")})
+    .then(function(j){ls("ag-tk-"+j.n,j.token);ls("ag-bemvindo",j.n);location.href=linkPara(j.n)+"#painel"})
+    .catch(function(e){b.disabled=false;b.textContent="Criar minha agenda grátis";alert(e.message)})};
+  $("#fEnt").onsubmit=function(e){e.preventDefault();var n=this.n.value.trim().toLowerCase().replace(/^.*[?&]n=/,"").replace(/[#&].*$/,"");if(n)location.href=linkPara(n)+"#painel"};
+}
+function bemVindo(){
+  if(ls("ag-bemvindo")!==NEG)return;ls("ag-bemvindo",null);var u=base();
+  var m=modal('<div style="text-align:center"><div style="font-size:40px">🎉</div><h2>Sua agenda está pronta!</h2><p class="sub">Os serviços e horários do seu ramo já estão cadastrados. Confira em <b>Serviços e horários</b>.</p></div><p style="font-weight:700;margin:12px 0 4px">Link para as suas clientes agendarem:</p><div class="link"><input readonly value="'+esc(u)+'" onclick="this.select()"></div><p style="font-weight:700;margin:12px 0 4px">Seu painel (guarde nos favoritos):</p><div class="link"><input readonly value="'+esc(u)+'#painel" onclick="this.select()"></div><div class="acoes"><button class="btn sol" id="bvOk">Começar</button></div>');
+  $("#bvOk",m).onclick=function(){fechaModal(m);N.aba="config";rNeg()};
+}
+
 /* ================= ROTAS ================= */
 var timer=null;
 function parar(){clearTimeout(timer);timer=null}
 function rota(){
   parar();$$(".aviso").forEach(function(x){x.remove()});
   if(!API)return telaConfig();
+  if(!NEG)return telaInicio();
   if(location.hash==="#painel")return P.iniciar();
   return C.iniciar();
 }
 window.addEventListener("hashchange",rota);
 
 function telaConfig(){
-  $("#app").innerHTML='<div class="caixa card"><h2>Conectar a agenda</h2><p class="sub">Cole o endereço do App da Web que você copiou no Google Apps Script (termina em <b>/exec</b>).</p><form id="fCfg"><label class="f">Endereço do App da Web<input id="cfgUrl" required placeholder="https://script.google.com/macros/s/…/exec"></label><p></p><button class="btn pri">Conectar</button></form><div id="cfgRes"></div></div>';
+  $("#app").innerHTML='<div class="caixa card"><h2>Conectar o Agenda Fácil</h2><p class="sub">Cole o endereço do App da Web que você copiou no Google Apps Script (termina em <b>/exec</b>).</p><form id="fCfg"><label class="f">Endereço do App da Web<input id="cfgUrl" required placeholder="https://script.google.com/macros/s/…/exec"></label><p></p><button class="btn pri">Conectar</button></form><div id="cfgRes"></div></div>';
   $("#fCfg").onsubmit=function(e){e.preventDefault();var u=$("#cfgUrl").value.trim(),m=u.match(/\/s\/([A-Za-z0-9_-]+)\//);
     if(!m){$("#cfgRes").innerHTML='<p class="erro">Esse endereço não parece um App da Web do Google. Ele começa com https://script.google.com/macros/s/</p>';return}
     SID=m[1];ls("ag-s",SID);API="https://script.google.com/macros/s/"+SID+"/exec";$("#cfgRes").innerHTML='<p class="sub">Testando…</p>';
-    api("info").then(function(j){carregar(j);var b=base();
-      $("#cfgRes").innerHTML='<div class="okbox"><b>Conectado: '+esc(j.negocio.nome)+'!</b><p>Link para as <b>clientes</b> agendarem (bio, WhatsApp):</p><input readonly value="'+esc(b)+'" onclick="this.select()"><p>Link do <b>painel</b> (só para o negócio):</p><input readonly value="'+esc(b)+'#painel" onclick="this.select()"><p><a class="btn sol" href="'+esc(b)+'#painel">Entrar no painel</a></p></div>'})
+    api("ping").then(function(j){var b=linkPara("");
+      $("#cfgRes").innerHTML='<div class="okbox"><b>Conectado!</b><p>Página para os negócios criarem a agenda:</p><input readonly value="'+esc(b)+'" onclick="this.select()"><p>Agenda da Ilumine-se:</p><input readonly value="'+esc(linkPara("ilumine-se"))+'" onclick="this.select()"><p><a class="btn sol" href="'+esc(b)+'">Abrir</a></p></div>'})
     .catch(function(e){$("#cfgRes").innerHTML='<p class="erro">Não consegui falar com a agenda: '+esc(e.message)+'. Confira se a implantação está como "Qualquer pessoa".</p>'})};
 }
 
@@ -348,12 +387,12 @@ var C={passo:1,sid:null,pid:null,dia:null,t:null,feito:null,meus:false,carregou:
     C.atualizar(true);
   },
   atualizar:function(desenhar){
-    return api("info").then(function(j){carregar(j);DB.ags=j.ocupados.map(function(o){return {prof:String(o.prof),ini:o.ini,fim:o.fim,status:"x"}});C.carregou=true;if(desenhar||C.passo===3)rCli()})
-    .catch(function(e){if(!C.carregou)$("#app").innerHTML='<div class="cli card"><p class="erro">Não foi possível abrir a agenda agora. '+esc(e.message)+'</p><button class="btn sec" onclick="C.atualizar(true)">Tentar de novo</button></div>'})
+    return api("info").then(function(j){if(j.bloqueado){$("#hNome").textContent=j.negocio.nome;$("#app").innerHTML='<div class="cli card"><h2>'+esc(j.negocio.nome)+'</h2><p class="sub" style="margin:0">Esta agenda está indisponível no momento. Fale direto com o estabelecimento.</p></div>';C.carregou=true;return}carregar(j);DB.ags=j.ocupados.map(function(o){return {prof:String(o.prof),ini:o.ini,fim:o.fim,status:"x"}});C.carregou=true;if(desenhar||C.passo===3)rCli()})
+    .catch(function(e){if(!C.carregou)$("#app").innerHTML='<div class="cli card"><p class="erro">'+(e.servidor?esc(e.message):'Não foi possível abrir a agenda agora. Confira a internet e tente de novo.')+'</p><button class="btn sec" onclick="C.atualizar(true)">Tentar de novo</button></div>'})
     .then(function(){parar();timer=setTimeout(function(){if(location.hash!=="#painel")C.atualizar(false)},document.hidden?60000:25000)});
   },
-  lista:function(){return ls("ag-meus")||[]},
-  guardar:function(o){var l=C.lista().filter(function(x){return x.id!==o.id});l.unshift(o);ls("ag-meus",l.slice(0,30))}
+  lista:function(){return ls("ag-meus-"+NEG)||[]},
+  guardar:function(o){var l=C.lista().filter(function(x){return x.id!==o.id});l.unshift(o);ls("ag-meus-"+NEG,l.slice(0,30))}
 };
 function rCli(){
   var N=DB.negocio,s=S(),wa=waNeg();
@@ -440,21 +479,23 @@ var N={aba:"agenda",dia:dia0(Date.now()),vis:"grade"};
 var P={tk:null,v:0,ids:null,recs:null,
   iniciar:function(){
     $("#rodape").innerHTML='<a href="#">Ver a página das clientes</a>';
-    P.tk=ls("ag-tk");if(!P.tk)return P.login();
+    P.tk=ls("ag-tk-"+NEG);if(!P.tk)return P.login();
     $("#app").innerHTML='<p class="vazio">Carregando o painel…</p>';P.v=0;P.ids=null;P.puxar();
   },
   login:function(msg){
     parar();
     $("#app").innerHTML='<div class="caixa card"><h2>Painel do negócio</h2><p class="sub">Digite a senha do painel.</p>'+(msg?'<p class="erro">'+esc(msg)+'</p>':'')+'<form id="fLog"><label class="f">Senha<input name="senha" type="password" required autocomplete="current-password"></label><p></p><button class="btn pri" id="bLog">Entrar</button></form></div>';
     $("#fLog").onsubmit=function(e){e.preventDefault();var b=$("#bLog");b.disabled=true;b.textContent="Entrando…";somLiberar();
-      api("login",{senha:this.senha.value}).then(function(j){P.tk=j.token;ls("ag-tk",j.token);P.iniciar()}).catch(function(e){P.login(e.message)})};
+      api("login",{senha:this.senha.value}).then(function(j){P.tk=j.token;ls("ag-tk-"+NEG,j.token);P.iniciar()}).catch(function(e){P.login(e.message)})};
   },
-  sair:function(){ls("ag-tk",null);P.tk=null;P.login()},
-  erro:function(e){if(e&&e.servidor&&e.message==="SESSAO"){ls("ag-tk",null);P.login("Sua sessão expirou. Entre de novo.");return true}return false},
+  sair:function(){ls("ag-tk-"+NEG,null);P.tk=null;P.login()},
+  erro:function(e){if(e&&e.servidor&&e.message==="SESSAO"){ls("ag-tk-"+NEG,null);P.login("Sua sessão expirou. Entre de novo.");return true}return false},
   puxar:function(){
     if(location.hash!=="#painel"||!P.tk)return;
     api("painel",{token:P.tk,v:P.v}).then(function(j){
-      if(!j.mudou)return;
+      var lic=JSON.stringify(j.licenca),mudouLic=lic!==P.licTxt;P.lic=j.licenca;P.licTxt=lic;
+      if(!j.licenca.ok){parar();telaBloqueada(j.licenca);return}
+      if(!j.mudou){if(mudouLic&&!$(".modal"))rNeg();return}
       P.v=j.v;carregar(j);
       DB.ags=j.ags.map(function(a){a.prof=String(a.prof);a.serv=String(a.serv);return a});
       DB.bloq=j.bloq;
@@ -466,6 +507,7 @@ var P={tk:null,v:0,ids:null,recs:null,
       }
       P.ids=ids;P.recs=recs;
       if(!$(".modal"))rNeg();else P.pendente=true;
+      bemVindo();
     }).catch(function(e){P.erro(e)}).then(function(){if(location.hash==="#painel"&&P.tk){parar();timer=setTimeout(P.puxar,document.hidden?20000:8000)}});
   },
   acao:function(tipo,extra,msgOk){
@@ -481,7 +523,8 @@ function rNeg(){
   var mes0=new Date();mes0.setDate(1);mes0.setHours(0,0,0,0);
   var fat=DB.ags.filter(function(a){return a.ini>=mes0.getTime()&&a.status==="concluido"}).reduce(function(s,a){return s+(a.preco||0)},0);
   var pend=ativos().filter(function(a){return a.status==="pendente"&&a.fim>Date.now()}).length,recs=DB.ags.filter(function(a){return a.recado_novo}).length;
-  var h='<div class="negtopo"><h2>'+S().ic+' '+esc(DB.negocio.nome)+'</h2><span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">'+(window.Notification&&Notification.permission!=="granted"?'<button class="btn sec min" id="bNotif">🔔 Ativar avisos</button>':'')+'<button class="btn sec min" id="bSair">Sair</button></span></div>'+
+  var L=P.lic||{},faixa=L.situacao==="teste"?'<div class="faixa-teste">🎁 <b>Teste grátis:</b> '+(L.dias_restantes===0?'termina hoje':(L.dias_restantes===1?'falta 1 dia':'faltam '+L.dias_restantes+' dias'))+'. Para continuar usando depois, <a href="'+waDayia("Olá! Quero continuar usando a Agenda Fácil na "+DB.negocio.nome+".")+'" target="_blank" rel="noopener">fale com a DayIA no WhatsApp</a>.</div>':'';
+  var h=faixa+'<div class="negtopo"><h2>'+S().ic+' '+esc(DB.negocio.nome)+'</h2><span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">'+(window.Notification&&Notification.permission!=="granted"?'<button class="btn sec min" id="bNotif">🔔 Ativar avisos</button>':'')+'<button class="btn sec min" id="bSair">Sair</button></span></div>'+
    '<div class="kp"><div><b>'+agH.length+'</b><span>horários hoje</span></div><div><b>'+brl(agH.reduce(function(s,a){return s+(a.preco||0)},0))+'</b><span>previsto hoje</span></div><div><b>'+pend+'</b><span>aguardando confirmar</span></div><div><b>'+recs+'</b><span>recados novos</span></div></div>'+
    '<nav class="abas" role="tablist">'+[["agenda","🗓 Agenda"],["recados","💬 Recados"],["clientes","👥 "+cap(S().clis)],["resultados","📊 Resultados"],["config","⚙️ Serviços e horários"],["link","🔗 Link de agendamento"]].map(function(a){return '<button role="tab" data-aba="'+a[0]+'" aria-selected="'+(N.aba===a[0])+'">'+a[1]+(a[0]==="agenda"&&pend?' <span class="tag t-warn">'+pend+'</span>':'')+(a[0]==="recados"&&recs?' <span class="tag t-warn">'+recs+'</span>':'')+'</button>'}).join("")+'</nav><div id="negCorpo"></div>';
   var foco=document.activeElement&&document.activeElement.id;

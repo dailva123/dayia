@@ -1,5 +1,5 @@
 /* =====================================================================
-   AGENDA ONLINE by DayIA  ·  servidor (Google Apps Script)
+   AGENDA FÁCIL by DayIA  ·  servidor (Google Apps Script)
    ---------------------------------------------------------------------
    Guarda agendamentos, serviços, equipe e bloqueios numa planilha Google.
    A página de agendamento e o painel ficam no site e conversam com este
@@ -81,7 +81,7 @@ function configurar() {
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.acao) return responder_(executar_(p));
-  return ContentService.createTextOutput("Agenda Online by DayIA · servidor funcionando (versão " + VERSAO_SISTEMA + ").");
+  return ContentService.createTextOutput("Agenda Fácil by DayIA · servidor funcionando (versão " + VERSAO_SISTEMA + ").");
 }
 function doPost(e) {
   var d = {};
@@ -335,7 +335,7 @@ function emailCliente_(a, C, tipo, texto) {
 function enviar_(para, assunto, html, nome) {
   try {
     if (MailApp.getRemainingDailyQuota() < 1) return;
-    MailApp.sendEmail({ to: para, subject: assunto, htmlBody: "<div style='font-family:Arial,sans-serif;color:#0E2238;font-size:14px'>" + html + "</div>", name: nome || "Agenda Online" });
+    MailApp.sendEmail({ to: para, subject: assunto, htmlBody: "<div style='font-family:Arial,sans-serif;color:#0E2238;font-size:14px'>" + html + "</div>", name: nome || "Agenda Fácil" });
   } catch (x) { console.log("e-mail não enviado: " + x); }
 }
 

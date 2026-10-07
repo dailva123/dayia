@@ -86,6 +86,8 @@ footer img{height:20px;width:auto;vertical-align:middle;margin-left:4px}
 .barra{background:var(--navy);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
 .barra span{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .barra button{background:var(--sun);color:var(--navy);border:0;border-radius:10px;padding:8px 14px;font-weight:800;cursor:pointer}
+#baixar{background:#fff;color:var(--navy);border-radius:10px;padding:8px 12px;font-weight:800;text-decoration:none;white-space:nowrap;font-size:14px}
+#baixar[hidden]{display:none}
 .chips{display:flex;gap:6px;background:var(--navy);padding:0 12px 10px;overflow-x:auto;scrollbar-width:thin}
 .chips:empty{display:none}
 .chips button{flex:none;background:var(--navy2);color:#CFE2F2;border:0;border-radius:999px;padding:7px 12px;font-weight:700;font-size:13px;cursor:pointer}
@@ -141,6 +143,7 @@ body.travado{overflow:hidden}
     <div class="card">
       <div class="linha"><h3>Central de Suporte</h3><span class="selo">Novo</span></div>
       <p>Chamados com prazo por prioridade, inventário de equipamentos e painel de resultados para mostrar ao cliente. O chamado aparece na hora na tela do técnico, com aviso sonoro, conversa com o cliente e acesso remoto ao computador. Para o TI da sua empresa ou para quem atende vários clientes.</p>
+      <button class="thumb" type="button" data-abrir="suporte"><img src="data:image/jpeg;base64,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" alt=""><div><b>▶ Assista ao vídeo</b><span>O cliente abre o chamado e o técnico atende, com acesso ao computador.</span></div></button>
       <p class="preco"><b>Valor sob consulta</b>, conforme o que a sua empresa precisa</p>
       <div class="acoes"><a class="btn escuro" href="suporte/" target="_blank" rel="noopener">Testar o sistema →</a><a class="btn" style="background:#F2C230;color:#0E2238" href="suporte/ao-vivo/" target="_blank" rel="noopener">Ver ao vivo →</a></div>
     </div>
@@ -172,7 +175,7 @@ body.travado{overflow:hidden}
 </main>
 
 <div id="tela" role="dialog" aria-modal="true" aria-labelledby="telaTitulo">
-  <div class="barra"><span id="telaTitulo"></span><button type="button" id="fechar">Fechar ✕</button></div>
+  <div class="barra"><span id="telaTitulo"></span><a id="baixar" hidden download>⬇ Baixar vídeo</a><button type="button" id="fechar">Fechar ✕</button></div>
   <div class="chips" id="chips"></div>
   <div class="palco" id="palco"></div>
 </div>
@@ -192,7 +195,8 @@ var V = {
     ["Serviços","videos/12-servicos.mp4"],["Estética","videos/13-estetica.mp4"],["Imobiliária","videos/14-imobiliaria.mp4"],["Representante","videos/15-representante.mp4"]
   ],
   evolui: [["Evolui","videos/16-evolui-com-voz.mp4"]],
-  prem: [["Resumo (1 min)","videos/premiacao-curto.mp4"],["Completo (4 min)","videos/video-premiacao.mp4"]]
+  prem: [["Resumo (1 min)","videos/premiacao-curto.mp4"],["Completo (4 min)","videos/video-premiacao.mp4"]],
+  suporte: [["Central de Suporte ao vivo","videos/central-suporte-ao-vivo.mp4"]]
 };
 (function(){
   if(WHATSAPP){
@@ -203,12 +207,13 @@ var V = {
   }
   var tela=document.getElementById("tela"),chips=document.getElementById("chips"),palco=document.getElementById("palco"),titulo=document.getElementById("telaTitulo"),origem=null;
   function decode(id){var b=atob(document.getElementById(id).textContent.trim()),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder("utf-8").decode(u);}
-  function limpar(){pedido++;palco.innerHTML="";chips.innerHTML="";}
-  function tocar(src){palco.innerHTML="";var v=document.createElement("video");v.controls=true;v.playsInline=true;v.setAttribute("playsinline","");v.preload="metadata";v.src=src;palco.appendChild(v);var p=v.play();if(p&&p.catch)p.catch(function(){});}
+  var baixar=document.getElementById("baixar");
+  function limpar(){pedido++;palco.innerHTML="";chips.innerHTML="";baixar.hidden=true;}
+  function tocar(src,nm){palco.innerHTML="";baixar.href=src;baixar.setAttribute("download","DayIA - "+(nm||"video").replace(/[\\/:*?"<>|]/g,"")+".mp4");baixar.hidden=false;var v=document.createElement("video");v.controls=true;v.playsInline=true;v.setAttribute("playsinline","");v.preload="metadata";v.src=src;palco.appendChild(v);var p=v.play();if(p&&p.catch)p.catch(function(){});}
   function abrirVideos(nome,lista){
     titulo.textContent=nome;limpar();
-    if(lista.length>1){lista.forEach(function(it,i){var b=document.createElement("button");b.type="button";b.textContent=it[0];b.setAttribute("aria-pressed",i===0);b.onclick=function(){chips.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed","false");});b.setAttribute("aria-pressed","true");tocar(it[1]);};chips.appendChild(b);});}
-    tocar(lista[0][1]);mostrar();
+    if(lista.length>1){lista.forEach(function(it,i){var b=document.createElement("button");b.type="button";b.textContent=it[0];b.setAttribute("aria-pressed",i===0);b.onclick=function(){chips.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed","false");});b.setAttribute("aria-pressed","true");tocar(it[1],lista.length>1?nome+" - "+it[0]:nome);};chips.appendChild(b);});}
+    tocar(lista[0][1],lista.length>1?nome+" - "+lista[0][0]:nome);mostrar();
   }
   function abrirFerramenta(nome,id){titulo.textContent=nome;limpar();var f=document.createElement("iframe");f.title=nome;f.srcdoc=decode(id);palco.appendChild(f);mostrar();}
   var T={central:[["Central de Vendas","ferramentas/central-vendas.html"]],
@@ -237,6 +242,7 @@ var V = {
     if(k==="qs")abrirVideos("Quanto Sobra",V.qs);
     else if(k==="evolui")abrirVideos("Evolui",V.evolui);
     else if(k==="prem")abrirVideos("Premiação de Vendas",V.prem);
+    else if(k==="suporte")abrirVideos("Central de Suporte",V.suporte);
     else if(k==="premDemo")abrirFerramenta("Premiação de Vendas · demonstração","src-prem");
     else if(k==="roscas")abrirFerramenta("Identificador de Roscas","src-roscas");
     else if(T[k])abrirRemoto(NOMES[k],T[k]);

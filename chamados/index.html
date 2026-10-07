@@ -431,6 +431,15 @@ var Tec={
       var em=this.email.value.trim(),pin=this.pin.value;ls("cs-ultimo",em);somLiberar();
       api("login",{email:em,pin:pin}).then(function(j){Tec.s={token:j.token,nome:j.nome,gestor:j.gestor,empresa:j.empresa,distribuicao:j.distribuicao};ls("cs-sessao",Tec.s);Tec.aba="fila";Tec.iniciar()})
       .catch(function(e){Tec.login(e.message)})};
+    api("ping").then(function(j){if(!j.primeiro||!$("#fLog"))return;
+      var c=document.createElement("div");c.className="caixa card";c.style.marginTop="14px";
+      c.innerHTML='<h2>👋 Primeira vez aqui?</h2><p class="sub">Crie o seu acesso de gestor. Depois é só entrar com o seu e-mail e a sua senha.</p>'+
+        '<form id="fPri"><label class="f">Seu nome<input name="nome" required maxlength="60" autocomplete="name"></label><p></p><label class="f">Nome da sua empresa<input name="empresa" required maxlength="80" autocomplete="organization"></label><p></p><label class="f">Seu e-mail<input name="email" type="email" required autocomplete="email"></label><p></p><label class="f">Crie uma senha (mínimo 4 caracteres)<input name="senha" type="password" required minlength="4" autocomplete="new-password"></label><p></p><button class="btn pri" id="bPri">Criar meu acesso</button></form>';
+      $("#app").appendChild(c);
+      $("#fPri").onsubmit=function(e){e.preventDefault();var b=$("#bPri"),f=this;b.disabled=true;b.textContent="Criando…";somLiberar();
+        api("primeiroAcesso",{nome:f.nome.value,empresa:f.empresa.value,email:f.email.value,senha:f.senha.value}).then(function(j){ls("cs-ultimo",f.email.value.trim());Tec.s={token:j.token,nome:j.nome,gestor:true,empresa:j.empresa,distribuicao:j.distribuicao};ls("cs-sessao",Tec.s);setEmpresa(j.empresa);Tec.aba="cfg";Tec.iniciar();toast("Acesso criado! Agora cadastre a sua equipe.")})
+        .catch(function(e){alert(e.message);b.disabled=false;b.textContent="Criar meu acesso"})};
+    }).catch(function(){});
   },
   sair:function(){ls("cs-sessao",null);Tec.s=null;Tec.sel=null;Tec.login()},
   cabecalho:function(){

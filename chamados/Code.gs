@@ -14,7 +14,7 @@
    5. Copie o código da implantação e coloque no link do sistema.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "1.2";
+var VERSAO_SISTEMA = "1.3";
 var ABAS = {
   Chamados:  ["id","criado","atualizado","nome","empresa","email","tel","setor","categoria","prioridade","assunto","descricao","patrimonio","app","rid","permite","anexo","status","tecnico","prazo","acesso","nota","minutos","resolvido","chave"],
   Mensagens: ["chamado","quando","de","autor","texto"],
@@ -97,7 +97,27 @@ function executar_(d) {
 }
 
 var ACOES = {
-  ping: function () { return { ok: true, empresa: cfg_("empresa"), versao: VERSAO_SISTEMA }; },
+  ping: function () { return { ok: true, empresa: cfg_("empresa"), versao: VERSAO_SISTEMA, primeiro: !!linhaExemploGestor_() }; },
+
+  /* primeiro acesso: o dono cria o próprio login, sem ninguém mexer na planilha */
+  primeiroAcesso: function (d) {
+    var nome = lim_(d.nome, 60), email = lim_(d.email, 120).toLowerCase(), senha = lim_(d.senha, 20), emp = lim_(d.empresa, 80);
+    if (!nome) throw new Error("Coloque o seu nome.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Coloque um e-mail válido.");
+    if (senha.length < 4) throw new Error("A senha precisa ter pelo menos 4 caracteres.");
+    return comTrava_(function () {
+      var linha = linhaExemploGestor_();
+      if (!linha) throw new Error("O acesso de gestor já foi criado. Entre com o seu e-mail e senha.");
+      var sh = aba_("Tecnicos"), v = sh.getDataRange().getValues();
+      sh.getRange(linha, 1, 1, 5).setValues([[nome, email, "'" + senha, "SIM", "SIM"]]);
+      for (var i = 1; i < v.length; i++) if (i + 1 !== linha && /@suaempresa\.com\.br$/i.test(String(v[i][1]).trim())) sh.getRange(i + 1, 5).setValue("NÃO");
+      if (emp) setCfg_("empresa", emp);
+      mudou_();
+      var token = Utilities.getUuid();
+      CacheService.getScriptCache().put("tk_" + token, JSON.stringify({ nome: nome, email: email, gestor: true }), 21600);
+      return { ok: true, token: token, nome: nome, gestor: true, empresa: cfg_("empresa"), distribuicao: cfg_("distribuicao") };
+    });
+  },
 
   /* guarda o aparelho para receber avisos com o app fechado */
   pushReg: function (d) {
@@ -542,6 +562,11 @@ function testarAviso() {
 }
 
 /* ---------------- configurações pelo painel do gestor ---------------- */
+function linhaExemploGestor_() {
+  var v = aba_("Tecnicos").getDataRange().getValues();
+  for (var i = 1; i < v.length; i++) if (String(v[i][1]).trim().toLowerCase() === "dono@suaempresa.com.br" && sim_(v[i][3])) return i + 1;
+  return 0;
+}
 function configGestor_(eu, d) {
   if (!eu.gestor) throw new Error("Só o gestor mexe nas configurações.");
   if (d.tipo === "verConfig") {

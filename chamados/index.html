@@ -207,9 +207,10 @@ var STATUS=["Aberto","Em atendimento","Aguardando cliente","Resolvido"];
 var Q=new URLSearchParams(location.search);
 if(Q.get("s"))ls("cs-s",Q.get("s"));
 if(Q.get("api"))ls("cs-api",Q.get("api"));
-var SID=Q.get("s")||ls("cs-s")||"";
-var API=Q.get("api")||ls("cs-api")||(SID?"https://script.google.com/macros/s/"+SID+"/exec":"");
-function base(){var u=location.origin+location.pathname;return SID?u+"?s="+SID:(Q.get("api")?u+"?api="+encodeURIComponent(API):u)}
+var SID_FIXO="AKfycbyl7cQh_oEVXLZSGBESLuVPrbGkPo690p1nATUAjWgvDELJvqyfW4-PjgUtdRPgC4Iw";
+var SID=SID_FIXO||Q.get("s")||ls("cs-s")||"";
+var API=Q.get("api")||(SID_FIXO?"":ls("cs-api"))||(SID?"https://script.google.com/macros/s/"+SID+"/exec":"");
+function base(){var u=location.origin+location.pathname;if(SID_FIXO&&!Q.get("api"))return u;return SID&&!Q.get("api")?u+"?s="+SID:(Q.get("api")?u+"?api="+encodeURIComponent(API):u)}
 function api(acao,dados){
   var corpo=Object.assign({acao:acao},dados||{});
   return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(corpo),redirect:"follow"})

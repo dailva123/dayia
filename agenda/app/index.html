@@ -369,7 +369,7 @@ function convHtml(conv,lado){
 
 var WA_DAYIA="5519999389118";
 /* planos: preços e links de pagamento (Mercado Pago). Link vazio = o botão abre o WhatsApp da DayIA */
-var PLANOS={mensal:{preco:"R$ 79,90",por:"por mês",link:"https://mpago.la/143gRxH"},anual:{preco:"R$ 799",por:"por ano",obs:"Paga 10 meses e usa 12",link:"https://mpago.la/1YroaiM"}};
+var PLANOS={mensal:{preco:"R$ 79,90",por:"por mês",link:"https://mpago.la/2D859LL"},anual:{preco:"R$ 799",por:"por ano",obs:"Paga 10 meses e usa 12",link:"https://mpago.la/1YroaiM"}};
 function planosHtml(nome){
   function bt(k,txt){var p=PLANOS[k];var href=p.link||waDayia("Olá! Quero o plano "+(k==="mensal"?"por mês":"por ano")+" da Agenda Fácil ("+nome+").");
     return '<a class="btn '+(k==="anual"?"pri":"sec")+'" style="width:100%;box-sizing:border-box;justify-content:center" target="_blank" rel="noopener" href="'+esc(href)+'">'+txt+'</a>'}

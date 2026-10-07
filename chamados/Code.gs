@@ -1,5 +1,5 @@
 /* =====================================================================
-   CENTRAL DE SUPORTE by DayIA  ·  servidor (Google Apps Script)
+   ATENDE FÁCIL by DayIA  ·  servidor (Google Apps Script)
    ---------------------------------------------------------------------
    Guarda chamados, conversas, histórico e técnicos numa planilha Google.
    As telas (cliente, técnico e gestor) ficam no site e conversam com
@@ -75,7 +75,7 @@ function configurar() {
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.acao) return responder_(executar_(p));
-  return ContentService.createTextOutput("Central de Suporte by DayIA · servidor funcionando (versão " + VERSAO_SISTEMA + ").");
+  return ContentService.createTextOutput("Atende Fácil by DayIA · servidor funcionando (versão " + VERSAO_SISTEMA + ").");
 }
 function doPost(e) {
   var d = {};
@@ -308,7 +308,7 @@ function avisarNovo_(t) {
     tabela_([["Prioridade", t.prioridade], ["Cliente", t.nome], ["Empresa", t.empresa], ["Telefone", t.tel], ["E-mail", t.email], ["Setor", t.setor],
              ["Tipo", t.categoria], ["Assunto", t.assunto], ["Descrição", t.descricao], ["Patrimônio", t.patrimonio],
              ["Acesso remoto", (t.app || "") + " " + (t.rid || "")], ["Encaminhado para", t.tecnico || "Fila (todos)"]]) +
-    (link ? "<p><a href='" + link + "#tecnico' style='background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold'>Abrir a Central de Suporte</a></p>" : ""));
+    (link ? "<p><a href='" + link + "#tecnico' style='background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold'>Abrir a Atende Fácil</a></p>" : ""));
 }
 function confirmarCliente_(t) {
   if (!sim_(cfg_("avisar_cliente_email")) || !/@/.test(t.email)) return;
@@ -325,7 +325,7 @@ function avisarTransferencia_(t, para, por) {
   if (!r || !/@/.test(r.email)) return;
   var link = cfg_("link_sistema");
   enviar_(r.email, "Chamado #" + t.id + " transferido para você", "<p>" + esc_(por) + " transferiu para você o chamado <b>#" + t.id + " · " + esc_(t.assunto) + "</b> (" + esc_(t.empresa) + ").</p>" +
-    (link ? "<p><a href='" + link + "#tecnico'>Abrir a Central de Suporte</a></p>" : ""));
+    (link ? "<p><a href='" + link + "#tecnico'>Abrir a Atende Fácil</a></p>" : ""));
 }
 function avisarCliente_(t, tecnico, texto, resolvido) {
   if (!sim_(cfg_("avisar_cliente_email")) || !/@/.test(t.email)) return;
@@ -340,7 +340,7 @@ function avisarCliente_(t, tecnico, texto, resolvido) {
 function enviar_(para, assunto, html, nome) {
   try {
     if (MailApp.getRemainingDailyQuota() < 1) return;
-    MailApp.sendEmail({ to: para, subject: assunto, htmlBody: "<div style='font-family:Arial,sans-serif;color:#0E2238;font-size:14px'>" + html + "</div>", name: nome || "Central de Suporte" });
+    MailApp.sendEmail({ to: para, subject: assunto, htmlBody: "<div style='font-family:Arial,sans-serif;color:#0E2238;font-size:14px'>" + html + "</div>", name: nome || "Atende Fácil" });
   } catch (x) { console.log("e-mail não enviado: " + x); }
 }
 function tabela_(linhas) {
@@ -353,7 +353,7 @@ function tabela_(linhas) {
 function pastaAnexos_() {
   var p = PropertiesService.getScriptProperties(), id = p.getProperty("PASTA");
   if (id) { try { return DriveApp.getFolderById(id); } catch (x) {} }
-  var f = DriveApp.createFolder("Central de Suporte · anexos");
+  var f = DriveApp.createFolder("Atende Fácil · anexos");
   p.setProperty("PASTA", f.getId());
   return f;
 }

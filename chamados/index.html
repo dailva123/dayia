@@ -212,7 +212,7 @@ fazManifesto();window.addEventListener("hashchange",fazManifesto);setTimeout(faz
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").then(function(r){SWR=r}).catch(function(){});
 function notificar(titulo,corpo,tag,aoClicar){
   try{
-    if(!window.Notification||Notification.permission!=="granted")return;
+    if(!window.Notification||Notification.permission!=="granted")return;if(PUSH.sub&&ls("push-srv"))return;
     var o={body:corpo,tag:tag,icon:"icon-192.png",badge:"icon-192.png",renotify:true,vibrate:[200,100,200]};
     try{var n=new Notification(titulo,o);n.onclick=function(){window.focus();n.close();if(aoClicar)aoClicar()};return}catch(e){}
     var go=function(r){if(r)r.showNotification(titulo,o)};
@@ -232,7 +232,7 @@ function botaoAvisos(onde,txt){
   try{
     if(!onde||!window.Notification||Notification.permission!=="default"||onde.querySelector(".bAvCli"))return;
     var b=document.createElement("button");b.type="button";b.className="btn sec min bAvCli";b.style.marginTop="12px";b.textContent=txt||"🔔 Me avise por notificação";
-    b.onclick=function(){somLiberar();Notification.requestPermission().then(function(p){b.remove();if(p==="granted")toast("Pronto! Você vai ser avisado aqui.")})};
+    b.onclick=function(){pedirPermissao().then(function(p){b.remove();if(p==="granted")toast("Pronto! Você vai ser avisado aqui.")})};
     onde.appendChild(b);
   }catch(e){}
 }
@@ -438,7 +438,7 @@ var Tec={
       (window.Notification&&Notification.permission!=="granted"?'<button class="btn sec min" id="bNotif">🔔 Ativar avisos</button>':'')+
       '<button class="btn sec min" id="bSair">Sair</button>';
     $("#bSair").onclick=Tec.sair;
-    var bn=$("#bNotif");if(bn)bn.onclick=function(){somLiberar();Notification.requestPermission().then(function(){Tec.cabecalho();toast("Pronto! Você vai ser avisado mesmo com a tela em segundo plano.")})};
+    var bn=$("#bNotif");if(bn)bn.onclick=function(){pedirPermissao().then(function(){Tec.cabecalho();toast("Pronto! Você vai ser avisado mesmo com a tela em segundo plano.")})};
   },
   erro:function(e){if(e&&e.servidor&&e.message==="SESSAO"){ls("cs-sessao",null);Tec.login("Sua sessão expirou. Entre de novo.");return true}return false},
   puxar:function(){
@@ -587,6 +587,42 @@ function somLiberar(){try{actx=actx||new (window.AudioContext||window.webkitAudi
 document.addEventListener("click",somLiberar);
 function bip(){try{somLiberar();[0,0.18,0.5,0.68].forEach(function(d,i){var o=actx.createOscillator(),g=actx.createGain();o.frequency.value=i%2?1046:784;o.connect(g);g.connect(actx.destination);g.gain.setValueAtTime(0.0001,actx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.3,actx.currentTime+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+d+0.25);o.start(actx.currentTime+d);o.stop(actx.currentTime+d+0.3)})}catch(e){}}
 document.addEventListener("visibilitychange",function(){if(!document.hidden){if(location.hash==="#tecnico"&&Tec.s){clearTimeout(timer);Tec.puxar()}else if(Cli.aberto){clearTimeout(timer);Cli.atualizar()}}});
+
+/* ===== avisos com o app fechado (OneSignal) ===== */
+var OS_APP="7a1178de-2e8b-4205-aeb9-8171f97fb614";
+var PUSH={os:null,sub:null};
+(function(){
+  if(!("serviceWorker" in navigator)||!window.PushManager&&!window.safari)return;
+  var raiz=location.pathname.split("/").slice(0,2).join("/")+"/";
+  window.OneSignalDeferred=window.OneSignalDeferred||[];
+  OneSignalDeferred.push(async function(OS){
+    try{
+      await OS.init({appId:OS_APP,serviceWorkerPath:raiz.slice(1)+"push/OneSignalSDKWorker.js",serviceWorkerParam:{scope:raiz+"push/"},autoResubscribe:true,notifyButton:{enable:false},welcomeNotification:{disable:true}});
+      PUSH.os=OS;
+      var at=function(){var s=OS.User.PushSubscription;PUSH.sub=(s.optedIn&&s.id)?s.id:null;if(PUSH.sub)setTimeout(pushRegistrar,300)};
+      OS.User.PushSubscription.addEventListener("change",at);
+      if(window.Notification&&Notification.permission==="granted"&&!OS.User.PushSubscription.optedIn){try{await OS.User.PushSubscription.optIn()}catch(e){}}
+      at();
+    }catch(e){try{console.log("avisos push indisponíveis",e)}catch(x){}}
+  });
+  var s=document.createElement("script");s.src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";s.defer=true;document.head.appendChild(s);
+})();
+function pedirPermissao(){
+  somLiberar();
+  if(PUSH.os){return PUSH.os.Notifications.requestPermission().then(function(){try{if(Notification.permission==="granted"&&!PUSH.os.User.PushSubscription.optedIn)return PUSH.os.User.PushSubscription.optIn()}catch(e){}}).catch(function(){}).then(function(){return window.Notification?Notification.permission:"denied"})}
+  return window.Notification?Notification.requestPermission():Promise.resolve("denied");
+}
+function pushJa(k){var l=ls("push-reg")||{};return l[k+"|"+PUSH.sub]}
+function pushMarca(k,ativo){var l=ls("push-reg")||{};l[k+"|"+PUSH.sub]=1;ls("push-reg",l);ls("push-srv",!!ativo)}
+setInterval(function(){if(PUSH.sub)pushRegistrar()},20000);
+window.addEventListener("hashchange",function(){if(PUSH.sub)setTimeout(pushRegistrar,1500)});
+function pushRegistrar(){
+  if(!PUSH.sub||!API)return;
+  try{
+    if(location.hash==="#tecnico"&&Tec.s&&Tec.s.token){var k="t:"+(Tec.s.nome||"");if(!pushJa(k))api("pushReg",{token:Tec.s.token,sub:PUSH.sub}).then(function(j){pushMarca(k,j.ativo)}).catch(function(){})}
+    var a=Cli.aberto;if(location.hash!=="#tecnico"&&a&&a.id&&a.chave){var k2="c:"+a.id;if(!pushJa(k2))api("pushReg",{id:a.id,chave:a.chave,sub:PUSH.sub}).then(function(j){pushMarca(k2,j.ativo)}).catch(function(){})}
+  }catch(e){}
+}
 
 /* ===== avisos para o cliente (Atende Fácil) ===== */
 function nomeApp(){return location.hash==="#tecnico"?(EMPRESA?EMPRESA+" · Equipe":"Atende Fácil · Equipe"):(EMPRESA||"Atende Fácil")}

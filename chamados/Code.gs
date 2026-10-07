@@ -14,7 +14,7 @@
    5. Copie o código da implantação e coloque no link do sistema.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "1.0";
+var VERSAO_SISTEMA = "1.1";
 var ABAS = {
   Chamados:  ["id","criado","atualizado","nome","empresa","email","tel","setor","categoria","prioridade","assunto","descricao","patrimonio","app","rid","permite","anexo","status","tecnico","prazo","acesso","nota","minutos","resolvido","chave"],
   Mensagens: ["chamado","quando","de","autor","texto"],
@@ -57,7 +57,8 @@ function configurar() {
     ["avisar_cliente_email", "SIM", "Mandar e-mail ao cliente quando o técnico responder"],
     ["proximo_id", "1001", "Número do próximo chamado (não mexa)"],
     ["rodizio_pos", "0", "Uso interno do rodízio (não mexa)"],
-    ["link_sistema", "", "Preenchido sozinho quando o primeiro chamado for aberto"]
+    ["link_sistema", "", "Preenchido sozinho quando o primeiro chamado for aberto"],
+    ["push_chave", "", "Chave do OneSignal: avisos no celular mesmo com o app fechado (cole aqui a chave)"]
   ];
   var tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
   padrao.forEach(function (p) { if (tem.indexOf(p[0]) < 0) cfg.appendRow(p); });
@@ -98,6 +99,13 @@ function executar_(d) {
 var ACOES = {
   ping: function () { return { ok: true, empresa: cfg_("empresa"), versao: VERSAO_SISTEMA }; },
 
+  /* guarda o aparelho para receber avisos com o app fechado */
+  pushReg: function (d) {
+    if (d.token) { var eu = sessao_(d); pushGuardar_("T_" + String(eu.email).trim().toLowerCase(), d.sub); }
+    else { var t = chamadoCliente_(d); pushGuardar_("C_" + t.id, d.sub); }
+    return { ok: true, ativo: !!pushChave_() };
+  },
+
   /* ======== CLIENTE (sem login: usa o número do chamado + código secreto) ======== */
   abrir: function (d) {
     var c = d.dados || {};
@@ -126,6 +134,7 @@ var ACOES = {
       mudou_();
       avisarNovo_(t);
       confirmarCliente_(t);
+      push_(tecsPush_(tecnico ? function (r) { return r.nome === tecnico || sim_(r.gestor); } : null), "🔔 Novo chamado #" + id, (t.empresa ? t.empresa + " · " : "") + t.assunto + " (" + prio + ")", linkTec_());
       return { ok: true, id: id, chave: chave, empresa: cfg_("empresa") };
     });
   },
@@ -146,6 +155,7 @@ var ACOES = {
       atualizar_(t.id, { status: st, atualizado: new Date() });
       hist_(t.id, t.nome + " (cliente)", "respondeu", resumo_(x));
       mudou_();
+      push_(tecsPush_(t.tecnico ? function (r) { return r.nome === t.tecnico; } : null), "💬 " + primeiro_(t.nome) + " respondeu o chamado #" + t.id, resumo_(x), linkTec_());
       return { ok: true };
     });
   },
@@ -221,6 +231,7 @@ var ACOES = {
           atualizar_(t.id, { tecnico: eu.nome, status: t.status === "Aberto" ? "Em atendimento" : t.status, atualizado: agora });
           msg_(t.id, "sis", "", eu.nome + " assumiu o chamado.");
           hist_(t.id, eu.nome, "assumiu o chamado", t.tecnico ? "estava com " + t.tecnico : "");
+          push_(["C_" + t.id], cfg_("empresa"), "👨‍🔧 " + eu.nome + " está cuidando do seu chamado #" + t.id + ".", linkCli_(t));
           break;
         case "transferir":
           var para = String(d.para || "");
@@ -229,6 +240,7 @@ var ACOES = {
           msg_(t.id, "sis", "", "Chamado transferido para " + para + ".");
           hist_(t.id, eu.nome, "transferiu", "de " + (t.tecnico || "ninguém") + " para " + para + (d.motivo ? " · " + lim_(d.motivo, 200) : ""));
           avisarTransferencia_(t, para, eu.nome);
+          push_(tecsPush_(function (r) { return r.nome === para; }), "Chamado #" + t.id + " transferido para você", eu.nome + " · " + t.assunto, linkTec_());
           break;
         case "responder":
           x = lim_(d.texto, 3000);
@@ -244,6 +256,7 @@ var ACOES = {
             msg_(t.id, "tec", eu.nome, x);
             hist_(t.id, eu.nome, "respondeu ao cliente", resumo_(x));
             avisarCliente_(t, eu.nome, x);
+            push_(["C_" + t.id], cfg_("empresa"), "💬 " + eu.nome + ": " + resumo_(x), linkCli_(t));
           }
           break;
         case "status":
@@ -257,6 +270,7 @@ var ACOES = {
           atualizar_(t.id, { acesso: "pendente", atualizado: agora });
           msg_(t.id, "sis", "", eu.nome + " pediu acesso remoto ao computador.");
           hist_(t.id, eu.nome, "pediu acesso remoto", (t.app || "") + " " + (t.rid || ""));
+          push_(["C_" + t.id], cfg_("empresa"), "🖥 " + eu.nome + " pediu para acessar o seu computador. Toque para permitir.", linkCli_(t));
           break;
         case "conectou":
           msg_(t.id, "sis", "", eu.nome + " conectou ao computador" + (t.rid ? " (" + (t.app || "acesso remoto") + " " + t.rid + ")" : "") + ".");
@@ -273,6 +287,7 @@ var ACOES = {
           if (d.texto) { msg_(t.id, "tec", eu.nome, lim_(d.texto, 3000)); avisarCliente_(t, eu.nome, lim_(d.texto, 3000), true); }
           msg_(t.id, "sis", "", "Chamado resolvido por " + eu.nome + ". Tempo de atendimento: " + fmtMin_(min) + ".");
           hist_(t.id, eu.nome, "resolveu o chamado", fmtMin_(min));
+          push_(["C_" + t.id], cfg_("empresa"), "✅ Seu chamado #" + t.id + " foi resolvido. Conte como foi o atendimento.", linkCli_(t));
           break;
         case "reabrir":
           atualizar_(t.id, { status: "Em atendimento", resolvido: "", atualizado: agora });
@@ -296,6 +311,12 @@ var ACOES = {
 };
 
 /* ---------------- e-mails ---------------- */
+function linkCli_(t) { var l = cfg_("link_sistema"); return l ? l + (l.indexOf("?") < 0 ? "?" : "&") + "c=" + t.id + "&k=" + t.chave : ""; }
+function linkTec_() { var l = cfg_("link_sistema"); return l ? l + "#tecnico" : ""; }
+function tecsPush_(filtro) {
+  return linhas_("Tecnicos").filter(function (r) { return sim_(r.ativo) && (!filtro || filtro(r)); })
+    .map(function (r) { return "T_" + String(r.email).trim().toLowerCase(); });
+}
 function avisarNovo_(t) {
   if (!sim_(cfg_("avisar_tecnicos_email"))) return;
   var tecs = linhas_("Tecnicos").filter(function (r) { return sim_(r.ativo) && /@/.test(r.email); });
@@ -469,3 +490,50 @@ function resumo_(x) { x = String(x).replace(/\s+/g, " "); return x.length > 120 
 function primeiro_(n) { return String(n || "").trim().split(" ")[0]; }
 function esc_(s) { return String(s === undefined || s === null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 function fmtMin_(m) { m = Number(m) || 0; var h = Math.floor(m / 60), r = m % 60; return h ? h + " h" + (r ? " " + r + " min" : "") : r + " min"; }
+
+/* ---------------- avisos no celular, mesmo com o app fechado (OneSignal) ---------------- */
+var ONESIGNAL_APP = "7a1178de-2e8b-4205-aeb9-8171f97fb614";
+function pushGuardar_(chave, sub) {
+  sub = String(sub || "").trim();
+  if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error("Aparelho inválido.");
+  var P = PropertiesService.getScriptProperties(), k = "PS_" + chave, o = { s: [], t: 0 };
+  try { o = JSON.parse(P.getProperty(k) || '{"s":[]}'); } catch (x) {}
+  var l = (o.s || []).filter(function (s) { return s !== sub; }); l.push(sub);
+  P.setProperty(k, JSON.stringify({ s: l.slice(-5), t: Date.now() }));
+  if (Math.random() < 0.03) pushLimpar_();
+}
+function pushLimpar_() {
+  try {
+    var P = PropertiesService.getScriptProperties(), tudo = P.getProperties(), velho = Date.now() - 120 * 86400000;
+    Object.keys(tudo).forEach(function (k) {
+      if (k.indexOf("PS_") !== 0) return;
+      try { if ((JSON.parse(tudo[k]).t || 0) < velho) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); }
+    });
+  } catch (x) {}
+}
+function pushDe_(chave) { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty("PS_" + chave) || '{"s":[]}').s || []; } catch (x) { return []; } }
+function pushChave_() { return String(cfg_("push_chave") || "").trim(); }
+function push_(chaves, titulo, texto, url) {
+  try {
+    var key = pushChave_();
+    if (!key) return;
+    var subs = [];
+    chaves.forEach(function (c) { pushDe_(c).forEach(function (s) { if (subs.indexOf(s) < 0) subs.push(s); }); });
+    if (!subs.length) return;
+    var corpo = { app_id: ONESIGNAL_APP, target_channel: "push", include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
+      chrome_web_icon: "https://dailva123.github.io/dayia/chamados/icon-192.png", chrome_web_badge: "https://dailva123.github.io/dayia/chamados/icon-192.png", ttl: 86400 };
+    if (url) corpo.url = url;
+    var r = UrlFetchApp.fetch("https://api.onesignal.com/notifications?c=push", { method: "post", contentType: "application/json", muteHttpExceptions: true,
+      headers: { Authorization: (/^os_v2_/.test(key) ? "Key " : "Basic ") + key }, payload: JSON.stringify(corpo) });
+    if (r.getResponseCode() >= 300) console.log("aviso push recusado: " + r.getResponseCode() + " " + r.getContentText().slice(0, 300));
+  } catch (x) { console.log("aviso push não enviado: " + x); }
+}
+function testarAviso() {
+  var key = pushChave_();
+  if (!key) return "Falta colar a chave do OneSignal na aba Config (linha push_chave).";
+  var r = UrlFetchApp.fetch("https://api.onesignal.com/notifications?c=push", { method: "post", contentType: "application/json", muteHttpExceptions: true,
+    headers: { Authorization: (/^os_v2_/.test(key) ? "Key " : "Basic ") + key },
+    payload: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: "push", include_subscription_ids: ["00000000-0000-0000-0000-000000000000"], contents: { en: "teste" } }) });
+  var c = r.getResponseCode();
+  return (c === 401 || c === 403) ? "A chave não foi aceita (" + c + "). Confira se copiou inteira, sem espaço." : "Chave do OneSignal funcionando!";
+}

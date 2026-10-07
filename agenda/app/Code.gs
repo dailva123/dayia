@@ -18,7 +18,7 @@
    5. Copie o endereço que termina em /exec.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "2.0";
+var VERSAO_SISTEMA = "2.1";
 var ABAS = {
   Negocios:     ["n","nome","segmento","situacao","teste_ate","criado","dono","whatsapp_dono","email_dono","senha","telefone","endereco","instagram","email_aviso","dias","abre","fecha","intervalo_ini","intervalo_fim","passo","antecedencia","cancelar_ate","observacao"],
   Agendamentos: ["negocio","id","criado","ini","fim","quando","cliente","tel","email","pet","servico","servico_nome","prof","prof_nome","preco","status","origem","obs","conversa","recado_novo","chave"],
@@ -61,7 +61,8 @@ function configurar() {
     ["whatsapp_dayia", "5519999389118", "WhatsApp que aparece para negócios com teste vencido ou suspensos"],
     ["fuso_minutos", "-180", "Fuso horário (Brasília = -180). Não mexa."],
     ["proximo_id", "1", "Uso interno (não mexa)"],
-    ["link_base", "", "Preenchido sozinho"]
+    ["link_base", "", "Preenchido sozinho"],
+    ["push_chave", "", "Chave do OneSignal: avisos no celular mesmo com o app fechado (cole aqui a chave)"]
   ];
   var tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
   padrao.forEach(function (p) { if (tem.indexOf(p[0]) < 0) cfg.appendRow([p[0], txt_(p[1]), p[2]]); });
@@ -96,6 +97,16 @@ function executar_(d) {
 
 var ACOES = {
   ping: function () { return { ok: true, versao: VERSAO_SISTEMA, cadastro: sim_(cfgVal_("cadastro_aberto")) }; },
+
+  /* guarda o aparelho para receber avisos com o app fechado */
+  pushReg: function (d) {
+    if (d.token) { pushGuardar_("N_" + sessao_(d), d.sub); }
+    else {
+      var N = negocio_(d.n);
+      (d.lista || []).slice(0, 10).forEach(function (x) { try { var a = daCliente_(N, x); pushGuardar_("A_" + N.n + "_" + a.id, d.sub); } catch (e) {} });
+    }
+    return { ok: true, ativo: !!pushChave_() };
+  },
 
   /* ======== CADASTRO DE NEGÓCIO NOVO ======== */
   cadastro: function (d) {
@@ -173,6 +184,7 @@ var ACOES = {
       mudou_(N.n);
       avisarNegocio_(a, N);
       emailCliente_(a, N, "novo");
+      push_(["N_" + N.n], "📅 Novo agendamento: " + a.cliente, a.servico_nome + " · " + a.quando + (a.obs ? " · " + a.obs : ""), linkPainel_(N));
       return { ok: true, agendamento: publico_(a, true), chave: a.chave };
     });
   },
@@ -194,6 +206,7 @@ var ACOES = {
       var conv = conversa_(a); conv.push({ de: "sis", x: "Cancelado pela cliente.", t: Date.now() });
       atualizarAg_(a.id, { status: "cancelado", conversa: JSON.stringify(conv), recado_novo: "SIM" });
       mudou_(N.n);
+      push_(["N_" + N.n], "❌ " + a.cliente + " cancelou o horário", a.servico_nome + " · " + a.quando, linkPainel_(N));
       return { ok: true };
     });
   },
@@ -206,6 +219,7 @@ var ACOES = {
       conv.push({ de: "cli", x: x, t: Date.now() });
       atualizarAg_(a.id, { conversa: JSON.stringify(conv), recado_novo: "SIM" });
       mudou_(N.n);
+      push_(["N_" + N.n], "💬 Recado de " + a.cliente, x, linkPainel_(N));
       return { ok: true };
     });
   },
@@ -243,6 +257,7 @@ var ACOES = {
           atualizarAg_(a.id, { status: d.valor, conversa: JSON.stringify(conv) });
           if (d.valor === "confirmado") emailCliente_(a, N, "confirmado");
           if (d.valor === "cancelado") emailCliente_(a, N, "cancelado");
+          if (d.valor === "confirmado" || d.valor === "cancelado") push_(["A_" + n + "_" + a.id], String(N.nome), (d.valor === "confirmado" ? "✅ Seu horário está confirmado: " : "❌ Seu horário foi cancelado: ") + a.servico_nome + " · " + a.quando, linkCliAg_(N, a));
           break;
         case "remarcar":
           a = doNegocio_(n, d.id);
@@ -254,6 +269,7 @@ var ACOES = {
           atualizarAg_(a.id, { ini: ini, fim: ini + sv.minutos * MIN, quando: legivel_(ini), prof: prof, prof_nome: nomeProf_(n, prof), status: a.status === "faltou" || a.status === "cancelado" ? "confirmado" : a.status, conversa: JSON.stringify(conv) });
           a.quando = legivel_(ini); a.prof_nome = nomeProf_(n, prof);
           emailCliente_(a, N, "remarcado");
+          push_(["A_" + n + "_" + a.id], String(N.nome), "🔁 Seu horário foi remarcado para " + a.quando + " (" + a.servico_nome + ")", linkCliAg_(N, a));
           break;
         case "novo":
           var c = d.dados || {}, s2 = servicoPorId_(n, c.servico);
@@ -272,6 +288,7 @@ var ACOES = {
           conv = conversa_(a); conv.push({ de: "neg", x: x, t: agora });
           atualizarAg_(a.id, { conversa: JSON.stringify(conv), recado_novo: "" });
           emailCliente_(a, N, "resposta", x);
+          push_(["A_" + n + "_" + a.id], String(N.nome), "💬 " + x, linkCliAg_(N, a));
           break;
         case "lido":
           a = doNegocio_(n, d.id);
@@ -389,6 +406,8 @@ function legivel_(t) {
 }
 
 /* ---------------- e-mails ---------------- */
+function linkPainel_(N) { var l = linkNeg_(N); return l ? l + "#painel" : ""; }
+function linkCliAg_(N, a) { var l = linkNeg_(N); return l ? l + "&ag=" + a.id + "&k=" + a.chave : ""; }
 function linkNeg_(N) { var b = cfgVal_("link_base"); return b ? b + "?n=" + encodeURIComponent(N.n) : ""; }
 function avisarNegocio_(a, N) {
   if (!/@/.test(N.email_aviso || "")) return;
@@ -488,3 +507,50 @@ function txtRow_(r) { return r.map(txt_); }
 function sim_(v) { return /^s/i.test(String(v).trim()); }
 function lim_(v, n) { return String(v === undefined || v === null ? "" : v).trim().slice(0, n); }
 function esc_(s) { return String(s === undefined || s === null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+/* ---------------- avisos no celular, mesmo com o app fechado (OneSignal) ---------------- */
+var ONESIGNAL_APP = "7a1178de-2e8b-4205-aeb9-8171f97fb614";
+function pushGuardar_(chave, sub) {
+  sub = String(sub || "").trim();
+  if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error("Aparelho inválido.");
+  var P = PropertiesService.getScriptProperties(), k = "PS_" + chave, o = { s: [], t: 0 };
+  try { o = JSON.parse(P.getProperty(k) || '{"s":[]}'); } catch (x) {}
+  var l = (o.s || []).filter(function (s) { return s !== sub; }); l.push(sub);
+  P.setProperty(k, JSON.stringify({ s: l.slice(-5), t: Date.now() }));
+  if (Math.random() < 0.03) pushLimpar_();
+}
+function pushLimpar_() {
+  try {
+    var P = PropertiesService.getScriptProperties(), tudo = P.getProperties(), velho = Date.now() - 120 * 86400000;
+    Object.keys(tudo).forEach(function (k) {
+      if (k.indexOf("PS_") !== 0) return;
+      try { if ((JSON.parse(tudo[k]).t || 0) < velho) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); }
+    });
+  } catch (x) {}
+}
+function pushDe_(chave) { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty("PS_" + chave) || '{"s":[]}').s || []; } catch (x) { return []; } }
+function pushChave_() { return String(cfgVal_("push_chave") || "").trim(); }
+function push_(chaves, titulo, texto, url) {
+  try {
+    var key = pushChave_();
+    if (!key) return;
+    var subs = [];
+    chaves.forEach(function (c) { pushDe_(c).forEach(function (s) { if (subs.indexOf(s) < 0) subs.push(s); }); });
+    if (!subs.length) return;
+    var corpo = { app_id: ONESIGNAL_APP, target_channel: "push", include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
+      chrome_web_icon: "https://dailva123.github.io/dayia/agenda/app/icon-192.png", chrome_web_badge: "https://dailva123.github.io/dayia/agenda/app/icon-192.png", ttl: 86400 };
+    if (url) corpo.url = url;
+    var r = UrlFetchApp.fetch("https://api.onesignal.com/notifications?c=push", { method: "post", contentType: "application/json", muteHttpExceptions: true,
+      headers: { Authorization: (/^os_v2_/.test(key) ? "Key " : "Basic ") + key }, payload: JSON.stringify(corpo) });
+    if (r.getResponseCode() >= 300) console.log("aviso push recusado: " + r.getResponseCode() + " " + r.getContentText().slice(0, 300));
+  } catch (x) { console.log("aviso push não enviado: " + x); }
+}
+function testarAviso() {
+  var key = pushChave_();
+  if (!key) return "Falta colar a chave do OneSignal na aba Config (linha push_chave).";
+  var r = UrlFetchApp.fetch("https://api.onesignal.com/notifications?c=push", { method: "post", contentType: "application/json", muteHttpExceptions: true,
+    headers: { Authorization: (/^os_v2_/.test(key) ? "Key " : "Basic ") + key },
+    payload: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: "push", include_subscription_ids: ["00000000-0000-0000-0000-000000000000"], contents: { en: "teste" } }) });
+  var c = r.getResponseCode();
+  return (c === 401 || c === 403) ? "A chave não foi aceita (" + c + "). Confira se copiou inteira, sem espaço." : "Chave do OneSignal funcionando!";
+}

@@ -441,7 +441,7 @@ var Tec={
         .catch(function(e){alert(e.message);b.disabled=false;b.textContent="Criar meu acesso"})};
     }).catch(function(){});
   },
-  sair:function(){ls("cs-sessao",null);Tec.s=null;Tec.sel=null;Tec.login()},
+  sair:function(){try{if(Tec.s&&Tec.s.token)api("sair",{token:Tec.s.token}).catch(function(){})}catch(e){}ls("cs-sessao",null);Tec.s=null;Tec.sel=null;Tec.login()},
   cabecalho:function(){
     $("#hDir").innerHTML='<span class="quem">'+(Tec.s.gestor?'👑 ':'🛠 ')+esc(Tec.s.nome)+'</span>'+
       (window.Notification&&Notification.permission!=="granted"?'<button class="btn sec min" id="bNotif">🔔 Ativar avisos</button>':'')+

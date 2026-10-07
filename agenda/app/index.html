@@ -534,7 +534,7 @@ var P={tk:null,v:0,ids:null,recs:null,
     $("#fLog").onsubmit=function(e){e.preventDefault();var b=$("#bLog");b.disabled=true;b.textContent="Entrando…";somLiberar();
       api("login",{senha:this.senha.value}).then(function(j){P.tk=j.token;ls("ag-tk-"+NEG,j.token);P.iniciar()}).catch(function(e){P.login(e.message)})};
   },
-  sair:function(){ls("ag-tk-"+NEG,null);P.tk=null;P.login()},
+  sair:function(){try{if(P.tk)api("sair",{token:P.tk}).catch(function(){})}catch(e){}ls("ag-tk-"+NEG,null);P.tk=null;P.login()},
   erro:function(e){if(e&&e.servidor&&e.message==="SESSAO"){ls("ag-tk-"+NEG,null);P.login("Sua sessão expirou. Entre de novo.");return true}return false},
   puxar:function(){
     if(location.hash!=="#painel"||!P.tk)return;

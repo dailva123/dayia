@@ -14,7 +14,7 @@
    5. Copie o código da implantação e coloque no link do sistema.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "1.3";
+var VERSAO_SISTEMA = "1.4";
 var ABAS = {
   Chamados:  ["id","criado","atualizado","nome","empresa","email","tel","setor","categoria","prioridade","assunto","descricao","patrimonio","app","rid","permite","anexo","status","tecnico","prazo","acesso","nota","minutos","resolvido","chave"],
   Mensagens: ["chamado","quando","de","autor","texto"],
@@ -98,6 +98,7 @@ function executar_(d) {
 
 var ACOES = {
   ping: function () { return { ok: true, empresa: cfg_("empresa"), versao: VERSAO_SISTEMA, primeiro: !!linhaExemploGestor_() }; },
+  sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
 
   /* primeiro acesso: o dono cria o próprio login, sem ninguém mexer na planilha */
   primeiroAcesso: function (d) {
@@ -114,7 +115,7 @@ var ACOES = {
       if (emp) setCfg_("empresa", emp);
       mudou_();
       var token = Utilities.getUuid();
-      CacheService.getScriptCache().put("tk_" + token, JSON.stringify({ nome: nome, email: email, gestor: true }), 21600);
+      guardarSessao_(token, JSON.stringify({ nome: nome, email: email, gestor: true }));
       return { ok: true, token: token, nome: nome, gestor: true, empresa: cfg_("empresa"), distribuicao: cfg_("distribuicao") };
     });
   },
@@ -214,7 +215,7 @@ var ACOES = {
     })[0];
     if (!tec) throw new Error("E-mail ou senha incorretos.");
     var token = Utilities.getUuid();
-    CacheService.getScriptCache().put("tk_" + token, JSON.stringify({ nome: tec.nome, email: email, gestor: sim_(tec.gestor) }), 21600);
+    guardarSessao_(token, JSON.stringify({ nome: tec.nome, email: email, gestor: sim_(tec.gestor) }));
     return { ok: true, token: token, nome: tec.nome, gestor: sim_(tec.gestor), empresa: cfg_("empresa"), distribuicao: cfg_("distribuicao") };
   },
 
@@ -472,9 +473,11 @@ function proximoRodizio_() {
 
 /* ---------------- sessão, versão e trava ---------------- */
 function sessao_(d) {
-  var c = CacheService.getScriptCache(), k = "tk_" + String(d.token || ""), s = c.get(k);
+  var s = lerSessao_(d.token, function (v) {
+    var em = String(JSON.parse(v).email || "").toLowerCase();
+    return linhas_("Tecnicos").some(function (r) { return String(r.email).trim().toLowerCase() === em && sim_(r.ativo); });
+  });
   if (!s) throw new Error("SESSAO");
-  c.put(k, s, 21600);
   return JSON.parse(s);
 }
 function chamadoCliente_(d) {
@@ -607,4 +610,42 @@ function configGestor_(eu, d) {
     mudou_();
     return { ok: true };
   });
+}
+
+/* ---------------- sessão longa: fica conectado por 30 dias ---------------- */
+var SESSAO_DIAS = 30;
+function guardarSessao_(token, valor) {
+  CacheService.getScriptCache().put("tk_" + token, valor, 21600);
+  PropertiesService.getScriptProperties().setProperty("SS_" + token, JSON.stringify({ v: valor, exp: Date.now() + SESSAO_DIAS * 86400000 }));
+  if (Math.random() < 0.05) limparSessoes_();
+}
+function lerSessao_(token, valida) {
+  token = String(token || "");
+  if (!token) return null;
+  var c = CacheService.getScriptCache(), v = c.get("tk_" + token);
+  if (v) return v;
+  var P = PropertiesService.getScriptProperties(), raw = P.getProperty("SS_" + token);
+  if (!raw) return null;
+  try {
+    var o = JSON.parse(raw);
+    if (!(o.exp > Date.now()) || (valida && !valida(o.v))) { P.deleteProperty("SS_" + token); return null; }
+    P.setProperty("SS_" + token, JSON.stringify({ v: o.v, exp: Date.now() + SESSAO_DIAS * 86400000 }));
+    c.put("tk_" + token, o.v, 21600);
+    return o.v;
+  } catch (x) { return null; }
+}
+function encerrarSessao_(token) {
+  token = String(token || "");
+  if (!token) return;
+  try { CacheService.getScriptCache().remove("tk_" + token); } catch (x) {}
+  PropertiesService.getScriptProperties().deleteProperty("SS_" + token);
+}
+function limparSessoes_() {
+  try {
+    var P = PropertiesService.getScriptProperties(), tudo = P.getProperties(), agora = Date.now();
+    Object.keys(tudo).forEach(function (k) {
+      if (k.indexOf("SS_") !== 0) return;
+      try { if (!(JSON.parse(tudo[k]).exp > agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); }
+    });
+  } catch (x) {}
 }

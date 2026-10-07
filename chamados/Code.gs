@@ -14,7 +14,7 @@
    5. Copie o código da implantação e coloque no link do sistema.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "1.1";
+var VERSAO_SISTEMA = "1.2";
 var ABAS = {
   Chamados:  ["id","criado","atualizado","nome","empresa","email","tel","setor","categoria","prioridade","assunto","descricao","patrimonio","app","rid","permite","anexo","status","tecnico","prazo","acesso","nota","minutos","resolvido","chave"],
   Mensagens: ["chamado","quando","de","autor","texto"],
@@ -223,6 +223,7 @@ var ACOES = {
 
   acao: function (d) {
     var eu = sessao_(d);
+    if (d.tipo === "verConfig" || d.tipo === "salvarConfig" || d.tipo === "salvarTecnico") return configGestor_(eu, d);
     return comTrava_(function () {
       var t = achar_(d.id), agora = new Date(), x;
       switch (d.tipo) {
@@ -538,4 +539,47 @@ function testarAviso() {
   var msg = (c === 401 || c === 403) ? "❌ A chave não foi aceita (" + c + "). Confira se copiou inteira, sem espaço." : "✅ Chave do OneSignal funcionando!";
   console.log(msg);
   return msg;
+}
+
+/* ---------------- configurações pelo painel do gestor ---------------- */
+function configGestor_(eu, d) {
+  if (!eu.gestor) throw new Error("Só o gestor mexe nas configurações.");
+  if (d.tipo === "verConfig") {
+    return { ok: true, empresa: cfg_("empresa"), distribuicao: cfg_("distribuicao"), avisar_tecnicos_email: sim_(cfg_("avisar_tecnicos_email")), avisar_cliente_email: sim_(cfg_("avisar_cliente_email")),
+      tecnicos: linhas_("Tecnicos").filter(function (r) { return String(r.nome).trim(); }).map(function (r) { return { nome: String(r.nome), email: String(r.email), gestor: sim_(r.gestor), ativo: sim_(r.ativo) }; }) };
+  }
+  return comTrava_(function () {
+    if (d.tipo === "salvarConfig") {
+      var emp = lim_(d.empresa, 80);
+      if (!emp) throw new Error("Coloque o nome da empresa.");
+      setCfg_("empresa", emp);
+      setCfg_("distribuicao", d.distribuicao === "rodizio" ? "rodizio" : "fila");
+      setCfg_("avisar_tecnicos_email", d.at ? "SIM" : "NÃO");
+      setCfg_("avisar_cliente_email", d.ac ? "SIM" : "NÃO");
+    } else {
+      var t = d.tec || {}, nome = lim_(t.nome, 60), email = lim_(t.email, 120).toLowerCase(), pin = lim_(t.pin, 20), orig = lim_(t.orig, 120).toLowerCase();
+      if (!nome) throw new Error("Coloque o nome.");
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Coloque um e-mail válido.");
+      if (pin && pin.length < 4) throw new Error("A senha precisa ter pelo menos 4 caracteres.");
+      if (orig === String(eu.email).toLowerCase() && (!t.gestor || !t.ativo)) throw new Error("Você não pode tirar o seu próprio acesso de gestor.");
+      var sh = aba_("Tecnicos"), v = sh.getDataRange().getValues(), linha = -1;
+      for (var i = 1; i < v.length; i++) {
+        var em = String(v[i][1]).trim().toLowerCase();
+        if (orig && em === orig) linha = i + 1;
+        else if (em === email) throw new Error("Já existe alguém da equipe com esse e-mail.");
+      }
+      if (!orig && v.some(function (r, i) { return i > 0 && String(r[0]).trim().toLowerCase() === nome.toLowerCase(); })) throw new Error("Já existe alguém da equipe com esse nome.");
+      if (linha < 0) {
+        if (orig) throw new Error("Pessoa não encontrada.");
+        if (!pin) throw new Error("Crie uma senha para a pessoa nova.");
+        sh.appendRow([nome, email, "'" + pin, t.gestor ? "SIM" : "NÃO", t.ativo ? "SIM" : "NÃO"]);
+      } else {
+        sh.getRange(linha, 2).setValue(email);
+        if (pin) sh.getRange(linha, 3).setValue("'" + pin);
+        sh.getRange(linha, 4, 1, 2).setValues([[t.gestor ? "SIM" : "NÃO", t.ativo ? "SIM" : "NÃO"]]);
+      }
+    }
+    mudou_();
+    return { ok: true };
+  });
 }

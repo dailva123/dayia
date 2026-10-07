@@ -486,9 +486,10 @@ var Tec={
     var eu=Tec.s.nome,ab=Tec.lista.filter(function(t){return t.status!=="Resolvido"});
     var k={abertos:ab.length,sem:ab.filter(function(t){return !t.tecnico}).length,meus:ab.filter(function(t){return t.tecnico===eu}).length,atr:ab.filter(function(t){return t.prazo<Date.now()}).length};
     var abas=[["fila","Fila sem técnico",k.sem],["meus","Meus",k.meus],["abertos","Todos em aberto",k.abertos],["resolvidos","Resolvidos",null]];
-    if(Tec.s.gestor)abas.push(["equipe","👑 Equipe e histórico",null]);
-    var h='<div class="kp4"><div><b>'+k.abertos+'</b><span>em aberto</span></div><div><b class="'+(k.sem?"vermelho":"")+'">'+k.sem+'</b><span>sem técnico</span></div><div><b>'+k.meus+'</b><span>comigo</span></div><div><b class="'+(k.atr?"vermelho":"")+'">'+k.atr+'</b><span>atrasados</span></div></div>'+
+    if(Tec.s.gestor)abas.push(["cfg","⚙️ Configurações",null]);if(Tec.s.gestor)abas.push(["equipe","👑 Equipe e histórico",null]);
+    var h=(Tec.s.gestor&&/^Minha Empresa/i.test(EMPRESA||"")?'<div class="okbox" style="margin:0 0 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px">👋 <b>Primeiro passo:</b> coloque o nome da sua empresa e cadastre a sua equipe.</span><button class="btn pri min" id="irCfg">Abrir configurações</button></div>':'')+'<div class="kp4"><div><b>'+k.abertos+'</b><span>em aberto</span></div><div><b class="'+(k.sem?"vermelho":"")+'">'+k.sem+'</b><span>sem técnico</span></div><div><b>'+k.meus+'</b><span>comigo</span></div><div><b class="'+(k.atr?"vermelho":"")+'">'+k.atr+'</b><span>atrasados</span></div></div>'+
       '<nav class="abasT" role="tablist">'+abas.map(function(a){return '<button role="tab" data-aba="'+a[0]+'" aria-selected="'+(Tec.aba===a[0])+'">'+a[1]+(a[2]!=null?' <span class="cont">'+a[2]+'</span>':'')+'</button>'}).join("")+'</nav>';
+    if(Tec.aba==="cfg"){if($("#cfgG")&&!Tec.cfgRe)return;Tec.cfgRe=false;h+='<div id="cfgG"></div>';$("#app").innerHTML=h;Tec.ligarAbas();Tec.config();return}
     if(Tec.aba==="equipe"){h+='<div id="equipe"></div>';$("#app").innerHTML=h;Tec.ligarAbas();Tec.equipe();return}
     var l=Tec.filtrar();
     h+='<div class="tecgrid"><div><div class="filtros"><input id="tBusca" placeholder="Buscar cliente, empresa, nº…" value="'+esc(Tec.busca)+'">'+
@@ -504,8 +505,8 @@ var Tec={
     var tf=$("#tFiltro");if(tf)tf.onchange=function(){Tec.filtroTec=tf.value;Tec.desenhar()};
     if(Tec.sel&&Tec.det){Tec.desenharDet(Tec.det);if(rasc&&$("#tTxt")){$("#tTxt").value=rasc;$("#tInt").checked=interno}}
   },
-  ligarAbas:function(){$$(".abasT [data-aba]").forEach(function(b){b.onclick=function(){Tec.aba=b.dataset.aba;Tec.desenhar()}})},
-  abrir:function(id){Tec.sel=id;Tec.det=null;if(Tec.aba==="equipe")Tec.aba="abertos";Tec.desenhar();Tec.carregarDet(id);var el=$("#tecDet");if(el&&window.innerWidth<980)el.scrollIntoView({behavior:"smooth"})},
+  ligarAbas:function(){var ic=$("#irCfg");if(ic)ic.onclick=function(){Tec.aba="cfg";Tec.desenhar()};$$(".abasT [data-aba]").forEach(function(b){b.onclick=function(){Tec.aba=b.dataset.aba;Tec.desenhar()}})},
+  abrir:function(id){Tec.sel=id;Tec.det=null;if(Tec.aba==="equipe"||Tec.aba==="cfg")Tec.aba="abertos";Tec.desenhar();Tec.carregarDet(id);var el=$("#tecDet");if(el&&window.innerWidth<980)el.scrollIntoView({behavior:"smooth"})},
   carregarDet:function(id,silencioso){
     api("detalhe",{token:Tec.s.token,id:id}).then(function(j){if(Tec.sel!==id)return;var rasc=$("#tTxt")?$("#tTxt").value:"",interno=$("#tInt")?$("#tInt").checked:false;Tec.det=j;Tec.desenharDet(j);if(rasc&&$("#tTxt")){$("#tTxt").value=rasc;$("#tInt").checked=interno}})
     .catch(function(e){if(!Tec.erro(e)&&!silencioso)$("#tecDet").innerHTML='<div class="card"><p class="erro">'+esc(e.message)+'</p></div>'});
@@ -588,6 +589,35 @@ document.addEventListener("click",somLiberar);
 function bip(){try{somLiberar();[0,0.18,0.5,0.68].forEach(function(d,i){var o=actx.createOscillator(),g=actx.createGain();o.frequency.value=i%2?1046:784;o.connect(g);g.connect(actx.destination);g.gain.setValueAtTime(0.0001,actx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.3,actx.currentTime+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+d+0.25);o.start(actx.currentTime+d);o.stop(actx.currentTime+d+0.3)})}catch(e){}}
 document.addEventListener("visibilitychange",function(){if(!document.hidden){if(location.hash==="#tecnico"&&Tec.s){clearTimeout(timer);Tec.puxar()}else if(Cli.aberto){clearTimeout(timer);Cli.atualizar()}}});
 
+/* ===== Configurações do gestor (sem mexer na planilha) ===== */
+Tec.config=function(){
+  var el=$("#cfgG");if(!el)return;
+  el.innerHTML='<div class="card"><p class="vazio">Carregando…</p></div>';
+  api("acao",{token:Tec.s.token,tipo:"verConfig"}).then(function(j){
+    var h='<div class="card"><h3>🏢 Sua empresa</h3>'+
+      '<label class="f">Nome da empresa (aparece para os clientes e nos avisos)<input id="cfEmp" maxlength="80" value="'+esc(j.empresa)+'"></label>'+
+      '<label class="f">Como os chamados chegam para a equipe<select id="cfDist"><option value="fila"'+(j.distribuicao!=="rodizio"?" selected":"")+'>Fila: todos veem, quem assumir fica com o chamado</option><option value="rodizio"'+(j.distribuicao==="rodizio"?" selected":"")+'>Rodízio: o sistema distribui um para cada técnico</option></select></label>'+
+      '<label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="cfAT"'+(j.avisar_tecnicos_email?" checked":"")+'> Mandar e-mail para a equipe quando chegar chamado novo</label>'+
+      '<label style="display:flex;gap:8px;align-items:center;margin:8px 0 14px"><input type="checkbox" id="cfAC"'+(j.avisar_cliente_email?" checked":"")+'> Mandar e-mail para o cliente quando a equipe responder</label>'+
+      '<button class="btn pri" id="cfSalvar">Salvar</button></div>'+
+      '<div class="card"><h3>👥 Sua equipe</h3><p class="sub">Cada pessoa entra na área da equipe com o e-mail e a senha daqui. Para trocar a senha de alguém, escreva a nova senha e salve. Deixe em branco para manter a atual.</p>'+
+      '<div class="tabela"><table><thead><tr><th>Nome</th><th>E-mail (login)</th><th>Nova senha</th><th>Gestor 👑</th><th>Ativo</th><th></th></tr></thead><tbody>'+
+      j.tecnicos.map(function(t,i){return '<tr data-i="'+i+'"><td><b>'+esc(t.nome)+'</b></td><td><input class="cE" type="email" value="'+esc(t.email)+'" style="min-width:190px"></td><td><input class="cP" type="text" inputmode="numeric" placeholder="manter" maxlength="20" style="width:100px"></td><td><input class="cG" type="checkbox"'+(t.gestor?" checked":"")+'></td><td><input class="cA" type="checkbox"'+(t.ativo?" checked":"")+'></td><td><button class="btn sec min cS">Salvar</button></td></tr>'}).join("")+
+      '<tr id="cfNovo"><td><input class="cN" placeholder="Nome do técnico" maxlength="60"></td><td><input class="cE" type="email" placeholder="email@empresa.com" style="min-width:190px"></td><td><input class="cP" type="text" inputmode="numeric" placeholder="senha" maxlength="20" style="width:100px"></td><td><input class="cG" type="checkbox"></td><td><input class="cA" type="checkbox" checked></td><td><button class="btn pri min cS">+ Adicionar</button></td></tr>'+
+      '</tbody></table></div><p class="sub" style="margin-top:10px">Para tirar alguém da equipe, desmarque <b>Ativo</b> e salve. O histórico dessa pessoa continua guardado.</p></div>';
+    el.innerHTML=h;
+    $("#cfSalvar").onclick=function(){var b=this;b.disabled=true;
+      api("acao",{token:Tec.s.token,tipo:"salvarConfig",empresa:$("#cfEmp").value,distribuicao:$("#cfDist").value,at:$("#cfAT").checked,ac:$("#cfAC").checked})
+      .then(function(){setEmpresa($("#cfEmp").value.trim());Tec.s.empresa=EMPRESA;ls("cs-sessao",Tec.s);toast("Configurações salvas");Tec.v=0;Tec.cfgRe=true;Tec.puxar()})
+      .catch(function(e){alert(e.message)}).then(function(){b.disabled=false})};
+    $$("#cfgG tr .cS").forEach(function(b){b.onclick=function(){
+      var tr=b.closest("tr"),i=tr.dataset.i,novo=tr.id==="cfNovo",t=novo?{}:j.tecnicos[+i];
+      var o={orig:novo?"":t.email,nome:novo?$(".cN",tr).value:t.nome,email:$(".cE",tr).value,pin:$(".cP",tr).value,gestor:$(".cG",tr).checked,ativo:$(".cA",tr).checked};
+      b.disabled=true;
+      api("acao",{token:Tec.s.token,tipo:"salvarTecnico",tec:o}).then(function(){toast(novo?"Pessoa adicionada à equipe":"Dados salvos");Tec.v=0;Tec.cfgRe=true;Tec.puxar();Tec.config()})
+      .catch(function(e){alert(e.message);b.disabled=false})}});
+  }).catch(function(e){if(!Tec.erro(e))el.innerHTML='<div class="card"><p class="erro">'+esc(e.message)+'</p></div>'});
+};
 /* ===== avisos com o app fechado (OneSignal) ===== */
 var OS_APP="7a1178de-2e8b-4205-aeb9-8171f97fb614";
 var PUSH={os:null,sub:null};

@@ -281,7 +281,7 @@ function render(){
   $("#cAbertos").textContent=abertos;
   if(st.aba==="chamados")rChamados();else if(st.aba==="inventario")rInventario();else rPainel();
 }
-function demoBar(){return '<div class="demo noprint"><span>Demonstração com dados fictícios. O que você mudar fica salvo só neste aparelho.</span><button class="btn sec min" id="reset">Restaurar demonstração</button></div>'}
+function demoBar(){return '<div class="demo noprint"><span>Demonstração com dados fictícios. O que você mudar fica salvo só neste aparelho. <a href="ao-vivo/" target="_blank" rel="noopener" style="font-weight:800">Ver ao vivo: o cliente abre e o chamado chega na tela do técnico →</a></span><button class="btn sec min" id="reset">Restaurar demonstração</button></div>'}
 function ligaDemo(){var b=$("#reset");if(b)b.onclick=function(){if(confirm("Voltar aos dados de demonstração? O que você alterou será apagado.")){DB=gerar();salvar();render();toast("Demonstração restaurada")}}}
 
 /* ---------- CHAMADOS ---------- */

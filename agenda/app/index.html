@@ -200,6 +200,7 @@ main{max-width:1280px;margin:0 auto;padding:16px}
 .meu small{display:block;color:var(--mute)}
 .faixa-teste{background:var(--warnbg);color:#7A5410;border:1.5px solid #E6CF9A;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
 .faixa-teste a{color:#7A5410;font-weight:800}
+.faixa-teste .btn.pri,.faixa-teste .btn.pri:visited{color:#fff}.faixa-teste .btn.sec{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -367,10 +368,20 @@ function convHtml(conv,lado){
 }
 
 var WA_DAYIA="5519999389118";
+/* planos: preços e links de pagamento (Mercado Pago). Link vazio = o botão abre o WhatsApp da DayIA */
+var PLANOS={mensal:{preco:"R$ 79,90",por:"por mês",link:""},anual:{preco:"R$ 799",por:"por ano",obs:"Paga 10 meses e usa 12",link:""}};
+function planosHtml(nome){
+  function bt(k,txt){var p=PLANOS[k];var href=p.link||waDayia("Olá! Quero o plano "+(k==="mensal"?"por mês":"por ano")+" da Agenda Fácil ("+nome+").");
+    return '<a class="btn '+(k==="anual"?"pri":"sec")+'" style="width:100%;box-sizing:border-box;justify-content:center" target="_blank" rel="noopener" href="'+esc(href)+'">'+txt+'</a>'}
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0;text-align:left">'+
+    '<div style="border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff"><b style="font-size:15px">📅 Por mês</b><div style="font-size:26px;font-weight:800;margin:6px 0">'+PLANOS.mensal.preco+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por mês</small></div><p class="sub" style="margin:0 0 10px">Sem taxa para começar.</p>'+bt("mensal","Pagar por mês")+'</div>'+
+    '<div style="border:2px solid #F2C230;border-radius:14px;padding:14px;background:#FFFBEF"><b style="font-size:15px">⭐ Por ano · mais barato</b><div style="font-size:26px;font-weight:800;margin:6px 0">'+PLANOS.anual.preco+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por ano</small></div><p class="sub" style="margin:0 0 10px">'+PLANOS.anual.obs+'. Sai por R$ 66,58 por mês.</p>'+bt("anual","Pagar por ano")+'</div></div>'+
+    '<p class="sub" style="margin:0">Pix, boleto ou cartão. Depois de pagar, <a target="_blank" rel="noopener" href="'+waDayia("Olá! Paguei o plano da Agenda Fácil ("+nome+"). Segue o comprovante:")+'">mande o comprovante no WhatsApp</a> e a DayIA libera na hora.</p>';
+}
 function waDayia(msg){return "https://wa.me/"+((P.lic&&P.lic.whatsapp)||WA_DAYIA)+"?text="+encodeURIComponent(msg)}
 function telaBloqueada(L){
   var venc=L.situacao==="teste_vencido";
-  $("#app").innerHTML='<div class="caixa card" style="text-align:center"><div style="font-size:40px">'+(venc?"⏳":"⏸️")+'</div><h2>'+(venc?"Seu período de teste terminou":"Sua agenda está pausada")+'</h2><p class="sub">'+(venc?"Gostou da Agenda Fácil? Fale com a DayIA para continuar. Seus horários, clientes e serviços continuam guardados.":"Fale com a DayIA para reativar. Seus horários, clientes e serviços continuam guardados.")+'</p><a class="btn wa" target="_blank" rel="noopener" href="'+waDayia("Olá! Quero "+(venc?"continuar usando":"reativar")+" a Agenda Fácil ("+NEG+").")+'">💬 Falar com a DayIA</a><p></p><button class="btn sec min" onclick="P.sair()">Sair</button></div>';
+  $("#app").innerHTML='<div class="caixa card" style="text-align:center"><div style="font-size:40px">'+(venc?"⏳":"⏸️")+'</div><h2>'+(venc?"Seu período de teste terminou":"Sua agenda está pausada")+'</h2><p class="sub">'+(venc?"Gostou da Agenda Fácil? Escolha um plano para continuar. Seus horários, clientes e serviços continuam guardados.":"Fale com a DayIA para reativar. Seus horários, clientes e serviços continuam guardados.")+'</p>'+planosHtml(NEG)+'<p></p><a class="btn wa" target="_blank" rel="noopener" href="'+waDayia("Olá! Quero "+(venc?"continuar usando":"reativar")+" a Agenda Fácil ("+NEG+").")+'">💬 Tirar dúvidas no WhatsApp</a><p></p><button class="btn sec min" onclick="P.sair()">Sair</button></div>';
 }
 var SEGS_CAD=[["manicure","💅 Manicure e unhas"],["estetica","✨ Clínica de estética"],["salao","💈 Salão e barbearia"],["medico","🩺 Consultório médico"],["odonto","🦷 Consultório odontológico"],["psico","🧠 Psicologia e terapia"],["pet","🐶 Pet shop · banho e tosa"],["fisio","🧘 Fisioterapia e pilates"],["outro","📅 Outro ramo"]];
 function telaInicio(){
@@ -569,7 +580,7 @@ function rNeg(){
   var mes0=new Date();mes0.setDate(1);mes0.setHours(0,0,0,0);
   var fat=DB.ags.filter(function(a){return a.ini>=mes0.getTime()&&a.status==="concluido"}).reduce(function(s,a){return s+(a.preco||0)},0);
   var pend=ativos().filter(function(a){return a.status==="pendente"&&a.fim>Date.now()}).length,recs=DB.ags.filter(function(a){return a.recado_novo}).length;
-  var L=P.lic||{},faixa=L.situacao==="teste"?'<div class="faixa-teste">🎁 <b>Teste grátis:</b> '+(L.dias_restantes===0?'termina hoje':(L.dias_restantes===1?'falta 1 dia':'faltam '+L.dias_restantes+' dias'))+'. Para continuar usando depois, <a href="'+waDayia("Olá! Quero continuar usando a Agenda Fácil na "+DB.negocio.nome+".")+'" target="_blank" rel="noopener">fale com a DayIA no WhatsApp</a>.</div>':'';
+  var L=P.lic||{},faixa=L.situacao==="teste"?'<div class="faixa-teste">🎁 <b>Teste grátis:</b> '+(L.dias_restantes===0?'termina hoje':(L.dias_restantes===1?'falta 1 dia':'faltam '+L.dias_restantes+' dias'))+'. Gostou? Você já pode garantir o seu plano: o tempo pago só começa quando o teste acabar.<details style="margin-top:6px"><summary style="cursor:pointer;font-weight:800">Ver planos e pagar</summary>'+planosHtml(DB.negocio.nome)+'</details></div>':'';
   if(!String(DB.negocio.tel||"").replace(/\D/g,""))faixa+='<div class="faixa-teste">📱 <b>Cadastre o seu WhatsApp</b> em <a href="#" id="irCfg">⚙️ Serviços e horários</a>. Assim, depois de agendar, a cliente te avisa pelo WhatsApp com um toque.</div>';
   var h=faixa+'<div class="negtopo"><h2>'+S().ic+' '+esc(DB.negocio.nome)+'</h2><span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">'+(window.Notification&&Notification.permission!=="granted"?'<button class="btn sec min" id="bNotif">🔔 Ativar avisos</button>':'')+'<a class="btn sec min" href="../guia/" target="_blank" rel="noopener">❓ Como usar</a><button class="btn sec min" id="bSair">Sair</button></span></div>'+
    '<div class="kp"><div><b>'+agH.length+'</b><span>horários hoje</span></div><div><b>'+brl(agH.reduce(function(s,a){return s+(a.preco||0)},0))+'</b><span>previsto hoje</span></div><div><b>'+pend+'</b><span>aguardando confirmar</span></div><div><b>'+recs+'</b><span>recados novos</span></div></div>'+

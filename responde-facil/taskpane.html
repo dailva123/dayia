@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Responde Fácil</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+:root{--bg:#f3f5f8;--surface:#fff;--ink:#18212e;--muted:#5b6778;--line:#d9dfe8;--accent:#1f6f8b;--accent-ink:#fff;--soft:#e3f0f4;--warn:#9a5b00}
+@media (prefers-color-scheme:dark){:root{--bg:#11161d;--surface:#1a212b;--ink:#e6ebf2;--muted:#9aa6b6;--line:#2c3644;--accent:#5fb3cf;--accent-ink:#0c1a20;--soft:#1d3440;--warn:#e2a94a;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI",system-ui,sans-serif;padding:14px}
+h1{font-size:1.15rem;margin:0 0 2px}
+.sub{color:var(--muted);margin:0 0 12px;font-size:.85rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:10px;margin-bottom:12px}
+label{font-weight:600;font-size:.8rem}
+textarea,input{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;resize:vertical}
+textarea:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.field{display:grid;gap:4px}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.row button{flex:1 1 auto}
+button{font:inherit;font-weight:600;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 10px;cursor:pointer}
+button[aria-pressed="true"]{background:var(--soft);border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);padding:10px}
+button:disabled{opacity:.5;cursor:default}
+.from{font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}
+.from b{color:var(--ink)}
+#out{white-space:pre-wrap;min-height:110px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px}
+#out.empty{color:var(--muted)}
+.status{font-size:.82rem;color:var(--muted);min-height:1.1em}
+.status.err{color:var(--warn)}
+details summary{cursor:pointer;font-weight:600}
+.link{color:var(--accent)}
+</style>
+</head>
+<body>
+<h1>Responde Fácil</h1>
+<p class="sub">Resposta educada para o e-mail aberto.</p>
+
+<div class="card" id="setup" hidden>
+  <div class="field">
+    <label for="key">Sua chave da API do Claude</label>
+    <input id="key" type="password" placeholder="sk-ant-..." autocomplete="off">
+  </div>
+  <p class="sub" style="margin:0">Crie em console.anthropic.com, na parte "API Keys". Fica guardada só na sua caixa de e-mail.</p>
+  <button id="saveKey" class="primary" type="button">Salvar chave</button>
+</div>
+
+<div id="main">
+  <div class="card">
+    <div class="from" id="from">Abra um e-mail para começar.</div>
+    <div class="field">
+      <label for="intent">O que você quer dizer (opcional)</label>
+      <textarea id="intent" rows="3" placeholder="Ex.: atrasou por falta de material, sai quinta, mando o rastreio"></textarea>
+    </div>
+    <div class="field">
+      <label>Tom</label>
+      <div class="row" role="group" aria-label="Tom">
+        <button type="button" data-tone="cordial" aria-pressed="true">Cordial</button>
+        <button type="button" data-tone="formal" aria-pressed="false">Formal</button>
+        <button type="button" data-tone="firme" aria-pressed="false">Firme</button>
+      </div>
+    </div>
+    <button id="go" class="primary" type="button">Escrever resposta</button>
+  </div>
+
+  <div class="card">
+    <label>Resposta</label>
+    <div id="out" class="empty">A resposta aparece aqui.</div>
+    <div class="status" id="status" role="status"></div>
+    <button id="reply" class="primary" type="button" disabled>Responder com este texto</button>
+    <div class="row">
+      <button id="copy" type="button" disabled>Copiar</button>
+      <button id="again" type="button" disabled>Outra versão</button>
+    </div>
+    <div class="row">
+      <button type="button" class="adj" data-adj="Deixe mais curta e direta." disabled>Mais curta</button>
+      <button type="button" class="adj" data-adj="Deixe mais formal." disabled>Mais formal</button>
+      <button type="button" class="adj" data-adj="Deixe mais calorosa e simpática." disabled>Mais simpática</button>
+    </div>
+  </div>
+
+  <details class="card">
+    <summary>Configurações</summary>
+    <div class="field">
+      <label for="sig">Assinar como</label>
+      <textarea id="sig" rows="2" placeholder="Seu nome&#10;Empresa · telefone"></textarea>
+    </div>
+    <button id="saveSig" type="button">Salvar assinatura</button>
+    <button id="changeKey" type="button">Trocar chave da API</button>
+  </details>
+</div>
+
+<script>
+const MODEL = "claude-haiku-5-5";
+const $ = s => document.querySelector(s);
+let tone = "cordial", last = "", mail = { body:"", subject:"", from:"" }, settings = null;
+
+const TONES = {
+  cordial: "cordial, gentil e próximo, mas profissional",
+  formal: "formal e respeitoso, linguagem corporativa",
+  firme: "firme e educado: mantém a posição da empresa com clareza, sem grosseria e sem pedir desculpas em excesso"
+};
+
+function getS(k){ try { return settings ? (settings.get(k) || "") : (localStorage.getItem(k) || ""); } catch(e){ return ""; } }
+function setS(k, v, done){
+  try {
+    if (settings){ settings.set(k, v); settings.saveAsync(() => done && done()); }
+    else { localStorage.setItem(k, v); done && done(); }
+  } catch(e){ done && done(); }
+}
+function status(t, err){ const s = $("#status"); s.textContent = t; s.className = "status" + (err ? " err" : ""); }
+
+function showSetup(on){ $("#setup").hidden = !on; $("#main").hidden = on; }
+
+function loadMail(){
+  const item = Office.context.mailbox && Office.context.mailbox.item;
+  last = ""; $("#out").textContent = "A resposta aparece aqui."; $("#out").classList.add("empty"); setBusy(false); status("");
+  if (!item){ $("#from").textContent = "Abra um e-mail para começar."; mail.body = ""; return; }
+  mail.subject = item.subject || "";
+  const f = item.from || item.sender;
+  mail.from = f ? (f.displayName || f.emailAddress || "") : "";
+  $("#from").innerHTML = "";
+  const b = document.createElement("b"); b.textContent = mail.from || "Remetente";
+  $("#from").append(b, document.createTextNode(" · " + (mail.subject || "(sem assunto)")));
+  item.body.getAsync(Office.CoercionType.Text, r => {
+    mail.body = r.status === Office.AsyncResultStatus.Succeeded ? (r.value || "") : "";
+  });
+}
+
+function buildPrompt(extra){
+  const sig = getS("rf_sig").trim();
+  let p = `Você ajuda um profissional brasileiro a responder e-mails de clientes.
+Escreva UMA resposta de e-mail em português do Brasil, tom ${TONES[tone]}.
+Regras:
+- Educada, clara e objetiva. Responda ao que o cliente disse e reconheça a preocupação dele quando houver.
+- Use como base o que o profissional quer dizer. Não invente prazos, valores, números de pedido nem promessas.
+- Se faltar uma informação essencial, deixe entre colchetes, ex.: [data de entrega].
+- Comece com saudação usando o primeiro nome do cliente se souber, e termine com despedida.
+- ${sig ? "Assine assim:\n" + sig : "Termine com \"Atenciosamente,\" e [seu nome]."}
+- Responda SOMENTE com o texto do e-mail: sem assunto, sem comentários, sem markdown.
+
+Remetente: ${mail.from}
+Assunto: ${mail.subject}
+E-mail do cliente (pode conter mensagens antigas citadas abaixo; responda à mais recente):
+"""
+${mail.body.trim().slice(0, 15000)}
+"""
+`;
+  const intent = $("#intent").value.trim();
+  if (intent) p += `\nO que o profissional quer dizer:\n"""\n${intent.slice(0, 4000)}\n"""\n`;
+  if (extra) p += `\nVersão anterior:\n"""\n${last}\n"""\nReescreva essa resposta. ${extra}\n`;
+  return p;
+}
+
+function setBusy(b){
+  $("#go").disabled = b;
+  ["#reply", "#copy", "#again"].forEach(s => $(s).disabled = b || !last);
+  document.querySelectorAll(".adj").forEach(x => x.disabled = b || !last);
+}
+
+async function run(extra){
+  const key = getS("rf_key");
+  if (!key){ showSetup(true); return; }
+  if (!mail.body.trim()){ status("Não consegui ler o e-mail. Abra a mensagem e tente de novo.", true); return; }
+  setBusy(true); status("");
+  $("#out").classList.remove("empty"); $("#out").textContent = "Escrevendo...";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({ model: MODEL, max_tokens: 1200, messages: [{ role: "user", content: buildPrompt(extra) }] })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok){
+      const t = data && data.error && data.error.type;
+      let m = "Não deu certo agora. Tente de novo em instantes.";
+      if (res.status === 401) m = "Chave da API inválida. Confira em Configurações > Trocar chave.";
+      else if (res.status === 400 && /credit/i.test(JSON.stringify(data))) m = "Sem créditos na conta da API. Adicione créditos em console.anthropic.com.";
+      else if (res.status === 429) m = "Muitos pedidos seguidos. Espere um pouco.";
+      else if (res.status === 529 || t === "overloaded_error") m = "O serviço está ocupado. Tente de novo em instantes.";
+      throw new Error(m);
+    }
+    last = (data.content || []).filter(c => c.type === "text").map(c => c.text).join("").trim();
+    if (!last) throw new Error("Veio vazio. Tente de novo.");
+    $("#out").textContent = last;
+  } catch(e){
+    $("#out").textContent = last || "A resposta aparece aqui.";
+    if (!last) $("#out").classList.add("empty");
+    status(e.message && !/fetch/i.test(e.message) ? e.message : "Sem conexão com o Claude. Verifique a internet.", true);
+  } finally { setBusy(false); }
+}
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+Office.onReady(() => {
+  try { settings = Office.context.roamingSettings; } catch(e){ settings = null; }
+  $("#sig").value = getS("rf_sig");
+  showSetup(!getS("rf_key"));
+  loadMail();
+  try { Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, loadMail); } catch(e){}
+
+  $("#saveKey").onclick = () => {
+    const k = $("#key").value.trim();
+    if (!k.startsWith("sk-ant-")){ alertKey(); return; }
+    setS("rf_key", k, () => { $("#key").value = ""; showSetup(false); status("Chave salva."); });
+  };
+  function alertKey(){ $("#key").focus(); $("#key").style.borderColor = "var(--warn)"; }
+  $("#changeKey").onclick = () => showSetup(true);
+  $("#saveSig").onclick = () => setS("rf_sig", $("#sig").value, () => status("Assinatura salva."));
+
+  document.querySelectorAll("[data-tone]").forEach(b => b.onclick = () => {
+    tone = b.dataset.tone;
+    document.querySelectorAll("[data-tone]").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+  });
+  $("#go").onclick = () => run();
+  $("#again").onclick = () => run("Escreva uma versão diferente.");
+  document.querySelectorAll(".adj").forEach(b => b.onclick = () => run(b.dataset.adj));
+
+  $("#reply").onclick = () => {
+    const item = Office.context.mailbox.item;
+    if (!item) return;
+    item.displayReplyForm(esc(last).replace(/\n/g, "<br>"));
+  };
+  $("#copy").onclick = async () => {
+    try { await navigator.clipboard.writeText(last); status("Copiado."); }
+    catch(e){
+      const r = document.createRange(); r.selectNodeContents($("#out"));
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      status("Texto selecionado. Use Ctrl+C.");
+    }
+  };
+});
+</script>
+</body>
+</html>

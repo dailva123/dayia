@@ -148,7 +148,7 @@ function inicial_(empresa, nome, zap) {
   var em = String(empresa);
   return {
     posts: [
-      { id: "p1", t: "Exemplo: apresente a sua empresa", tit: "Conheça a " + em, d: hoje, fmt: "v", video: "", redes: ["ig", "fb", "tt", "wa"], feito: {}, u: t,
+      { id: "p1", t: "Exemplo: apresente a sua empresa", tit: "Conheça a " + em, d: hoje, fmt: "v", video: "", redes: ["ig", "fb", "tt", "wa", "yt", "li"], feito: {}, u: t,
         leg: "Prazer, somos a " + em + "! 👋\n\nConte aqui em poucas palavras o que você faz e por que o cliente vai gostar.\n\n💬 Chame no WhatsApp: " + zap + "\n\n#" + em.replace(/[^A-Za-zÀ-ÿ0-9]/g, "") }
     ],
     msgs: [

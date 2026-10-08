@@ -392,7 +392,7 @@ function cardPost(p){
   '</article>';
 }
 function formPost(p){
-  var novo=!p;p=p||{fmt:"v",redes:["ig","fb","tt","wa"],d:hojeIso(),feito:{}};
+  var novo=!p;p=p||{fmt:"v",redes:["ig","fb","tt","wa","yt","li"],d:hojeIso(),feito:{}};
   var m=janela('<h2>'+(novo?"Novo post":"Editar post")+'</h2><form id="fPost" class="g">'+
     '<label class="f">Título <small>um nome curto para o post, ex.: Promoção de sexta (o Facebook, o YouTube e o LinkedIn usam como título)</small><input name="tit" required maxlength="150" value="'+esc(p.tit||p.t||"")+'" placeholder="Ex.: Promoção de sexta"></label>'+
     '<label class="f">Legenda <small>o texto que vai junto com o vídeo</small><textarea name="leg" rows="6" placeholder="Escreva a legenda, com emojis e hashtags">'+esc(p.leg||"")+'</textarea></label>'+
@@ -501,12 +501,12 @@ $("#bConta").onclick=function(){
 var EXEMPLO=(function(){var t=1,h=new Date(),d=function(n){var x=new Date(h.getFullYear(),h.getMonth(),h.getDate()+n);return x.getFullYear()+"-"+("0"+(x.getMonth()+1)).slice(-2)+"-"+("0"+x.getDate()).slice(-2)};
   var P=function(id,tit,dd,fmt,redes,feito,leg){return {id:id,t:tit,tit:tit,d:d(dd),fmt:fmt,video:"",redes:redes,feito:feito,leg:leg,u:t}};
   return {posts:[
-    P("p1","Lançamento da nova coleção",-2,"v",["ig","fb","tt","wa"],{ig:true,fb:true,tt:true,wa:true},"Chegou a nova coleção da Loja Modelo! ✨\n\nPeças pensadas pra deixar o seu dia mais prático e bonito. Corre pra ver antes que acabe.\n\n💬 Pedidos pelo WhatsApp\n\n#LojaModelo #novacolecao #lancamento"),
-    P("p2","Bastidores: como preparamos seu pedido",-1,"v",["ig","fb","tt","wa"],{ig:true,fb:true},"Já imaginou como o seu pedido é preparado? 📦\n\nMostramos aqui o cuidado em cada etapa, da separação à entrega.\n\n#LojaModelo #bastidores #feitocomcuidado"),
-    P("p3","Promoção da semana",0,"v",["ig","fb","tt","wa"],{},"Só esta semana: condições especiais em toda a loja! 🔥\n\nVálido até domingo ou enquanto durarem os estoques.\n\n💬 Chame no WhatsApp e garanta o seu\n\n#LojaModelo #promocao #oferta"),
-    P("p4","Depoimento de cliente",1,"v",["ig","fb","tt"],{},"Nada melhor do que ouvir quem já é cliente 💙\n\nQuer ter a mesma experiência? Fale com a gente.\n\n#LojaModelo #depoimento #clientesatisfeito"),
-    P("p5","Tour pela loja",2,"h",["fb","yt","li"],{},"Vem conhecer a nossa loja por dentro! 🏬\n\nTe esperamos de segunda a sábado.\n\n#LojaModelo #conheca"),
-    P("p6","Dica rápida",3,"v",["ig","tt","wa"],{},"Dica rápida de hoje 💡\n\nSalve este vídeo pra não esquecer e compartilhe com quem precisa ver.\n\n#LojaModelo #dica")],
+    P("p1","Lançamento da nova coleção",-2,"v",["ig","fb","tt","wa","yt","li"],{ig:true,fb:true,tt:true,wa:true},"Chegou a nova coleção da Loja Modelo! ✨\n\nPeças pensadas pra deixar o seu dia mais prático e bonito. Corre pra ver antes que acabe.\n\n💬 Pedidos pelo WhatsApp\n\n#LojaModelo #novacolecao #lancamento"),
+    P("p2","Bastidores: como preparamos seu pedido",-1,"v",["ig","fb","tt","wa","yt","li"],{ig:true,fb:true},"Já imaginou como o seu pedido é preparado? 📦\n\nMostramos aqui o cuidado em cada etapa, da separação à entrega.\n\n#LojaModelo #bastidores #feitocomcuidado"),
+    P("p3","Promoção da semana",0,"v",["ig","fb","tt","wa","yt","li"],{},"Só esta semana: condições especiais em toda a loja! 🔥\n\nVálido até domingo ou enquanto durarem os estoques.\n\n💬 Chame no WhatsApp e garanta o seu\n\n#LojaModelo #promocao #oferta"),
+    P("p4","Depoimento de cliente",1,"v",["ig","fb","tt","wa","yt","li"],{},"Nada melhor do que ouvir quem já é cliente 💙\n\nQuer ter a mesma experiência? Fale com a gente.\n\n#LojaModelo #depoimento #clientesatisfeito"),
+    P("p5","Tour pela loja",2,"h",["ig","fb","tt","wa","yt","li"],{},"Vem conhecer a nossa loja por dentro! 🏬\n\nTe esperamos de segunda a sábado.\n\n#LojaModelo #conheca"),
+    P("p6","Dica rápida",3,"v",["ig","fb","tt","wa","yt","li"],{},"Dica rápida de hoje 💡\n\nSalve este vídeo pra não esquecer e compartilhe com quem precisa ver.\n\n#LojaModelo #dica")],
   msgs:[{id:"m1",t:"Saudação",m:"Olá! Obrigada por falar com a Loja Modelo 😊\n\nJá vamos te responder. Como podemos te ajudar?",u:t},
     {id:"m2",t:"Enviar orçamento",m:"Olá, tudo bem? 😊\n\nSegue o orçamento que você pediu. Qualquer dúvida, é só me chamar por aqui.\n\nFico à disposição!",u:t},
     {id:"m3",t:"Pedir avaliação",m:"Olá, tudo bem? 😊\n\nSe você gostou do nosso atendimento, poderia deixar uma avaliação rapidinha no Google? Leva menos de 1 minuto e ajuda muito.\n\nObrigada pelo apoio! 🙏",u:t},

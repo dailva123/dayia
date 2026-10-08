@@ -12,7 +12,7 @@
   <Description DefaultValue="Escreve respostas educadas para e-mails de clientes."/>
   <IconUrl DefaultValue="https://dailva123.github.io/dayia/responde-facil/assets/icon-64.png"/>
   <HighResolutionIconUrl DefaultValue="https://dailva123.github.io/dayia/responde-facil/assets/icon-128.png"/>
-  <SupportUrl DefaultValue="https://dailva123.github.io/dayia/responde-facil/"/>
+  <SupportUrl DefaultValue="https://dailva123.github.io/dayia/"/>
   <AppDomains>
     <AppDomain>https://dailva123.github.io</AppDomain>
   </AppDomains>

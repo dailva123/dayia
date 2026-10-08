@@ -177,7 +177,7 @@ var Q=new URLSearchParams(location.search);
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
 var DEMO=Q.has("demo");
 var API=Q.get("api")||(SID_FIXO?"https://script.google.com/macros/s/"+SID_FIXO+"/exec":"");
-var PFX=DEMO?"dfd-":"df-";
+var PFX=DEMO?"dfd2-":"df-";
 function $(s,el){return (el||document).querySelector(s)}
 function $$(s,el){return Array.prototype.slice.call((el||document).querySelectorAll(s))}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}

@@ -187,7 +187,7 @@ function limpar_(k, x) {
   var u = Math.min(Number(x.u) || Date.now(), Date.now() + 5 * MIN), id = lim_(x.id, 40);
   if (x.del) return { id: id, del: true, u: u };
   if (k === "posts") {
-    var redes = (Array.isArray(x.redes) ? x.redes : []).filter(function (r) { return ["ig", "fb", "tt", "wa", "yt"].indexOf(r) >= 0; });
+    var redes = (Array.isArray(x.redes) ? x.redes : []).filter(function (r) { return ["ig", "fb", "tt", "wa", "yt", "li"].indexOf(r) >= 0; });
     var feito = {}; redes.forEach(function (r) { if (x.feito && x.feito[r]) feito[r] = true; });
     return { id: id, t: lim_(x.t, 120), tit: lim_(x.tit, 150), leg: lim_(x.leg, 5000), d: lim_(x.d, 10), fmt: x.fmt === "h" ? "h" : "v",
       video: lim_(x.video, 600), redes: redes, feito: feito, u: u };

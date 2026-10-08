@@ -127,7 +127,7 @@ label.f small{font-weight:400;color:var(--mute)}
 .redes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-top:1px dashed var(--line);padding-top:10px}
 .redes span{font-size:12.5px;font-weight:800;color:var(--ink2)}
 .rb{font-size:13px;font-weight:800;text-decoration:none;color:#fff;padding:7px 12px;border-radius:999px}
-.rb.ig{background:#c13584}.rb.fb{background:#1877f2}.rb.tt{background:#111}.rb.wa{background:#1fa855}.rb.yt{background:#e62117}
+.rb.ig{background:#c13584}.rb.fb{background:#1877f2}.rb.tt{background:#111}.rb.wa{background:#1fa855}.rb.yt{background:#e62117}.rb.li{background:#0A66C2}
 .links td{padding:10px 8px;border-top:1px solid var(--line);vertical-align:middle}
 .links input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
 
@@ -195,8 +195,8 @@ function copiar(txt,bt,rot){
 function fallbackCopia(t){var x=document.createElement("textarea");x.value=t;x.style.position="fixed";x.style.opacity="0";document.body.appendChild(x);x.select();try{document.execCommand("copy")}catch(e){}x.remove()}
 $("#rodZap").href=waDayia("Olá! Preciso de ajuda com o Divulga Fácil.");
 
-var REDES={ig:["Instagram","https://www.instagram.com/"],fb:["Facebook","https://www.facebook.com/"],tt:["TikTok","https://www.tiktok.com/upload"],wa:["WhatsApp","https://wa.me/"],yt:["YouTube","https://studio.youtube.com/"]};
-var ORDEM=["ig","fb","tt","wa","yt"];
+var REDES={ig:["Instagram","https://www.instagram.com/"],fb:["Facebook","https://www.facebook.com/"],tt:["TikTok","https://www.tiktok.com/upload"],wa:["WhatsApp","https://wa.me/"],yt:["YouTube","https://studio.youtube.com/"],li:["LinkedIn","https://www.linkedin.com/feed/?shareActive=true"]};
+var ORDEM=["ig","fb","tt","wa","yt","li"];
 
 /* ======================= instalar no celular ======================= */
 var PEDIDO_INSTALAR=null;
@@ -383,7 +383,7 @@ function cardPost(p){
     '<div class="meta">📅 '+esc(fdata(p.d))+' · '+(p.fmt==="h"?"💻 Vídeo deitado":"📱 Vídeo em pé")+'</div>'+
     (rs.length?'<div><p class="rot">Já postei em:</p><div class="ja">'+rs.map(function(r){var on=!!(p.feito||{})[r];return '<label class="'+(on?"on":"")+'"><input type="checkbox" data-ja="'+r+'"'+(on?" checked":"")+'> '+REDES[r][0]+'</label>'}).join("")+'</div></div>'+
       '<button type="button" class="todas" data-todas>'+(e.todo?"Desmarcar todas":"✓ Marcar em todas as redes")+'</button>':'')+
-    (p.tit?'<div><p class="rot">Título <span style="font-weight:400">(o Facebook e o YouTube pedem)</span></p><div class="tit"><input readonly value="'+esc(p.tit)+'" aria-label="Título"><button type="button" class="btn pri min" data-copia-tit>Copiar título</button></div></div>':'')+
+    (p.tit?'<div><p class="rot">Título <span style="font-weight:400">(Facebook, YouTube e LinkedIn pedem)</span></p><div class="tit"><input readonly value="'+esc(p.tit)+'" aria-label="Título"><button type="button" class="btn pri min" data-copia-tit>Copiar título</button></div></div>':'')+
     '<div><p class="rot">Legenda <span style="font-weight:400">(o texto que vai junto com o vídeo)</span></p><textarea rows="5" data-leg aria-label="Legenda">'+esc(p.leg||"")+'</textarea></div>'+
     '<div class="acoes"><button type="button" class="btn pri min" data-copia-leg>Copiar legenda</button>'+
       (p.video?'<a class="btn sec min" target="_blank" rel="noopener" href="'+esc(p.video)+'">▶ Abrir vídeo</a>':'')+
@@ -394,11 +394,11 @@ function cardPost(p){
 function formPost(p){
   var novo=!p;p=p||{fmt:"v",redes:["ig","fb","tt","wa"],d:hojeIso(),feito:{}};
   var m=janela('<h2>'+(novo?"Novo post":"Editar post")+'</h2><form id="fPost" class="g">'+
-    '<label class="f">Título <small>um nome curto para o post, ex.: Promoção de sexta</small><input name="tit" required maxlength="150" value="'+esc(p.tit||p.t||"")+'" placeholder="Ex.: Promoção de sexta"></label>'+
+    '<label class="f">Título <small>um nome curto para o post, ex.: Promoção de sexta (o Facebook, o YouTube e o LinkedIn usam como título)</small><input name="tit" required maxlength="150" value="'+esc(p.tit||p.t||"")+'" placeholder="Ex.: Promoção de sexta"></label>'+
     '<label class="f">Legenda <small>o texto que vai junto com o vídeo</small><textarea name="leg" rows="6" placeholder="Escreva a legenda, com emojis e hashtags">'+esc(p.leg||"")+'</textarea></label>'+
     '<div class="g2"><label class="f">Dia que quer postar<input name="d" type="date" value="'+esc(p.d||"")+'"></label>'+
     '<label class="f">Onde está o vídeo? <small>não é obrigatório: cole aqui o link, se o vídeo estiver no Google Drive ou no Google Fotos</small><input name="video" type="url" inputmode="url" value="'+esc(p.video||"")+'" placeholder="Cole o link aqui"></label></div>'+
-    '<div><p class="rot">O vídeo é…</p><div class="fmt-esc"><label><input type="radio" name="fmt" value="v"'+(p.fmt!=="h"?" checked":"")+'> 📱 Em pé (o mais comum no celular)</label><label><input type="radio" name="fmt" value="h"'+(p.fmt==="h"?" checked":"")+'> 💻 Deitado (como TV)</label></div></div>'+
+    '<div><p class="rot">O vídeo é…</p><div class="fmt-esc"><label><input type="radio" name="fmt" value="v"'+(p.fmt!=="h"?" checked":"")+'> 📱 Em pé (o mais comum no celular)</label><label><input type="radio" name="fmt" value="h"'+(p.fmt==="h"?" checked":"")+'> 💻 Deitado (como TV: YouTube, LinkedIn)</label></div></div>'+
     '<div><p class="rot">Onde você vai postar?</p><div class="redes-esc">'+ORDEM.map(function(r){return '<label><input type="checkbox" name="r" value="'+r+'"'+((p.redes||[]).indexOf(r)>=0?" checked":"")+'> '+REDES[r][0]+'</label>'}).join("")+'</div></div>'+
     '<p class="erro" id="ePost"></p><div class="acoes"><button class="btn sol">Salvar post</button><button type="button" class="btn sec" data-fecha>Cancelar</button></div></form>');
   $("#fPost",m).onsubmit=function(ev){ev.preventDefault();var f=this,tit=f.tit.value.trim();
@@ -505,7 +505,7 @@ var EXEMPLO=(function(){var t=1,h=new Date(),d=function(n){var x=new Date(h.getF
     P("p2","Bastidores: como preparamos seu pedido",-1,"v",["ig","fb","tt","wa"],{ig:true,fb:true},"Já imaginou como o seu pedido é preparado? 📦\n\nMostramos aqui o cuidado em cada etapa, da separação à entrega.\n\n#LojaModelo #bastidores #feitocomcuidado"),
     P("p3","Promoção da semana",0,"v",["ig","fb","tt","wa"],{},"Só esta semana: condições especiais em toda a loja! 🔥\n\nVálido até domingo ou enquanto durarem os estoques.\n\n💬 Chame no WhatsApp e garanta o seu\n\n#LojaModelo #promocao #oferta"),
     P("p4","Depoimento de cliente",1,"v",["ig","fb","tt"],{},"Nada melhor do que ouvir quem já é cliente 💙\n\nQuer ter a mesma experiência? Fale com a gente.\n\n#LojaModelo #depoimento #clientesatisfeito"),
-    P("p5","Tour pela loja",2,"h",["fb","yt"],{},"Vem conhecer a nossa loja por dentro! 🏬\n\nTe esperamos de segunda a sábado.\n\n#LojaModelo #conheca"),
+    P("p5","Tour pela loja",2,"h",["fb","yt","li"],{},"Vem conhecer a nossa loja por dentro! 🏬\n\nTe esperamos de segunda a sábado.\n\n#LojaModelo #conheca"),
     P("p6","Dica rápida",3,"v",["ig","tt","wa"],{},"Dica rápida de hoje 💡\n\nSalve este vídeo pra não esquecer e compartilhe com quem precisa ver.\n\n#LojaModelo #dica")],
   msgs:[{id:"m1",t:"Saudação",m:"Olá! Obrigada por falar com a Loja Modelo 😊\n\nJá vamos te responder. Como podemos te ajudar?",u:t},
     {id:"m2",t:"Enviar orçamento",m:"Olá, tudo bem? 😊\n\nSegue o orçamento que você pediu. Qualquer dúvida, é só me chamar por aqui.\n\nFico à disposição!",u:t},

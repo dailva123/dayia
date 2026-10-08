@@ -338,9 +338,12 @@ function servAtivos(){return DB.servicos.filter(function(s){return s.ativo})}
 function profsAtivos(){return DB.profs.filter(function(p){return p.ativo})}
 
 /* disponibilidade (a página mostra só o que está livre; o servidor confere de novo na hora de salvar) */
+function hDia(H,wd){var e=H.esp&&H.esp[wd];return e?{ini:e[0],fim:e[1],almoco:["",""],dias:H.dias}:H}
+function hFaixa(H){var a=hm2min(H.ini),b=hm2min(H.fim);Object.keys(H.esp||{}).forEach(function(k){a=Math.min(a,hm2min(H.esp[k][0]));b=Math.max(b,hm2min(H.esp[k][1]))});return {ini:min2hm(a),fim:min2hm(b)}}
 function livreEm(db,pid,ini,dur,ignorar,semAntecedencia){
   var fim=ini+dur*6e4,d0=dia0(ini),H=db.horario,wd=new Date(ini).getDay();
   if(H.dias.indexOf(wd)<0)return false;
+  H=hDia(H,wd);
   var a=(ini-d0)/6e4,b=(fim-d0)/6e4;
   if(a<hm2min(H.ini)||b>hm2min(H.fim))return false;
   if(H.almoco&&H.almoco[0]&&H.almoco[1]&&a<hm2min(H.almoco[1])&&b>hm2min(H.almoco[0]))return false;
@@ -350,7 +353,7 @@ function livreEm(db,pid,ini,dur,ignorar,semAntecedencia){
   return true;
 }
 function horarios(dia,sid,pid){
-  var s=serv(sid),H=DB.horario,out=[],ps=pid?[pid]:profsAtivos().map(function(p){return p.id});
+  var s=serv(sid),H=hDia(DB.horario,new Date(dia).getDay()),out=[],ps=pid?[pid]:profsAtivos().map(function(p){return p.id});
   for(var m=hm2min(H.ini);m+s.min<=hm2min(H.fim);m+=DB.passo){
     var t=dia+m*6e4,quem=ps.filter(function(p){return livreEm(DB,p,t,s.min)});
     if(quem.length)out.push({t:t,profs:quem});
@@ -597,7 +600,7 @@ function rNeg(){
 }
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
 function nAgenda(){
-  var el=$("#negCorpo"),d=N.dia,H=DB.horario,ini=hm2min(H.ini),fim=hm2min(H.fim),PX=1.6,aberto=H.dias.indexOf(new Date(d).getDay())>=0;
+  var el=$("#negCorpo"),d=N.dia,H=hDia(DB.horario,new Date(N.dia).getDay()),ini=hm2min(H.ini),fim=hm2min(H.fim),PX=1.6,aberto=H.dias.indexOf(new Date(d).getDay())>=0;
   var doDia=DB.ags.filter(function(a){return dia0(a.ini)===d}).sort(function(a,b){return a.ini-b.ini});
   var profsV=DB.profs.filter(function(p){return p.ativo||doDia.some(function(a){return a.prof===p.id})});
   var h='<div class="barraDia"><button class="btn sec min" id="dAnt" aria-label="Dia anterior">‹</button><button class="btn sec min" id="dHoje">Hoje</button><button class="btn sec min" id="dProx" aria-label="Próximo dia">›</button><input type="date" id="dPick" value="'+isoDia(d)+'" style="border:1.5px solid var(--line);border-radius:10px;padding:5px 8px"><h3>'+dataLonga(d)+'</h3>'+
@@ -665,7 +668,7 @@ function detalhe(id){
     P.acao("responder",{id:a.id,texto:x},"Resposta enviada").then(function(){a.conversa.push({de:"neg",x:x,t:Date.now()});fechaModal(m);detalhe(a.id)})};
 }
 function formAg(a,t,pid){
-  var d=t?dia0(t):N.dia,s=S(),opc=[],H=DB.horario;
+  var d=t?dia0(t):N.dia,s=S(),opc=[],H=hFaixa(DB.horario);
   for(var x=hm2min(H.ini);x<hm2min(H.fim);x+=DB.passo)opc.push(x);
   var hsel=t?(t-dia0(t))/6e4:hm2min(H.ini);
   var m=modal('<h2>'+(a?"Remarcar":"Novo agendamento")+'</h2><p class="sub">'+(a?esc(a.cli)+' · '+esc(a.servico_nome):"Agendamento feito no balcão, telefone ou WhatsApp.")+'</p><form id="fN"><div class="g2">'+
@@ -681,7 +684,7 @@ function formAg(a,t,pid){
     N.dia=dd;fechaModal(m)};
 }
 function formBloq(){
-  var H=DB.horario,opc=[];for(var x=hm2min(H.ini);x<=hm2min(H.fim);x+=30)opc.push(x);
+  var H=hFaixa(DB.horario),opc=[];for(var x=hm2min(H.ini);x<=hm2min(H.fim);x+=30)opc.push(x);
   var m=modal('<h2>Bloquear horário</h2><p class="sub">Folga, compromisso, feriado… O horário some da página de agendamento.</p><form id="fB"><div class="g2"><label class="f full">Quem<select name="prof"><option value="todos">Todos</option>'+profsAtivos().map(function(p){return '<option value="'+p.id+'">'+esc(p.nome)+'</option>'}).join("")+'</select></label>'+
     '<label class="f">Do dia<input type="date" name="dia" value="'+isoDia(N.dia)+'"></label><label class="f">Até o dia<input type="date" name="dia2" value="'+isoDia(N.dia)+'"></label><label class="f">Das<select name="de">'+opc.map(function(x){return '<option value="'+x+'">'+min2hm(x)+'</option>'}).join("")+'</select></label><label class="f">Até<select name="ate">'+opc.map(function(x,i){return '<option value="'+x+'"'+(i===opc.length-1?" selected":"")+'>'+min2hm(x)+'</option>'}).join("")+'</select></label>'+
     '<label class="f full">Motivo<input name="motivo" placeholder="Ex.: folga, curso, feriado, férias"></label></div><div class="acoes"><button class="btn pri">Bloquear</button><button type="button" class="btn sec" id="bX">Cancelar</button></div></form>');
@@ -715,7 +718,7 @@ function nResultados(){
   var fat=conc.reduce(function(s,a){return s+(a.preco||0)},0),onl=l.filter(function(a){return a.origem==="online"}).length;
   function barras(grupo,nomeDe){var m={};conc.forEach(function(a){var k=a[grupo];m[k]=(m[k]||0)+(a.preco||0)});var ks=Object.keys(m).sort(function(a,b){return m[b]-m[a]}),mx=Math.max.apply(null,ks.map(function(k){return m[k]}).concat([1]));
     return ks.length?'<div class="barras">'+ks.map(function(k){return '<div class="b"><small>'+esc(nomeDe(k))+'</small><i style="width:'+Math.max(3,m[k]/mx*100)+'%"></i><span>'+brl(m[k])+'</span></div>'}).join("")+'</div>':'<p class="sub">Aparece depois dos primeiros atendimentos concluídos.</p>'}
-  var disp=0,ocup=0,h0=dia0(Date.now());for(var i=0;i<7;i++){var d=h0+i*864e5;if(DB.horario.dias.indexOf(new Date(d).getDay())<0)continue;var H=DB.horario,mm=hm2min(H.fim)-hm2min(H.ini)-(H.almoco[0]&&H.almoco[1]?hm2min(H.almoco[1])-hm2min(H.almoco[0]):0);disp+=mm*profsAtivos().length}
+  var disp=0,ocup=0,h0=dia0(Date.now());for(var i=0;i<7;i++){var d=h0+i*864e5;if(DB.horario.dias.indexOf(new Date(d).getDay())<0)continue;var H=hDia(DB.horario,new Date(d).getDay()),mm=hm2min(H.fim)-hm2min(H.ini)-(H.almoco[0]&&H.almoco[1]?hm2min(H.almoco[1])-hm2min(H.almoco[0]):0);disp+=mm*profsAtivos().length}
   ativos().forEach(function(a){if(a.ini>=h0&&a.ini<h0+7*864e5)ocup+=(a.fim-a.ini)/6e4});
   $("#negCorpo").innerHTML='<div class="kp"><div><b>'+brl(fat)+'</b><span>recebido em 30 dias</span></div><div><b>'+conc.length+'</b><span>atendimentos</span></div><div><b>'+brl(conc.length?fat/conc.length:0)+'</b><span>ticket médio</span></div><div><b>'+Math.round(falt.length/Math.max(1,l.length)*100)+'%</b><span>faltas ('+falt.length+')</span></div></div>'+
     '<div class="duas"><div class="card"><h3>Por serviço</h3>'+barras("serv",function(k){return serv(k).nome})+'</div><div class="card"><h3>Por '+esc(S().prof.toLowerCase())+'</h3>'+barras("prof",function(k){return prof(k).nome})+'</div></div>'+
@@ -726,7 +729,9 @@ function nConfig(){
   function desenha(){
     $("#negCorpo").innerHTML='<div class="duas"><div class="card cfg"><h3>Serviços</h3><div class="lin" style="font-size:12px;color:var(--mute);font-weight:700"><span>Nome</span><span>Minutos</span><span>Preço R$</span><span></span></div><div id="sv">'+sv.map(function(s,i){return '<div class="lin" data-i="'+i+'"><input value="'+esc(s.nome)+'" data-k="nome" aria-label="Nome do serviço"><input type="number" min="5" step="5" value="'+s.min+'" data-k="min" aria-label="Minutos"><input type="number" min="0" step="1" value="'+s.preco+'" data-k="preco" aria-label="Preço"><button class="x" data-del="'+i+'" aria-label="Remover">✕</button></div>'}).join("")+'</div><button class="btn sec min" id="svAdd">+ Serviço</button></div>'+
       '<div class="card cfg"><h3>Equipe</h3><div id="pf">'+pf.map(function(p,i){return '<div class="lin" style="grid-template-columns:1fr 34px"><input value="'+esc(p.nome)+'" data-p="'+i+'" aria-label="Nome"><button class="x" data-pdel="'+i+'" aria-label="Remover">✕</button></div>'}).join("")+'</div><button class="btn sec min" id="pfAdd">+ Pessoa</button></div></div>'+
-      '<div class="duas"><div class="card"><h3>Horário de atendimento</h3><div class="chips" id="dsem">'+DSEM.map(function(d,i){return '<label><input type="checkbox" value="'+i+'"'+(H.dias.indexOf(i)>=0?" checked":"")+'> '+d+'</label>'}).join("")+'</div><p></p><div class="g2"><label class="f">Abre<input type="time" id="hIni" value="'+H.ini+'"></label><label class="f">Fecha<input type="time" id="hFim" value="'+H.fim+'"></label><label class="f">Intervalo de<input type="time" id="aIni" value="'+(H.almoco[0]||"")+'"></label><label class="f">até<input type="time" id="aFim" value="'+(H.almoco[1]||"")+'"></label><label class="f full">Agendamento online com antecedência mínima de<select id="ante">'+[[0,"sem mínimo"],[30,"30 minutos"],[60,"1 hora"],[120,"2 horas"],[240,"4 horas"],[1440,"1 dia"]].map(function(o){return '<option value="'+o[0]+'"'+(DB.antecedencia===o[0]?" selected":"")+'>'+o[1]+'</option>'}).join("")+'</select></label></div></div>'+
+      '<div class="duas"><div class="card"><h3>Horário de atendimento</h3><div class="chips" id="dsem">'+DSEM.map(function(d,i){return '<label><input type="checkbox" value="'+i+'"'+(H.dias.indexOf(i)>=0?" checked":"")+'> '+d+'</label>'}).join("")+'</div><p></p><div class="g2"><label class="f">Abre<input type="time" id="hIni" value="'+H.ini+'"></label><label class="f">Fecha<input type="time" id="hFim" value="'+H.fim+'"></label><label class="f">Intervalo de<input type="time" id="aIni" value="'+(H.almoco[0]||"")+'"></label><label class="f">até<input type="time" id="aFim" value="'+(H.almoco[1]||"")+'"></label><label class="f full">Agendamento online com antecedência mínima de<select id="ante">'+[[0,"sem mínimo"],[30,"30 minutos"],[60,"1 hora"],[120,"2 horas"],[240,"4 horas"],[1440,"1 dia"]].map(function(o){return '<option value="'+o[0]+'"'+(DB.antecedencia===o[0]?" selected":"")+'>'+o[1]+'</option>'}).join("")+'</select></label></div>'+
+      '<details id="espBox" style="margin-top:12px"'+(Object.keys(H.esp||{}).length?' open':'')+'><summary style="cursor:pointer;font-weight:800">🕐 Algum dia com horário diferente?</summary><p class="sub" style="margin:6px 0">Ex.: domingo só até as 13h. Preencha só o dia que muda. Deixe em branco para usar o horário normal. Nesses dias não tem intervalo.</p>'+
+      DSEM.map(function(d,i){var e=(H.esp||{})[i]||["",""];return '<div style="display:grid;grid-template-columns:44px 1fr 1fr;gap:8px;align-items:center;margin-bottom:6px"><b>'+d+'</b><input type="time" data-ei="'+i+'" value="'+e[0]+'" aria-label="'+d+' abre"><input type="time" data-ef="'+i+'" value="'+e[1]+'" aria-label="'+d+' fecha"></div>'}).join("")+'</details></div>'+
       '<div class="card"><h3>Seu negócio</h3><div class="g2"><label class="f full">Nome<input id="nNome" value="'+esc(N2.nome)+'"></label><label class="f full">Endereço<input id="nEnd" value="'+esc(N2.end)+'"></label><label class="f">WhatsApp do negócio (recebe os avisos das clientes)<input id="nTel" inputmode="tel" placeholder="(19) 99999-9999" value="'+esc(N2.tel)+'"></label><label class="f">Instagram<input id="nIg" value="'+esc(N2.insta)+'"></label><label class="f full">E-mail que recebe aviso de agendamento<input id="nMail" type="email" value="'+esc(DB.email_aviso||"")+'"></label><label class="f full">Nova senha do painel (deixe vazio para manter)<input id="nSenha" type="password" autocomplete="new-password"></label></div></div></div>'+
       '<button class="btn sol" id="cfgOk">Salvar alterações</button>';
     $("#svAdd").onclick=function(){coletar();sv.push({nome:"Novo serviço",min:30,preco:0,ativo:true});desenha()};
@@ -734,11 +739,14 @@ function nConfig(){
     $$("[data-del]").forEach(function(b){b.onclick=function(){coletar();if(sv.length>1)sv.splice(+b.dataset.del,1);desenha()}});
     $$("[data-pdel]").forEach(function(b){b.onclick=function(){coletar();if(pf.length>1)pf.splice(+b.dataset.pdel,1);desenha()}});
     $("#cfgOk").onclick=function(){coletar();var b=this;b.disabled=true;b.textContent="Salvando…";
-      var dados={servicos:sv,profs:pf,horario:{dias:$$("#dsem input:checked").map(function(i){return +i.value}),ini:$("#hIni").value||H.ini,fim:$("#hFim").value||H.fim,almoco:[$("#aIni").value,$("#aFim").value]},antecedencia:+$("#ante").value,
+      var dados={servicos:sv,profs:pf,horario:{dias:$$("#dsem input:checked").map(function(i){return +i.value}),ini:$("#hIni").value||H.ini,fim:$("#hFim").value||H.fim,almoco:[$("#aIni").value,$("#aFim").value],esp:espLer()},antecedencia:+$("#ante").value,
         negocio:{nome:$("#nNome").value.trim()||N2.nome,end:$("#nEnd").value.trim(),tel:$("#nTel").value.trim(),insta:$("#nIg").value.trim()},email_aviso:$("#nMail").value.trim()};
+      var ruim=$$("[data-ei]").filter(function(x){var f=$('[data-ef="'+x.dataset.ei+'"]').value;return (x.value||f)&&!(x.value&&f&&x.value<f)})[0];
+      if(ruim){alert("Confira o horário diferente de "+DSEM[+ruim.dataset.ei]+": coloque a hora que abre e a hora que fecha.");b.disabled=false;b.textContent="Salvar alterações";return}
       var ns=$("#nSenha").value;if(ns){if(ns.length<4){alert("A senha precisa ter pelo menos 4 caracteres.");b.disabled=false;b.textContent="Salvar alterações";return}dados.senha=ns}
       P.acao("config",dados,"Alterações salvas. A página das clientes já foi atualizada.")};
   }
+  function espLer(){var o={};$$("[data-ei]").forEach(function(x){var i=x.dataset.ei,f=$('[data-ef="'+i+'"]').value;if(x.value&&f&&x.value<f)o[i]=[x.value,f]});return o}
   function coletar(){
     $$("#sv .lin").forEach(function(l){var s=sv[+l.dataset.i];s.nome=$('[data-k="nome"]',l).value.trim()||s.nome;s.min=Math.max(5,+$('[data-k="min"]',l).value||s.min);s.preco=Math.max(0,+$('[data-k="preco"]',l).value||0)});
     $$("#pf [data-p]").forEach(function(i){pf[+i.dataset.p].nome=i.value.trim()||pf[+i.dataset.p].nome});

@@ -18,7 +18,7 @@
    5. Copie o endereço que termina em /exec.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "2.2";
+var VERSAO_SISTEMA = "2.3";
 var ABAS = {
   Negocios:     ["n","nome","segmento","situacao","teste_ate","criado","dono","whatsapp_dono","email_dono","senha","telefone","endereco","instagram","email_aviso","dias","abre","fecha","intervalo_ini","intervalo_fim","passo","antecedencia","cancelar_ate","observacao"],
   Agendamentos: ["negocio","id","criado","ini","fim","quando","cliente","tel","email","pet","servico","servico_nome","prof","prof_nome","preco","status","origem","obs","conversa","recado_novo","chave"],
@@ -351,9 +351,17 @@ function negocio_(n, semErro) {
 }
 function publicoNeg_(N) { return { n: N.n, nome: String(N.nome), tel: String(N.telefone || ""), end: String(N.endereco || ""), insta: String(N.instagram || "") }; }
 function horario_(N) {
-  return { dias: String(N.dias || "").split(",").filter(function (x) { return x.trim() !== ""; }).map(Number), ini: hmTxt_(N.abre) || "09:00", fim: hmTxt_(N.fecha) || "18:00",
+  /* coluna dias: "0=09:00-13:00,2,3,4" → dia 0 (domingo) com horário próprio, sem intervalo */
+  var dias = [], esp = {};
+  String(N.dias || "").split(",").forEach(function (x) {
+    x = x.trim(); if (x === "") return;
+    var m = x.match(/^(\d)\s*=\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+    if (m) { dias.push(Number(m[1])); esp[m[1]] = [m[2], m[3]]; } else if (/^\d$/.test(x)) dias.push(Number(x));
+  });
+  return { dias: dias, esp: esp, ini: hmTxt_(N.abre) || "09:00", fim: hmTxt_(N.fecha) || "18:00",
     almoco: [hmTxt_(N.intervalo_ini), hmTxt_(N.intervalo_fim)] };
 }
+function hDia_(H, wd) { var e = H.esp && H.esp[wd]; return e ? { ini: e[0], fim: e[1], almoco: ["", ""] } : H; }
 function hmTxt_(v) { if (v instanceof Date) return ("0" + v.getHours()).slice(-2) + ":" + ("0" + v.getMinutes()).slice(-2); return String(v || "").trim(); }
 function confereSenha_(N, senha) {
   var s = String(N.senha || "");
@@ -369,7 +377,7 @@ function hash_(s) {
 function salvarConfig_(N, d) {
   var m = {};
   if (d.negocio) { m.nome = lim_(d.negocio.nome, 60) || N.nome; m.telefone = lim_(d.negocio.tel, 30); m.endereco = lim_(d.negocio.end, 150); m.instagram = lim_(d.negocio.insta, 60); }
-  if (d.horario) { m.dias = (d.horario.dias || []).join(","); m.abre = d.horario.ini; m.fecha = d.horario.fim; m.intervalo_ini = (d.horario.almoco || [])[0] || ""; m.intervalo_fim = (d.horario.almoco || [])[1] || ""; }
+  if (d.horario) { var esp = d.horario.esp || {}; m.dias = (d.horario.dias || []).map(function (x) { var e = esp[x]; return e && /^\d{1,2}:\d{2}$/.test(e[0]) && /^\d{1,2}:\d{2}$/.test(e[1]) && e[0] < e[1] ? x + "=" + e[0] + "-" + e[1] : String(x); }).join(","); m.abre = d.horario.ini; m.fecha = d.horario.fim; m.intervalo_ini = (d.horario.almoco || [])[0] || ""; m.intervalo_fim = (d.horario.almoco || [])[1] || ""; }
   if (d.antecedencia !== undefined) m.antecedencia = String(Number(d.antecedencia) || 0);
   if (d.email_aviso !== undefined) m.email_aviso = lim_(d.email_aviso, 120);
   if (d.senha) { if (String(d.senha).length < 4) throw new Error("A senha precisa ter pelo menos 4 caracteres."); m.senha = hash_(d.senha); }
@@ -389,6 +397,7 @@ function livre_(N, H, ags, bl, pid, ini, minutos, ignorar, semAntecedencia) {
   var fim = ini + minutos * MIN, off = fuso_();
   var local = ini / MIN + off, minDia = ((local % 1440) + 1440) % 1440, dsem = ((Math.floor(local / 1440) + 4) % 7 + 7) % 7;
   if (H.dias.indexOf(dsem) < 0) return false;
+  H = hDia_(H, dsem);
   var a = minDia, b = minDia + minutos;
   if (a < hm_(H.ini) || b > hm_(H.fim)) return false;
   if (H.almoco[0] && H.almoco[1] && a < hm_(H.almoco[1]) && b > hm_(H.almoco[0])) return false;

@@ -336,7 +336,7 @@ function resumo(){
   var el=$("#resumo");if(!el)return;
   var ps=vivos("posts"),feitos=ps.filter(function(p){return estado(p).todo}).length;
   var prox=postsOrdenados().filter(function(p){return !estado(p).todo})[0];
-  el.innerHTML='<div class="pend"><b>'+(ps.length-feitos)+'</b><span>faltam postar</span></div><div class="feitos"><b>'+feitos+'</b><span>já postados</span></div><div class="px"><b>'+(prox?esc(fdata(prox.d)+" · "+(prox.tit||prox.t)):"Tudo em dia ✓")+'</b><span>próximo post</span></div>';
+  el.innerHTML='<div class="pend"><b>'+(ps.length-feitos)+'</b><span>falta postar</span></div><div class="feitos"><b>'+feitos+'</b><span>já postados</span></div><div class="px"><b>'+(prox?esc(fdata(prox.d)+" · "+(prox.tit||prox.t)):"Tudo em dia ✓")+'</b><span>próximo post</span></div>';
 }
 function desenhar(){
   $("#topoDir").hidden=DEMO;
@@ -347,14 +347,16 @@ function desenhar(){
   resumo();
   ({posts:abaPosts,msgs:abaMsgs,links:abaLinks})[UI.aba]();
 }
+function ajudaHtml(){if(ls(PFX+"ajuda-ok"))return "";return '<div class="card" id="ajuda" style="margin-bottom:12px;background:#F4F9FF;border-color:#BFD8F2"><b>👋 Como usar, em 3 passos</b><ol class="passos" style="margin-top:6px"><li>Toque em <b>＋ Novo post</b>, escreva o título e a legenda e escolha onde vai postar.</li><li>Na hora de postar, toque em <b>Copiar legenda</b> e depois no botão da rede (Instagram, Facebook…). É só colar lá.</li><li>Postou? Marque a rede em <b>Já postei em</b>. Assim você sabe o que já foi e o que falta.</li></ol><p></p><button type="button" class="btn sec min" id="ajudaOk">Entendi, pode esconder</button></div>'}
 function abaPosts(){
-  $("#corpo").innerHTML='<button type="button" class="btn sol larg" id="novoPost" style="margin-bottom:12px;font-size:16px;padding:12px">＋ Novo post</button>'+
-    '<div class="ferr"><input id="busca" type="search" placeholder="🔎 Buscar post pelo nome" value="'+esc(UI.busca)+'" aria-label="Buscar post"></div>'+
-    '<div class="ferr"><div class="chips">'+[["todos","Todos"],["faltam","Faltam postar"],["feitos","Já postados"]].map(function(f){return '<button type="button" class="chip'+(UI.filtro===f[0]?" on":"")+'" data-filtro="'+f[0]+'">'+f[1]+'</button>'}).join("")+'</div>'+
+  $("#corpo").innerHTML=ajudaHtml()+'<button type="button" class="btn sol larg" id="novoPost" style="margin-bottom:12px;font-size:16px;padding:12px">＋ Novo post</button>'+
+    '<div class="ferr"><input id="busca" type="search" placeholder="🔎 Procurar post (digite uma palavra)" value="'+esc(UI.busca)+'" aria-label="Buscar post"></div>'+
+    '<div class="ferr"><div class="chips">'+[["todos","Todos"],["faltam","Falta postar"],["feitos","Já postados"]].map(function(f){return '<button type="button" class="chip'+(UI.filtro===f[0]?" on":"")+'" data-filtro="'+f[0]+'">'+f[1]+'</button>'}).join("")+'</div>'+
     '<select class="sel" id="selRede" aria-label="Rede"><option value="todas">Todas as redes</option>'+ORDEM.map(function(r){return '<option value="'+r+'"'+(UI.rede===r?" selected":"")+'>'+REDES[r][0]+'</option>'}).join("")+'</select>'+
-    '<select class="sel" id="selFmt" aria-label="Formato"><option value="todos">Todos os formatos</option><option value="v"'+(UI.fmt==="v"?" selected":"")+'>📱 Em pé</option><option value="h"'+(UI.fmt==="h"?" selected":"")+'>💻 Deitado</option></select></div>'+
+    '<select class="sel" id="selFmt" aria-label="Formato"><option value="todos">Vídeo em pé e deitado</option><option value="v"'+(UI.fmt==="v"?" selected":"")+'>📱 Só vídeo em pé</option><option value="h"'+(UI.fmt==="h"?" selected":"")+'>💻 Só vídeo deitado</option></select></div>'+
     '<div class="lista" id="lista"></div>';
   listaPosts();
+  var ao=$("#ajudaOk");if(ao)ao.onclick=function(){ls(PFX+"ajuda-ok","1");$("#ajuda").remove()};
   $("#novoPost").onclick=function(){formPost(null)};
   $("#busca").oninput=function(){UI.busca=this.value;listaPosts()};
   $("#selRede").onchange=function(){UI.rede=this.value;listaPosts()};
@@ -374,15 +376,15 @@ function listaPosts(){
   $("#lista").innerHTML=ps.map(cardPost).join("")||'<div class="card vazio" style="grid-column:1/-1">'+(vivos("posts").length?"Nenhum post neste filtro.":"Você ainda não tem posts. Toque em <b>＋ Novo post</b> para começar.")+'</div>';
 }
 function cardPost(p){
-  var e=estado(p),cls=e.todo?" feito":(e.n?" parcial":""),st=e.todo?"Postado ✓":(e.n?"Postado em "+e.n+" de "+e.tot:"Pendente");
+  var e=estado(p),cls=e.todo?" feito":(e.n?" parcial":""),st=e.todo?"Postado em tudo ✓":(e.n?"Postado em "+e.n+" de "+e.tot:"Falta postar");
   var rs=(p.redes||[]);
   return '<article class="card post'+cls+'" data-id="'+esc(p.id)+'">'+
     '<div class="ph"><h3>'+esc(p.tit||p.t||"Sem título")+'</h3><span class="st">'+st+'</span></div>'+
-    '<div class="meta">📅 '+esc(fdata(p.d))+' · '+(p.fmt==="h"?"💻 Deitado (16:9)":"📱 Em pé (9:16)")+'</div>'+
+    '<div class="meta">📅 '+esc(fdata(p.d))+' · '+(p.fmt==="h"?"💻 Vídeo deitado":"📱 Vídeo em pé")+'</div>'+
     (rs.length?'<div><p class="rot">Já postei em:</p><div class="ja">'+rs.map(function(r){var on=!!(p.feito||{})[r];return '<label class="'+(on?"on":"")+'"><input type="checkbox" data-ja="'+r+'"'+(on?" checked":"")+'> '+REDES[r][0]+'</label>'}).join("")+'</div></div>'+
       '<button type="button" class="todas" data-todas>'+(e.todo?"Desmarcar todas":"✓ Marcar em todas as redes")+'</button>':'')+
-    (p.tit?'<div><p class="rot">Título <span style="font-weight:400">(Facebook e YouTube)</span></p><div class="tit"><input readonly value="'+esc(p.tit)+'" aria-label="Título"><button type="button" class="btn pri min" data-copia-tit>Copiar título</button></div></div>':'')+
-    '<div><p class="rot">Legenda</p><textarea rows="5" data-leg aria-label="Legenda">'+esc(p.leg||"")+'</textarea></div>'+
+    (p.tit?'<div><p class="rot">Título <span style="font-weight:400">(o Facebook e o YouTube pedem)</span></p><div class="tit"><input readonly value="'+esc(p.tit)+'" aria-label="Título"><button type="button" class="btn pri min" data-copia-tit>Copiar título</button></div></div>':'')+
+    '<div><p class="rot">Legenda <span style="font-weight:400">(o texto que vai junto com o vídeo)</span></p><textarea rows="5" data-leg aria-label="Legenda">'+esc(p.leg||"")+'</textarea></div>'+
     '<div class="acoes"><button type="button" class="btn pri min" data-copia-leg>Copiar legenda</button>'+
       (p.video?'<a class="btn sec min" target="_blank" rel="noopener" href="'+esc(p.video)+'">▶ Abrir vídeo</a>':'')+
       '<button type="button" class="btn lnk" data-editar>✏️ Editar</button><button type="button" class="btn del" data-apagar>Excluir</button></div>'+
@@ -392,12 +394,12 @@ function cardPost(p){
 function formPost(p){
   var novo=!p;p=p||{fmt:"v",redes:["ig","fb","tt","wa"],d:hojeIso(),feito:{}};
   var m=janela('<h2>'+(novo?"Novo post":"Editar post")+'</h2><form id="fPost" class="g">'+
-    '<label class="f">Título <small>aparece no card e serve de título no Facebook e no YouTube</small><input name="tit" required maxlength="150" value="'+esc(p.tit||p.t||"")+'" placeholder="Ex.: Promoção de sexta"></label>'+
+    '<label class="f">Título <small>um nome curto para o post, ex.: Promoção de sexta</small><input name="tit" required maxlength="150" value="'+esc(p.tit||p.t||"")+'" placeholder="Ex.: Promoção de sexta"></label>'+
     '<label class="f">Legenda <small>o texto que vai junto com o vídeo</small><textarea name="leg" rows="6" placeholder="Escreva a legenda, com emojis e hashtags">'+esc(p.leg||"")+'</textarea></label>'+
     '<div class="g2"><label class="f">Dia que quer postar<input name="d" type="date" value="'+esc(p.d||"")+'"></label>'+
-    '<label class="f">Link do vídeo <small>opcional</small><input name="video" type="url" inputmode="url" value="'+esc(p.video||"")+'" placeholder="Google Drive, Google Fotos…"></label></div>'+
-    '<div><p class="rot">Formato do vídeo</p><div class="fmt-esc"><label><input type="radio" name="fmt" value="v"'+(p.fmt!=="h"?" checked":"")+'> 📱 Em pé (Reels, TikTok, Status)</label><label><input type="radio" name="fmt" value="h"'+(p.fmt==="h"?" checked":"")+'> 💻 Deitado (Facebook, YouTube)</label></div></div>'+
-    '<div><p class="rot">Onde vai postar</p><div class="redes-esc">'+ORDEM.map(function(r){return '<label><input type="checkbox" name="r" value="'+r+'"'+((p.redes||[]).indexOf(r)>=0?" checked":"")+'> '+REDES[r][0]+'</label>'}).join("")+'</div></div>'+
+    '<label class="f">Onde está o vídeo? <small>não é obrigatório: cole aqui o link, se o vídeo estiver no Google Drive ou no Google Fotos</small><input name="video" type="url" inputmode="url" value="'+esc(p.video||"")+'" placeholder="Cole o link aqui"></label></div>'+
+    '<div><p class="rot">O vídeo é…</p><div class="fmt-esc"><label><input type="radio" name="fmt" value="v"'+(p.fmt!=="h"?" checked":"")+'> 📱 Em pé (o mais comum no celular)</label><label><input type="radio" name="fmt" value="h"'+(p.fmt==="h"?" checked":"")+'> 💻 Deitado (como TV)</label></div></div>'+
+    '<div><p class="rot">Onde você vai postar?</p><div class="redes-esc">'+ORDEM.map(function(r){return '<label><input type="checkbox" name="r" value="'+r+'"'+((p.redes||[]).indexOf(r)>=0?" checked":"")+'> '+REDES[r][0]+'</label>'}).join("")+'</div></div>'+
     '<p class="erro" id="ePost"></p><div class="acoes"><button class="btn sol">Salvar post</button><button type="button" class="btn sec" data-fecha>Cancelar</button></div></form>');
   $("#fPost",m).onsubmit=function(ev){ev.preventDefault();var f=this,tit=f.tit.value.trim();
     var redes=$$('input[name="r"]:checked',f).map(function(x){return x.value});

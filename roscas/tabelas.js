@@ -47,7 +47,7 @@
     ORFS: { familia: "mangueira", forma: "reta", angulo: 60, vedacao: "face", nome: "ORFS", desc: "Conexão de face plana com anel de borracha (o-ring) na ponta." },
     MET:  { familia: "metrica", forma: "reta", angulo: 60, nome: "Métrica", desc: "Rosca métrica fina, comum em conexões hidráulicas europeias (DIN)." }
   };
-  var FAMILIAS = { tubo: "Tubo (BSP / NPT)", mangueira: "Mangueira (JIC / ORFS)", metrica: "Métrica" };
+  var FAMILIAS = { tubo: "Rosca BSP / NPT", mangueira: "Rosca JIC / ORFS", metrica: "Rosca métrica" };
 
   // diferença entre diâmetro externo e diâmetro menor (2 x altura do filete)
   function altura(passo, ang) { return (ang === 55 ? 1.2806 : 1.2269) * passo; }

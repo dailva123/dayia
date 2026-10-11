@@ -7,6 +7,27 @@
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function fmt(n, c) { return Number(n).toFixed(c === undefined ? 1 : c).replace(".", ","); }
   function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+  /* Telas cheias (ajuste, calibrar, pente) entram no histórico do navegador:
+     o gesto/botão "voltar" do celular fecha a tela de cima em vez de sair do app. */
+  var pilha = [], ignorarVolta = 0;
+  function empilhar(fecharReal) {
+    pilha.push(fecharReal);
+    try { history.pushState({ rf: pilha.length }, ""); } catch (e) {}
+  }
+  function desempilhar(fecharReal) {
+    var i = pilha.indexOf(fecharReal);
+    if (i < 0) return;
+    pilha.splice(i, 1);
+    ignorarVolta++;
+    try { history.back(); } catch (e) { ignorarVolta--; }
+  }
+  window.addEventListener("popstate", function () {
+    if (ignorarVolta > 0) { ignorarVolta--; return; }
+    var f = pilha.pop();
+    if (f) { f(true); return; }
+    if (raiz.Medir && typeof raiz.Medir.aoVoltar === "function") raiz.Medir.aoVoltar();
+  });
+  function depoisDeFechar(fn) { setTimeout(fn, 120); }
   var reduzMov = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* =================================================================
@@ -270,7 +291,7 @@
       var s = dedos[e.pointerId], eraPan = pan && s && Math.hypot(s[0] - pan.x, s[1] - pan.y) < 8;
       delete dedos[e.pointerId];
       if (pinca && Object.keys(dedos).length < 2) { pinca = null; trazerSeSumiram(); }
-      if (!Object.keys(dedos).length) { arrastando = null; pan = null; lupa.hidden = true; }
+      if (!Object.keys(dedos).length) { if (arrastando) salvarRascunho(); arrastando = null; pan = null; lupa.hidden = true; }
       // toque duplo na foto (fora das bolinhas): aumenta 2x ali, ou volta se já estiver bem perto
       if (e.type === "pointerup" && eraPan) {
         var agora = Date.now();
@@ -312,7 +333,19 @@
       desenhar();
     };
     $(".ed-ref-dica", ov).hidden = sel.value === "nenhuma";
-    function fechar() { window.removeEventListener("resize", layout); ov.remove(); document.body.style.overflow = ""; }
+    function fechar(viaVoltar) {
+      if (!ov.parentNode) return;
+      salvarRascunho();
+      window.removeEventListener("resize", layout); ov.remove(); document.body.style.overflow = "";
+      if (viaVoltar !== true) desempilhar(fechar);
+    }
+    function normal(p) { return [+(p[0] / W).toFixed(4), +(p[1] / H).toFixed(4)]; }
+    function salvarRascunho() {
+      if (!opts.salvar) return;
+      opts.salvar({ diam_a: normal(h.a), diam_b: normal(h.b), fil_ini: normal(h.c), fil_fim: normal(h.d), n_intervalos: n,
+        ref_a: sel.value !== "nenhuma" ? normal(h.r1) : null, ref_b: sel.value !== "nenhuma" ? normal(h.r2) : null, ref_tipo: sel.value });
+    }
+    empilhar(fechar);
     $(".ed-x", ov).onclick = fechar; $(".ed-cancelar", ov).onclick = fechar;
     $(".ed-ok", ov).onclick = function () { var m = medida(); fechar(); opts.pronto(m); };
     window.addEventListener("resize", layout);
@@ -344,9 +377,14 @@
     function aplica() { cartao.style.width = 53.98 * k + "px"; cartao.style.height = 85.6 * k + "px"; rg.value = k; }
     rg.oninput = function () { k = Number(rg.value); aplica(); };
     ov.querySelectorAll("[data-d]").forEach(function (b) { b.onclick = function () { k = Math.max(2, Math.min(12, k + Number(b.dataset.d) * 0.02)); aplica(); }; });
-    function fechar() { ov.remove(); document.body.style.overflow = ""; }
+    function fechar(viaVoltar) {
+      if (!ov.parentNode) return;
+      ov.remove(); document.body.style.overflow = "";
+      if (viaVoltar !== true) desempilhar(fechar);
+    }
+    empilhar(fechar);
     $(".ed-x", ov).onclick = fechar; $(".ed-cancelar", ov).onclick = fechar;
-    $(".ed-ok", ov).onclick = function () { lsSet("rf-pxmm", String(k)); fechar(); if (depois) depois(); };
+    $(".ed-ok", ov).onclick = function () { lsSet("rf-pxmm", String(k)); fechar(); if (depois) depoisDeFechar(depois); };
     aplica();
   }
 
@@ -401,12 +439,18 @@
       $(".pt-qual", ov).textContent = (i + 1) + " de " + candidatos.length;
     }
     ov.querySelectorAll("[data-i]").forEach(function (b) { b.onclick = function () { i = (i + Number(b.dataset.i) + candidatos.length) % candidatos.length; mostra(); }; });
-    function fechar() { window.removeEventListener("resize", mostra); ov.remove(); document.body.style.overflow = ""; }
+    function fechar(viaVoltar) {
+      if (!ov.parentNode) return;
+      window.removeEventListener("resize", mostra); ov.remove(); document.body.style.overflow = "";
+      if (viaVoltar !== true) desempilhar(fechar);
+    }
+    empilhar(fechar);
     $(".ed-x", ov).onclick = fechar;
-    $(".ed-cal", ov).onclick = function () { fechar(); calibrar(function () { abrirPente(candidatos, tipo); }); };
+    $(".ed-cal", ov).onclick = function () { fechar(); depoisDeFechar(function () { calibrar(function () { abrirPente(candidatos, tipo); }); }); };
     window.addEventListener("resize", mostra);
     requestAnimationFrame(mostra);
   }
 
-  raiz.Medir = { abrirEditor: abrirEditor, abrirPente: abrirPente, calibrar: calibrar, pxPorMm: pxPorMm };
+  raiz.Medir = { abrirEditor: abrirEditor, abrirPente: abrirPente, calibrar: calibrar, pxPorMm: pxPorMm, aoVoltar: null,
+    telaAberta: function () { return pilha.length > 0; } };
 })(this);

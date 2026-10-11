@@ -16,7 +16,7 @@
 :root{--navy:#0E2238;--navy2:#16304F;--sky:#8EC5E8;--sun:#F2C230;--bg:#EEF2F7;--card:#fff;--ink:#0E2238;--ink2:#4A5B75;--mute:#7B8BA3;--line:#D6DFEA;
 --ok:#1F8A5B;--okbg:#E3F4EC;--warn:#8A5A12;--warnbg:#FBF0D9;--bad:#C0392B;--badbg:#FBE4E1;--blue:#2B6CB0;--bluebg:#E2EEFA;box-sizing:border-box}
 *,*::before,*::after{box-sizing:inherit}
-html,body{margin:0;min-height:100%}
+html,body{margin:0;min-height:100%;overscroll-behavior-y:none}
 body{background:var(--bg);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--sun);outline-offset:2px}
@@ -161,7 +161,7 @@ form.manual label small{font-weight:500;color:var(--mute)}
 .bloqueio div{max-width:360px}
 
 /* ---------- editor / calibração / pente (telas cheias) ---------- */
-.editor{position:fixed;inset:0;z-index:80;background:#0B1B2C;color:#fff;display:flex;flex-direction:column;animation:entra .25s ease-out forwards}
+.editor{overscroll-behavior:none;position:fixed;inset:0;z-index:80;background:#0B1B2C;color:#fff;display:flex;flex-direction:column;animation:entra .25s ease-out forwards}
 .ed-topo{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--navy)}
 .ed-topo b{flex:1;font-size:16px}
 .ed-topo button{background:var(--navy2);border:0;color:#fff;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
@@ -364,9 +364,73 @@ if (EMP) {
   }).catch(function () {});
 }
 
+/* ---------- não perder a medição ----------
+   Se o celular fechar a página (falta de memória ao abrir a câmera, gesto de voltar,
+   puxar para atualizar), as fotos e as marcações voltam quando o app abrir de novo. */
+var SESSAO = "rf-sessao";
+function temSessao() {
+  try { var s = JSON.parse(sessionStorage.getItem(SESSAO) || "null"); return !!(s && s.fotos && s.fotos.length && Date.now() - s.t < 3 * 3600e3); }
+  catch (e) { return false; }
+}
+function miniatura(img) {
+  var max = 1280, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+  var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.82);
+}
+var salvarTimer = null;
+function salvarSessao() {
+  clearTimeout(salvarTimer);
+  salvarTimer = setTimeout(function () {
+    try {
+      if (!estado.fotos.length) { sessionStorage.removeItem(SESSAO); return; }
+      var dados = { t: Date.now(), tipo: estado.tipo, familia: estado.familia, fotos: estado.fotos.map(function (f) {
+        if (!f.salva) f.salva = miniatura(f.img);
+        return { dataUrl: f.salva, medida: f.medida, status: f.status, rascunho: f.rascunho || null, escala: f.salvaEscala || null };
+      }) };
+      sessionStorage.setItem(SESSAO, JSON.stringify(dados));
+    } catch (e) { /* sem espaço: segue sem salvar */ }
+  }, 300);
+}
+function restaurarSessao() {
+  if (!temSessao()) return;
+  var s; try { s = JSON.parse(sessionStorage.getItem(SESSAO)); } catch (e) { return; }
+  marcarTipo(s.tipo || "macho"); marcarFamilia(s.familia === undefined ? "tubo" : s.familia);
+  var pend = s.fotos.length;
+  s.fotos.forEach(function (f, i) {
+    var im = new Image();
+    im.onload = function () {
+      estado.fotos[i] = { dataUrl: f.dataUrl, img: im, medida: f.medida, status: f.status || "ok", rascunho: f.rascunho, salva: f.dataUrl };
+      if (--pend === 0) {
+        estado.fotos = estado.fotos.filter(Boolean);
+        var ult = estado.fotos[estado.fotos.length - 1];
+        $("#preview").hidden = false; $("#preview img").src = ult.dataUrl;
+        desenharFotos();
+        if (estado.fotos.some(function (x) { return x.medida; })) atualizarMedida();
+        aviso("#msgFoto", "info", "Continuando a medição de onde você parou.");
+      }
+    };
+    im.onerror = function () { if (--pend === 0) desenharFotos(); };
+    im.src = f.dataUrl;
+  });
+}
+// pedir confirmação antes de sair com medição em andamento
+window.addEventListener("beforeunload", function (e) {
+  if (estado.fotos.length && !saindo) { e.preventDefault(); e.returnValue = ""; }
+});
+var saindo = false;
+try { history.replaceState({ rf: 0 }, ""); history.pushState({ rf: "app" }, ""); } catch (e) {}
+Medir.aoVoltar = function () {
+  // gesto de voltar na tela principal: não sai sem querer
+  if (!estado.fotos.length && !estado.medida) { saindo = true; history.back(); return; }
+  if (confirm("Sair do app? A medição atual fica salva por algumas horas.")) { saindo = true; history.back(); }
+  else { try { history.pushState({ rf: "app" }, ""); } catch (e) {} }
+};
+
 /* ---------- abertura ---------- */
 (function () {
   var intro = $("#intro");
+  if (temSessao()) { intro.classList.add("fim"); return; } // voltando de onde parou: sem abertura
   if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { intro.classList.add("fim"); return; }
   setTimeout(function () { intro.classList.add("passo2"); }, 1500);
   setTimeout(function () { intro.classList.add("fim"); }, 2700);
@@ -429,6 +493,7 @@ function receberFoto() {
   reduzir(f).then(function (r) {
     var foto = { dataUrl: r.dataUrl, img: r.img, medida: null, status: "nova" };
     estado.fotos.push(foto);
+    salvarSessao();
     $("#preview").hidden = false;
     $("#preview img").src = r.dataUrl;
     desenharFotos();
@@ -500,7 +565,8 @@ function editarFoto(foto) {
   var m = foto.medida || {};
   Medir.abrirEditor({
     img: foto.img,
-    pontos: m.pontos || null,
+    pontos: foto.rascunho || m.pontos || null,
+    salvar: function (p) { foto.rascunho = p; salvarSessao(); },
     previa: function (med) {
       var r = Roscas.resumir(Roscas.comparar(Object.assign({ diametro_estimado_mm: m.diametro_estimado_mm }, med), estado.tipo, estado.familia));
       return r ? "<b>" + r.melhor.rotulo + "</b>" : "";
@@ -517,6 +583,7 @@ function editarFoto(foto) {
 }
 
 function atualizarMedida() {
+  salvarSessao();
   var j = Roscas.juntar(estado.fotos.map(function (f) { return f.medida; }));
   if (!j) return;
   estado.medida = j; estado.origem = "foto"; estado.respondeu = false; estado.formaUsuario = ""; estado.vedUsuario = "";
@@ -702,7 +769,7 @@ function mostrar() {
   };
   $("#btnNovo").onclick = function () {
     estado.medida = null; estado.fotos = []; box.hidden = true; $("#preview").hidden = true; $("#msgFoto").innerHTML = "";
-    desenharFotos();
+    desenharFotos(); salvarSessao();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   if (!estado.respondeu) box.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -723,6 +790,7 @@ function bt(q, f, txt) {
   return '<button type="button" data-q="' + q + '" data-f="' + f + '" aria-pressed="' + (estado.respondeu && atual === f ? "true" : "false") + '">' + txt + "</button>";
 }
 
+restaurarSessao();
 if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} }
 </script>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rosca Fácil by DayIA</title>
-<meta name="description" content="Tire uma foto da peça e descubra a medida da rosca: BSP ou NPT, em milímetro e polegada.">
+<meta name="description" content="Tire uma foto da peça e descubra a medida da rosca: BSP, NPT, JIC, ORFS ou métrica, em milímetro e polegada.">
 <meta name="theme-color" content="#0E2238">
 <link rel="icon" href="dayia-simbolo.png">
 <link rel="apple-touch-icon" href="dayia-simbolo.png">
@@ -33,12 +33,17 @@ button,input,select{font:inherit;color:inherit}
 #intro.passo2 .quadro{opacity:0;transition:opacity .3s}
 #intro.passo2 .by{opacity:1}
 
-header.top{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
+header.top{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden}
+header.top::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 14px,rgba(142,197,232,.06) 14px 16px);pointer-events:none}
+header.top::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent);animation:brilho 6s 3s ease-in-out infinite;pointer-events:none}
+@keyframes brilho{0%{left:-40%}35%,100%{left:120%}}
+header.top>*{position:relative;z-index:1}
 header.top h1{margin:0;font-size:20px;font-stretch:112%;font-weight:800}
+.sub-app{font-size:12.5px;color:#9DB4CC;font-weight:600;letter-spacing:.02em}
 .by2{display:flex;align-items:center;gap:6px;color:#B9CCE2;font-size:13px}
 .by2 img{height:20px}
 .abas{display:flex;gap:4px;background:var(--navy);padding:0 16px 12px}
-.abas button{flex:1;background:var(--navy2);border:0;color:#B9CCE2;font-weight:700;font-size:14px;padding:10px 8px;border-radius:10px;cursor:pointer}
+.abas button{flex:1;background:var(--navy2);border:0;color:#B9CCE2;font-weight:700;font-size:13.5px;padding:10px 4px;border-radius:10px;cursor:pointer}
 .abas button[aria-pressed="true"]{background:#fff;color:var(--navy)}
 
 main{max-width:560px;margin:0 auto;padding:16px 16px 40px}
@@ -48,24 +53,33 @@ main{max-width:560px;margin:0 auto;padding:16px 16px 40px}
 .esc{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .esc button{background:#fff;border:2px solid var(--line);border-radius:14px;padding:12px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:15px}
 .esc button small{font-weight:500;color:var(--mute);font-size:12.5px}
-.esc button[aria-pressed="true"]{border-color:var(--navy);background:var(--bluebg)}
+.esc button[aria-pressed="true"]{border-color:var(--navy);background:var(--bluebg);box-shadow:0 0 0 4px rgba(142,197,232,.35)}
 .esc svg{width:56px;height:40px}
+.rotulo{font-weight:700;font-size:14px;color:var(--ink2);margin:14px 0 8px}
+.chips-esc{display:flex;flex-wrap:wrap;gap:8px}
+.chips-esc button{background:#fff;border:2px solid var(--line);border-radius:99px;padding:7px 12px;font-weight:700;font-size:13.5px;cursor:pointer}
+.chips-esc button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
 .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:0;border-radius:14px;padding:15px;font-weight:800;font-size:17px;cursor:pointer;background:var(--navy);color:#fff;text-decoration:none}
 .btn.sec{background:#fff;color:var(--navy);border:2px solid var(--line);font-size:15px;padding:12px}
 .btn.zap{background:#1F8A5B;font-size:15px;padding:12px}
 .btn svg{width:22px;height:22px}
 .linha{display:flex;gap:10px;margin-top:10px}.linha>*{flex:1}
+.grade2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.grade2 .btn{font-size:14px;padding:11px 8px}
 details{margin-top:12px;font-size:14.5px;color:var(--ink2)}
 summary{cursor:pointer;font-weight:700;color:var(--navy)}
 .dicas{display:grid;grid-template-columns:120px 1fr;gap:12px;margin-top:10px;align-items:start}
 .dicas img{width:100%;border-radius:10px;border:1px solid var(--line)}
 .dicas ul{margin:0;padding-left:18px}.dicas li{margin-bottom:4px}
+.fotos{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.fotos .mini{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;border:2px solid var(--line);background:#000}
+.fotos .mini img{width:100%;height:100%;object-fit:cover;display:block}
+.fotos .mini span{position:absolute;right:3px;bottom:3px;background:rgba(14,34,56,.85);color:#fff;font-size:10.5px;font-weight:800;padding:1px 5px;border-radius:6px}
+.fotos .mini.ok{border-color:var(--ok)}.fotos .mini.aj{border-color:var(--sun)}
 .foto{position:relative;margin-top:12px;border-radius:12px;overflow:hidden;background:#000}
 .foto img{display:block;width:100%;max-height:340px;object-fit:contain}
-.carregando{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:var(--bluebg);color:var(--blue);font-weight:700;margin-top:12px}
-.roda{width:22px;height:22px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:gira .8s linear infinite}
+.carregando{padding:14px;border-radius:12px;background:var(--bluebg);color:var(--blue);font-weight:700;margin-top:12px}
 @keyframes gira{to{transform:rotate(1turn)}}
-@media (prefers-reduced-motion:reduce){.roda{animation-duration:3s}}
 .aviso{padding:12px 14px;border-radius:12px;font-size:14.5px;margin-top:12px}
 .aviso.erro{background:var(--badbg);color:var(--bad)}
 .aviso.atencao{background:var(--warnbg);color:var(--warn)}
@@ -73,10 +87,14 @@ summary{cursor:pointer;font-weight:700;color:var(--navy)}
 
 .res-topo{text-align:center;padding:6px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
 .res-topo .rot{font-size:13px;color:var(--mute);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.res-topo .bitola{font-size:54px;line-height:1.05;font-weight:800;font-stretch:115%;margin:4px 0}
+.res-topo .bitola{font-size:50px;line-height:1.05;font-weight:800;font-stretch:115%;margin:4px 0;word-break:break-word}
+.res-topo .bitola.longa{font-size:30px}
 .res-topo .norma{font-size:20px;font-weight:800;color:var(--blue)}
+.res-topo .tam{color:var(--mute);font-size:14px;margin-top:4px}
 .selo{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:99px;font-size:12.5px;font-weight:800}
 .selo.alta{background:var(--okbg);color:var(--ok)}.selo.média{background:var(--warnbg);color:var(--warn)}.selo.baixa{background:var(--badbg);color:var(--bad)}
+.selos-extra{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}
+.selos-extra span{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--bluebg);color:var(--blue)}
 .pergunta{background:var(--warnbg);border-radius:12px;padding:12px;margin-bottom:12px}
 .pergunta p{margin:0 0 8px;font-weight:700;color:var(--warn)}
 .pergunta .ia{font-weight:500;font-size:13.5px;margin:6px 0 0}
@@ -87,34 +105,33 @@ table{width:100%;border-collapse:collapse;font-size:14.5px}
 th,td{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--mute);font-weight:600;width:46%}
 td{font-weight:700;font-variant-numeric:tabular-nums}
+td small{font-weight:500;color:var(--mute)}
 h3{font-size:14px;margin:16px 0 6px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
 .norma-bloco{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .norma-bloco b{display:block;font-size:15.5px}
 .norma-bloco p{margin:2px 0 6px;color:var(--ink2);font-size:13.5px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chips span{background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:13.5px;font-weight:700}
+.chips small{font-weight:500;color:var(--mute)}
 
 form.manual label{display:block;font-weight:700;font-size:14.5px;margin:12px 0 6px}
 form.manual label small{font-weight:500;color:var(--mute)}
 .campo{display:flex;gap:8px}
 .campo input{flex:1;min-width:0;border:2px solid var(--line);border-radius:12px;padding:12px;font-size:18px;font-weight:700;background:#fff}
 .campo select{border:2px solid var(--line);border-radius:12px;padding:0 10px;font-weight:700;background:#fff}
+.pente-info p{margin:0 0 10px;color:var(--ink2);font-size:14.5px}
+.pente-info select{width:100%;border:2px solid var(--line);border-radius:12px;padding:12px;font-weight:700;background:#fff;margin-bottom:10px}
+.pe{text-align:center;color:var(--mute);font-size:13px;padding:8px 16px 28px;max-width:560px;margin:0 auto}
+.pe .by2{justify-content:center;margin-top:10px;color:var(--mute)}
+
 /* ---------- animações ---------- */
-header.top{position:relative;overflow:hidden}
-header.top::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 14px,rgba(142,197,232,.06) 14px 16px);pointer-events:none}
-header.top::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent);animation:brilho 6s 3s ease-in-out infinite;pointer-events:none}
-@keyframes brilho{0%{left:-40%}35%,100%{left:120%}}
-header.top>*{position:relative;z-index:1}
-.sub-app{font-size:12.5px;color:#9DB4CC;font-weight:600;letter-spacing:.02em}
 .entra{opacity:0;transform:translateY(14px);animation:entra .55s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes entra{to{opacity:1;transform:none}}
-.btn,.esc button,.tres button,.abas button{transition:transform .12s,background .2s,border-color .2s,box-shadow .2s}
-.btn:active,.esc button:active,.tres button:active{transform:scale(.97)}
+.btn,.esc button,.tres button,.abas button,.chips-esc button{transition:transform .12s,background .2s,border-color .2s,box-shadow .2s}
+.btn:active,.esc button:active,.tres button:active,.chips-esc button:active{transform:scale(.97)}
 .btn:not(.sec):hover{box-shadow:0 6px 18px rgba(14,34,56,.25)}
 .esc button[aria-pressed="true"] .fil{animation:fil 1.6s linear infinite}
 @keyframes fil{to{transform:translateX(-5px)}}
-.esc button[aria-pressed="true"]{box-shadow:0 0 0 4px rgba(142,197,232,.35)}
-/* scanner sobre a foto */
 .foto .scan{position:absolute;inset:0;pointer-events:none;display:none}
 .foto.medindo .scan{display:block}
 .foto.medindo img{filter:saturate(.6) brightness(.85)}
@@ -128,12 +145,11 @@ header.top>*{position:relative;z-index:1}
 .scan .grade{position:absolute;inset:0;background-image:linear-gradient(rgba(142,197,232,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(142,197,232,.18) 1px,transparent 1px);background-size:24px 24px;animation:pisca 1.2s ease-in-out infinite alternate}
 @keyframes pisca{from{opacity:.25}to{opacity:.7}}
 .etapas{list-style:none;margin:0;padding:0;font-size:14px}
-.etapas li{display:flex;align-items:center;gap:8px;opacity:.45;transition:opacity .3s}
+.etapas li{display:flex;align-items:center;gap:8px;opacity:.45;transition:opacity .3s;margin:2px 0}
 .etapas li.ativo{opacity:1}.etapas li.feito{opacity:.8}
 .etapas li .ck{width:18px;height:18px;border-radius:50%;border:2px solid currentColor;display:inline-grid;place-items:center;font-size:11px;flex:none}
 .etapas li.ativo .ck{border-right-color:transparent;animation:gira .8s linear infinite}
 .etapas li.feito .ck{background:currentColor}.etapas li.feito .ck::after{content:"✓";color:#fff}
-/* resultado */
 #resultado.mostra{animation:surge .5s cubic-bezier(.2,.8,.2,1)}
 @keyframes surge{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
 #resultado.mostra .bitola{animation:pop .7s .15s cubic-bezier(.3,1.6,.5,1) both}
@@ -143,9 +159,45 @@ header.top>*{position:relative;z-index:1}
 .barra i.alta{background:var(--ok)}.barra i.média{background:var(--sun)}.barra i.baixa{background:var(--bad)}
 .bloqueio{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
 .bloqueio div{max-width:360px}
-@media (prefers-reduced-motion:reduce){.entra,#resultado.mostra,#resultado.mostra .bitola{animation:none;opacity:1;transform:none}header.top::after,.scan .laser,.scan .grade,.esc .fil{animation:none}}
-.pe{text-align:center;color:var(--mute);font-size:13px;padding:8px 16px 28px;max-width:560px;margin:0 auto}
-.pe .by2{justify-content:center;margin-top:10px;color:var(--mute)}
+
+/* ---------- editor / calibração / pente (telas cheias) ---------- */
+.editor{position:fixed;inset:0;z-index:80;background:#0B1B2C;color:#fff;display:flex;flex-direction:column;animation:entra .25s ease-out forwards}
+.ed-topo{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--navy)}
+.ed-topo b{flex:1;font-size:16px}
+.ed-topo button{background:var(--navy2);border:0;color:#fff;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+.ed-palco{position:relative;flex:1;min-height:0;touch-action:none;overflow:hidden}
+.ed-palco canvas{position:absolute;touch-action:none}
+.ed-lupa{width:120px;height:120px;top:10px;pointer-events:none;z-index:2;filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))}
+.ed-painel{background:#fff;color:var(--ink);padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0}
+.ed-dica{margin:0 0 10px;font-size:13.5px;color:var(--ink2)}
+.bol{display:inline-block;width:11px;height:11px;border-radius:50%;margin:0 4px 0 2px;vertical-align:-1px}
+.bol.am{background:#F2C230}.bol.az{background:#2B8CE8}.bol.vd{background:#1F8A5B}
+.ed-linha{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-weight:700;font-size:14px}
+.ed-linha select{border:2px solid var(--line);border-radius:10px;padding:7px 8px;font-weight:700;background:#fff;max-width:58%}
+.ed-n{display:flex;align-items:center;gap:6px}
+.ed-n button{width:38px;height:38px;border-radius:10px;border:2px solid var(--line);background:#fff;font-size:20px;font-weight:800;cursor:pointer}
+.ed-n output{min-width:30px;text-align:center;font-size:18px;font-weight:800}
+.ed-ref-dica{font-size:13px;color:var(--ink2);margin-bottom:8px}
+.ed-previa{background:var(--bluebg);color:var(--blue);border-radius:10px;padding:8px 10px;font-size:14px;margin-bottom:10px}
+.ed-acoes{display:flex;gap:10px}.ed-acoes .btn{font-size:15px;padding:12px}
+.cal-palco{flex:1;position:relative;background:#fff;overflow:hidden}
+.cal-cartao{position:absolute;top:0;left:0;border:3px solid var(--blue);border-top:0;border-left:0;background:repeating-linear-gradient(45deg,var(--bluebg) 0 10px,#fff 10px 20px);display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--blue);font-weight:700;font-size:13px;border-radius:0 0 12px 0}
+.cal-ctrl{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cal-ctrl input{flex:1}
+.cal-ctrl button{width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:#fff;font-size:22px;font-weight:800;cursor:pointer}
+.pt-palco{flex:1;display:grid;grid-template-columns:64px 1fr 64px;gap:8px;background:#fff;color:var(--ink);min-height:0}
+.pt-col{position:relative;min-height:0}
+.pt-col canvas{width:100%;height:100%;display:block}
+.pt-col:last-child canvas{transform:scaleX(-1)}
+.pt-rot{position:absolute;left:0;right:0;bottom:6px;font-size:10.5px;line-height:1.25;background:rgba(255,255,255,.92);padding:4px;border-radius:6px;text-align:center}
+.pt-rot b{display:block;font-size:12px}
+.pt-meio{display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:14px;text-align:center;font-size:13px;color:var(--ink2);overflow:hidden}
+.pt-diam{display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:800;color:var(--navy)}
+.pt-diam i{display:block;height:18px;border:3px solid var(--navy);border-top:0;border-radius:0 0 6px 6px}
+.pt-painel{display:flex;align-items:center;gap:10px}
+.pt-painel .btn{width:auto;flex:1}
+.pt-qual{font-weight:800;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.entra,#resultado.mostra,#resultado.mostra .bitola,.editor{animation:none;opacity:1;transform:none}header.top::after,.scan .laser,.scan .grade,.esc .fil{animation:none}}
 </style>
 </head>
 <body>
@@ -163,23 +215,30 @@ header.top>*{position:relative;z-index:1}
   </div>
 </header>
 <nav class="abas" aria-label="Modo">
-  <button type="button" data-aba="foto" aria-pressed="true">📸 Pela foto</button>
-  <button type="button" data-aba="manual" aria-pressed="false">📏 Já tenho a medida</button>
+  <button type="button" data-aba="foto" aria-pressed="true">📸 Foto</button>
+  <button type="button" data-aba="manual" aria-pressed="false">📏 Medida</button>
+  <button type="button" data-aba="pente" aria-pressed="false">🔩 Pente na tela</button>
 </nav>
 
 <main>
-  <!-- tipo da rosca (vale para os dois modos) -->
-  <section class="card entra" style="animation-delay:2.75s">
-    <h2><span class="num">1</span>Onde fica a rosca na peça?</h2>
+  <section class="card entra" style="animation-delay:2.75s" id="cardTipo">
+    <h2><span class="num">1</span>Sobre a peça</h2>
     <div class="esc" id="tipo">
       <button type="button" data-tipo="macho" aria-pressed="true">
         <svg viewBox="0 0 56 40" aria-hidden="true"><rect x="4" y="12" width="14" height="16" rx="2" fill="#8EC5E8"/><path d="M18 14h34v12H18z" fill="#D6DFEA"/><clipPath id="cl"><path d="M18 10h34v20H18z"/></clipPath><g clip-path="url(#cl)"><path class="fil" d="M22 12v16M27 12v16M32 12v16M37 12v16M42 12v16M47 12v16M52 12v16" stroke="#0E2238" stroke-width="2"/></g></svg>
-        Por fora<small>macho</small>
+        Rosca por fora<small>macho</small>
       </button>
       <button type="button" data-tipo="femea" aria-pressed="false">
         <svg viewBox="0 0 56 40" aria-hidden="true"><path d="M8 6l10-4h20l10 4v28l-10 4H18L8 34z" fill="#8EC5E8"/><circle cx="28" cy="20" r="11" fill="#fff" stroke="#0E2238" stroke-width="2"/><circle cx="28" cy="20" r="7.5" fill="none" stroke="#0E2238" stroke-width="1.5" stroke-dasharray="3 2"><animateTransform attributeName="transform" type="rotate" from="0 28 20" to="360 28 20" dur="6s" repeatCount="indefinite"/></circle></svg>
-        Por dentro<small>fêmea</small>
+        Rosca por dentro<small>fêmea</small>
       </button>
+    </div>
+    <div class="rotulo">Que tipo de conexão?</div>
+    <div class="chips-esc" id="familia">
+      <button type="button" data-f="tubo" aria-pressed="true">Tubo (BSP / NPT)</button>
+      <button type="button" data-f="mangueira" aria-pressed="false">Mangueira (JIC / ORFS)</button>
+      <button type="button" data-f="metrica" aria-pressed="false">Métrica</button>
+      <button type="button" data-f="" aria-pressed="false">Não sei</button>
     </div>
   </section>
 
@@ -190,7 +249,7 @@ header.top>*{position:relative;z-index:1}
     <input type="file" id="galeria" accept="image/*" hidden>
     <label for="arquivo" class="btn" role="button" tabindex="0" id="btnFoto">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="4"/></svg>
-      Tirar foto da peça
+      <span id="txtFoto">Tirar foto da peça</span>
     </label>
     <label for="galeria" class="btn sec" role="button" tabindex="0" id="btnGaleria" style="margin-top:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>
@@ -205,16 +264,18 @@ header.top>*{position:relative;z-index:1}
           <li>Deixe a rosca <b>de lado</b>, mostrando os filetes.</li>
           <li>Espere ficar <b>nítido</b>: os filetes precisam aparecer bem.</li>
           <li>Lugar claro, sem tremer.</li>
-          <li>Tem um cartão ou régua por perto? Coloque ao lado: a medida fica ainda mais certa. Mas não é obrigatório.</li>
+          <li>Para acertar mais: tire <b>2 ou 3 fotos</b> de lados diferentes.</li>
+          <li>Tem um cartão ou régua por perto? Coloque ao lado: fica ainda mais certo. Mas não é obrigatório.</li>
         </ul>
       </div>
     </details>
+    <div class="fotos" id="fotos" hidden></div>
     <div class="foto" id="preview" hidden><img alt="Foto enviada"><div class="scan"><div class="grade"></div><div class="laser"></div><span class="canto c1"></span><span class="canto c2"></span><span class="canto c3"></span><span class="canto c4"></span></div></div>
     <div class="carregando" id="carregando" hidden><ul class="etapas" id="etapas">
       <li><span class="ck"></span>Achando a rosca na foto</li>
-      <li><span class="ck"></span>Contando os filetes</li>
+      <li><span class="ck"></span>Contando os filetes (duas vezes)</li>
       <li><span class="ck"></span>Medindo a proporção da rosca</li>
-      <li><span class="ck"></span>Comparando com as tabelas BSP e NPT</li>
+      <li><span class="ck"></span>Comparando com as tabelas</li>
     </ul></div>
     <div id="msgFoto"></div>
   </section>
@@ -228,13 +289,25 @@ header.top>*{position:relative;z-index:1}
         <input id="mDiam" inputmode="decimal" placeholder="ex.: 20,9" required>
         <select id="mUnid" aria-label="Unidade"><option value="mm">mm</option><option value="pol">pol</option></select>
       </div>
-      <label for="mFios">Fios por polegada <small>(se souber; conte os filetes em 1 polegada)</small></label>
-      <div class="campo"><input id="mFios" inputmode="decimal" placeholder="ex.: 14"></div>
+      <label for="mFios">Fios por polegada ou passo <small>(se souber)</small></label>
+      <div class="campo">
+        <input id="mFios" inputmode="decimal" placeholder="ex.: 14">
+        <select id="mFiosUn" aria-label="Unidade"><option value="tpi">fios/pol</option><option value="mm">passo mm</option></select>
+      </div>
       <button class="btn" style="margin-top:16px">Ver a rosca</button>
     </form>
   </section>
 
-  <!-- RESULTADO -->
+  <!-- MODO PENTE -->
+  <section class="card pente-info" id="modoPente" hidden>
+    <h2><span class="num">2</span>Pente de rosca na tela</h2>
+    <p>Encoste a rosca nos dentes desenhados na tela, em tamanho real. Mostra duas roscas lado a lado (ex.: BSP e NPT) para você ver qual encaixa.</p>
+    <select id="penteLista" aria-label="Rosca para comparar"></select>
+    <button type="button" class="btn" id="btnPente">Abrir o pente</button>
+    <button type="button" class="btn sec" id="btnCalib" style="margin-top:10px">Calibrar a tela (uma vez)</button>
+    <div id="msgPente"></div>
+  </section>
+
   <section class="card" id="resultado" hidden aria-live="polite"></section>
 </main>
 
@@ -245,8 +318,8 @@ header.top>*{position:relative;z-index:1}
 
 <script src="config.js"></script>
 <script src="tabelas.js"></script>
+<script src="medir.js"></script>
 <script>
-
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
 function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
@@ -254,17 +327,21 @@ if (Q.get("api")) ls("rf-api", Q.get("api"));
 var API = (typeof ROSCA_API !== "undefined" && ROSCA_API) || ls("rf-api") || "";
 var EMP = (Q.get("e") || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
 var NOME = "";
+var MAX_FOTOS = 3;
 
-/* nome da empresa do link (a logo continua a da DayIA) */
+var estado = { tipo: "macho", familia: ls("rf-fam") === null ? "tubo" : ls("rf-fam"), fotos: [], medida: null, origem: "", formaUsuario: "", vedUsuario: "", respondeu: false };
+
+/* ---------- empresa do link (a logo continua a da DayIA) ---------- */
 function aplicarEmpresa(nome) {
   NOME = nome;
   $("#nomeApp").textContent = nome;
   $("#subApp").hidden = false;
   document.title = nome + " · Medidor de roscas";
   try {
-    var m = { name: nome + " · Medidor de roscas", short_name: nome.slice(0, 12), start_url: location.href.split("#")[0], scope: location.href.replace(/[^/]*$/, ""),
+    var base = location.href.replace(/[^/]*$/, "");
+    var m = { name: nome + " · Medidor de roscas", short_name: nome.slice(0, 12), start_url: location.href.split("#")[0], scope: base,
       display: "standalone", background_color: "#0E2238", theme_color: "#0E2238",
-      icons: [{ src: location.href.replace(/[^/]*$/, "") + "dayia-simbolo.png", sizes: "153x153", type: "image/png" }] };
+      icons: [{ src: base + "dayia-simbolo.png", sizes: "153x153", type: "image/png" }] };
     document.querySelector('link[rel="manifest"]').href = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(m));
   } catch (e) {}
 }
@@ -282,9 +359,7 @@ if (EMP) {
   }).catch(function () {});
 }
 
-var estado = { tipo: "macho", medida: null, formaUsuario: "", origem: "" };
-
-/* abertura */
+/* ---------- abertura ---------- */
 (function () {
   var intro = $("#intro");
   if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { intro.classList.add("fim"); return; }
@@ -292,70 +367,158 @@ var estado = { tipo: "macho", medida: null, formaUsuario: "", origem: "" };
   setTimeout(function () { intro.classList.add("fim"); }, 2700);
 })();
 
-/* abas */
-document.querySelectorAll(".abas button").forEach(function (b) {
-  b.onclick = function () {
-    document.querySelectorAll(".abas button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); });
-    $("#modoFoto").hidden = b.dataset.aba !== "foto";
-    $("#modoManual").hidden = b.dataset.aba !== "manual";
-    $("#resultado").hidden = true;
-  };
-});
+/* ---------- abas, tipo, família ---------- */
+function aba(nome) {
+  document.querySelectorAll(".abas button").forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.aba === nome); });
+  $("#modoFoto").hidden = nome !== "foto";
+  $("#modoManual").hidden = nome !== "manual";
+  $("#modoPente").hidden = nome !== "pente";
+  if (nome === "pente") listaPente();
+  else $("#resultado").hidden = !estado.medida || estado.origem !== nome;
+}
+document.querySelectorAll(".abas button").forEach(function (b) { b.onclick = function () { aba(b.dataset.aba); }; });
 
-/* tipo macho / fêmea */
+function marcarTipo(t) {
+  estado.tipo = t;
+  document.querySelectorAll("#tipo button").forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.tipo === t); });
+}
 document.querySelectorAll("#tipo button").forEach(function (b) {
-  b.onclick = function () {
-    document.querySelectorAll("#tipo button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); });
-    estado.tipo = b.dataset.tipo;
-    if (estado.medida) mostrar();
-  };
+  b.onclick = function () { marcarTipo(b.dataset.tipo); if (estado.medida) mostrar(); if (!$("#modoPente").hidden) listaPente(); };
 });
-$("#btnFoto").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#arquivo").click(); } });
+function marcarFamilia(f) {
+  estado.familia = f; ls("rf-fam", f);
+  document.querySelectorAll("#familia button").forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.f === f); });
+}
+marcarFamilia(estado.familia);
+document.querySelectorAll("#familia button").forEach(function (b) {
+  b.onclick = function () { marcarFamilia(b.dataset.f); estado.respondeu = false; estado.formaUsuario = ""; estado.vedUsuario = ""; if (estado.medida) mostrar(); if (!$("#modoPente").hidden) listaPente(); };
+});
+["#btnFoto", "#btnGaleria"].forEach(function (id) {
+  $(id).addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $(id === "#btnFoto" ? "#arquivo" : "#galeria").click(); } });
+});
 
-/* foto */
+/* ---------- fotos ---------- */
+function reduzir(file) {
+  return new Promise(function (ok, falha) {
+    var img = new Image(), url = URL.createObjectURL(file);
+    img.onload = function () {
+      var max = 1600, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+      var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      var dataUrl = c.toDataURL("image/jpeg", 0.9), im = new Image();
+      im.onload = function () { ok({ dataUrl: dataUrl, img: im }); };
+      im.src = dataUrl;
+    };
+    img.onerror = function () { falha(new Error("img")); };
+    img.src = url;
+  });
+}
+
 function receberFoto() {
   var f = this.files && this.files[0];
   this.value = "";
   if (!f) return;
   $("#msgFoto").innerHTML = "";
-  $("#resultado").hidden = true;
-  reduzir(f).then(function (dataUrl) {
+  if (estado.fotos.length >= MAX_FOTOS) estado.fotos.shift();
+  reduzir(f).then(function (r) {
+    var foto = { dataUrl: r.dataUrl, img: r.img, medida: null, status: "nova" };
+    estado.fotos.push(foto);
     $("#preview").hidden = false;
-    $("#preview img").src = dataUrl;
+    $("#preview img").src = r.dataUrl;
+    desenharFotos();
     if (!API) {
-      aviso("#msgFoto", "info", "A medição pela foto ainda está sendo ligada. Por enquanto, use a aba <b>Já tenho a medida</b>.");
+      // sem IA ligada: medição feita com o dedo, direto na foto
+      aviso("#msgFoto", "info", "Marque a rosca na foto com o dedo. Leva uns segundos.");
+      editarFoto(foto);
       return;
     }
     comecarScan();
     return fetch(API, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ acao: "analisar", e: EMP, tipo: estado.tipo, mime: "image/jpeg", imagem: dataUrl.split(",")[1] }),
+      body: JSON.stringify({ acao: "analisar", e: EMP, tipo: estado.tipo, mime: "image/jpeg", imagem: r.dataUrl.split(",")[1] }),
       redirect: "follow"
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(function (x) { return x.json(); }).then(function (d) {
       return pararScan(!!d.ok).then(function () { return d; });
     }).then(function (d) {
-      if (!d.ok) { aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.")); return; }
-      var m = d.medida || {};
-      m.razao = Number(m.razao_diametro_passo) || (m.diametro_px && m.passo_px ? m.diametro_px / m.passo_px : 0);
-      m.tem_referencia = !!m.tem_referencia && Number(m.diametro_mm) > 0;
+      if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
+      var m = normalizar(d.medida || {});
+      foto.medida = m;
       if (m.rosca_visivel === false || !(m.razao > 0 || m.tem_referencia)) {
-        aviso("#msgFoto", "erro", "Não consegui ver os filetes direito. " + esc(m.problemas || "Tente outra foto, mais de perto e de lado.")); $("#dicasBox").open = true; return;
+        foto.status = "erro"; desenharFotos();
+        aviso("#msgFoto", "erro", "Não consegui ver os filetes direito. " + esc(m.problemas || "Tente outra foto, mais de perto e de lado.") +
+          ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Marcar com o dedo</button>');
+        $("#dicasBox").open = true; return;
       }
+      foto.status = "ok"; desenharFotos();
       if (m.tipo === "macho" || m.tipo === "femea") marcarTipo(m.tipo);
-      estado.medida = m; estado.formaUsuario = ""; estado.respondeu = false; estado.origem = "foto";
-      mostrar();
+      atualizarMedida();
     });
   }).catch(function () {
     pararScan(false);
-    aviso("#msgFoto", "erro", "Sem conexão com a internet, ou o servidor não respondeu. Tente de novo.");
+    aviso("#msgFoto", "erro", "Sem conexão com a internet, ou o servidor não respondeu. Tente de novo, ou marque com o dedo.");
   });
-};
-
+}
 $("#arquivo").onchange = receberFoto;
 $("#galeria").onchange = receberFoto;
-$("#btnGaleria").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#galeria").click(); } });
 
+/* resposta da IA → medida do app */
+function normalizar(m) {
+  var r1 = Number(m.razao_1) || 0, r2 = Number(m.razao_2) || 0;
+  var razao = Number(m.razao_diametro_passo) || 0;
+  if (r1 > 0 && r2 > 0) razao = razao || (r1 + r2) / 2;
+  if (!razao && m.diametro_px && m.passo_px) razao = m.diametro_px / m.passo_px;
+  m.razao = razao;
+  var cert = Number(m.certeza) || 60;
+  if (r1 > 0 && r2 > 0 && Math.abs(r1 - r2) / Math.min(r1, r2) > 0.08) cert = Math.min(cert, 45); // as duas contagens não bateram
+  m.certeza = cert;
+  m.tem_referencia = !!m.tem_referencia && Number(m.diametro_mm) > 0;
+  if (m.tem_referencia && !m.passo_mm && Number(m.fios_por_polegada) > 0) m.passo_mm = 25.4 / Number(m.fios_por_polegada);
+  return m;
+}
+
+function desenharFotos() {
+  var box = $("#fotos");
+  box.hidden = estado.fotos.length < 2 && !estado.fotos.some(function (f) { return f.status === "aj"; });
+  box.innerHTML = estado.fotos.map(function (f, i) {
+    var cls = f.status === "ok" ? "ok" : f.status === "aj" ? "aj" : "";
+    var t = f.status === "aj" ? "✋" : f.status === "ok" ? "✓" : f.status === "erro" ? "!" : "…";
+    return '<button type="button" class="mini ' + cls + '" data-i="' + i + '" aria-label="Foto ' + (i + 1) + '" style="padding:0;cursor:pointer"><img src="' + f.dataUrl + '" alt=""><span>' + t + "</span></button>";
+  }).join("");
+  box.querySelectorAll(".mini").forEach(function (b) { b.onclick = function () { editarFoto(estado.fotos[Number(b.dataset.i)]); }; });
+  $("#txtFoto").textContent = estado.fotos.length ? "Tirar outra foto" : "Tirar foto da peça";
+}
+
+function editarUltima() { var f = estado.fotos[estado.fotos.length - 1]; if (f) editarFoto(f); }
+function editarFoto(foto) {
+  var m = foto.medida || {};
+  Medir.abrirEditor({
+    img: foto.img,
+    pontos: m.pontos || null,
+    previa: function (med) {
+      var r = Roscas.resumir(Roscas.comparar(Object.assign({ diametro_estimado_mm: m.diametro_estimado_mm }, med), estado.tipo, estado.familia));
+      return r ? "<b>" + r.melhor.rotulo + "</b>" : "";
+    },
+    pronto: function (med) {
+      med.diametro_estimado_mm = m.diametro_estimado_mm;
+      med.forma = m.forma; med.problemas = "";
+      foto.medida = med; foto.status = "aj";
+      $("#msgFoto").innerHTML = "";
+      desenharFotos();
+      atualizarMedida();
+    }
+  });
+}
+
+function atualizarMedida() {
+  var j = Roscas.juntar(estado.fotos.map(function (f) { return f.medida; }));
+  if (!j) return;
+  estado.medida = j; estado.origem = "foto"; estado.respondeu = false; estado.formaUsuario = ""; estado.vedUsuario = "";
+  mostrar();
+}
+
+/* ---------- scanner ---------- */
 var scanTimer = null, scanPasso = 0;
 function etapas() { return document.querySelectorAll("#etapas li"); }
 function comecarScan() {
@@ -377,106 +540,143 @@ function pararScan(ok) {
   });
 }
 
-function marcarTipo(t) {
-  estado.tipo = t;
-  document.querySelectorAll("#tipo button").forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.tipo === t); });
-}
-
-function reduzir(file) {
-  return new Promise(function (ok, falha) {
-    var img = new Image(), url = URL.createObjectURL(file);
-    img.onload = function () {
-      var max = 1600, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
-      var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url);
-      ok(c.toDataURL("image/jpeg", 0.88));
-    };
-    img.onerror = function () { falha(new Error("img")); };
-    img.src = url;
-  });
-}
-
-/* manual */
+/* ---------- medida digitada ---------- */
 $("#formManual").onsubmit = function (e) {
   e.preventDefault();
-  var v = num($("#mDiam").value), fios = num($("#mFios").value);
+  var v = num($("#mDiam").value), f = num($("#mFios").value);
   if (!(v > 0)) return;
   var mm = $("#mUnid").value === "pol" ? v * 25.4 : v;
-  estado.medida = { diametro_mm: mm, tem_referencia: true, fios_por_polegada: fios > 0 ? fios : null, passo_mm: fios > 0 ? 25.4 / fios : null, forma: "indefinida" };
-  estado.formaUsuario = ""; estado.respondeu = false; estado.origem = "manual";
+  var passo = f > 0 ? ($("#mFiosUn").value === "mm" ? f : 25.4 / f) : null;
+  estado.medida = { diametro_mm: mm, tem_referencia: true, passo_mm: passo, forma: "indefinida" };
+  estado.origem = "manual"; estado.respondeu = false; estado.formaUsuario = ""; estado.vedUsuario = "";
   mostrar();
 };
 function num(s) { return parseFloat(String(s || "").replace(/\s/g, "").replace(",", ".")); }
 
-/* resultado */
+/* ---------- pente na tela ---------- */
+function candidatosPente() {
+  var lista;
+  if (estado.medida) {
+    lista = Roscas.comparar(medidaAtual(), estado.tipo, estado.familia).slice(0, 8);
+  } else {
+    lista = Roscas.linhas(estado.tipo, estado.familia);
+  }
+  return lista;
+}
+function listaPente() {
+  var l = candidatosPente(), sel = $("#penteLista");
+  sel.innerHTML = l.map(function (x, i) { return '<option value="' + i + '">' + x.rotulo + " · " + x.nome + "</option>"; }).join("");
+  $("#msgPente").innerHTML = Medir.pxPorMm() ? "" : '<div class="aviso info">Na primeira vez, o app pede para calibrar a tela com um cartão de banco. Depois não precisa mais.</div>';
+}
+$("#btnPente").onclick = function () {
+  var l = candidatosPente(), i = Number($("#penteLista").value) || 0;
+  Medir.abrirPente(l.slice(i).concat(l.slice(0, i)), estado.tipo);
+};
+$("#btnCalib").onclick = function () { Medir.calibrar(listaPente); };
+
+/* ---------- resultado ---------- */
 function fmt(n, c) { return Number(n).toFixed(c === undefined ? 2 : c).replace(".", ","); }
-function polB(b) { return b + "\""; }
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]; }); }
 function aviso(alvo, tipo, html) { $(alvo).innerHTML = '<div class="aviso ' + tipo + '">' + html + "</div>"; }
+function medidaAtual() {
+  var m = estado.medida;
+  return { diametro_mm: m.diametro_mm, tem_referencia: m.tem_referencia, passo_mm: m.passo_mm, razao: m.razao,
+    diametro_estimado_mm: m.diametro_estimado_mm, forma: estado.formaUsuario, vedacao: estado.vedUsuario };
+}
+function tituloGrupo(grupo) {
+  var normas = grupo.map(function (g) { return g.norma; });
+  var f = grupo[0].familia;
+  if (f === "metrica") return "Rosca métrica";
+  if (f === "mangueira") return normas.length > 1 ? "JIC ou ORFS" : Roscas.NORMAS[normas[0]].nome;
+  if (estado.formaUsuario === "reta") return "BSP reta (G)";
+  if (estado.formaUsuario === "conica") return normas.length > 1 ? "BSPT ou NPT" : Roscas.NORMAS[normas[0]].nome;
+  return normas.indexOf("NPT") >= 0 ? "BSP ou NPT" : "BSP";
+}
 
 function mostrar() {
-  var m = estado.medida, forma = estado.formaUsuario;
-  var lista = Roscas.comparar({ diametro_mm: m.diametro_mm, tem_referencia: m.tem_referencia, fios_por_polegada: m.fios_por_polegada, razao: m.razao, diametro_estimado_mm: m.diametro_estimado_mm, forma: forma }, estado.tipo);
+  var m = estado.medida;
+  var lista = Roscas.comparar(medidaAtual(), estado.tipo, estado.familia);
   var r = Roscas.resumir(lista);
   var box = $("#resultado");
   if (!r) { box.hidden = true; return; }
   var grupo = [r.melhor].concat(r.empate);
-  var nomes = grupo.map(function (g) { return g.norma; });
-  var titulo;
-  if (forma === "reta") titulo = "BSP reta (G)";
-  else if (forma === "conica") titulo = nomes.length > 1 ? "BSPT ou NPT" : Roscas.NORMAS[nomes[0]].nome;
-  else titulo = nomes.indexOf("NPT") >= 0 ? "BSP ou NPT" : "BSP";
+  var titulo = tituloGrupo(grupo);
+  var bitola = r.melhor.familia === "mangueira" ? r.melhor.bitola : r.melhor.bitola;
 
   var conf = r.confianca;
   if (estado.origem === "foto" && Number(m.certeza) < 50 && conf === "alta") conf = "média";
+  if (estado.origem === "foto" && m.espalho > 0.1) conf = "baixa";
+  if (r.semReferencia && m.ajustada && m.fotos > 1 && m.espalho < 0.05 && r.melhor.pontos < 0.04) conf = "alta";
   var confTxt = r.semReferencia
-    ? { "média": "Confira o tamanho com a peça na mão", baixa: "Foto difícil, confira com a peça" }[conf] || "Confira com a peça na mão"
+    ? { alta: "Medidas batendo entre si", "média": "Confira o tamanho com a peça na mão", baixa: "Foto difícil, confira com a peça" }[conf]
     : { alta: "Medida bem próxima da tabela", "média": "Medida razoável, vale conferir", baixa: "Medida longe da tabela, confira" }[conf];
 
-  var h = '<div class="res-topo"><div class="rot">' + (r.semReferencia ? "Rosca provável" : "Rosca encontrada") + '</div>' +
-    '<div class="bitola">' + polB(r.melhor.bitola) + '</div><div class="norma">' + titulo + '</div>' +
-    (r.semReferencia ? '<div style="color:var(--mute);font-size:14px;margin-top:4px">mais ou menos ' + fmt(r.melhor.diametro, 0) + ' mm de diâmetro</div>' : "") +
-    '<span class="selo ' + conf + '">' + confTxt + '</span><div class="barra"><i class="' + conf + '"></i></div></div>';
+  var extras = [];
+  if (estado.origem === "foto" && m.fotos > 1) extras.push(m.fotos + " fotos");
+  if (estado.origem === "foto" && m.ajustada) extras.push("✋ ajustada à mão");
+  if (estado.origem === "foto" && m.tem_referencia) extras.push("com referência");
 
-  // pergunta reta ou cônica (resolve BSP reta x cônica)
-  var temReta = grupo.some(function (g) { return g.forma === "reta"; }) || forma === "reta";
-  var temConica = grupo.some(function (g) { return g.forma === "conica"; }) || forma === "conica";
-  if (temReta && temConica || forma) {
+  var h = '<div class="res-topo"><div class="rot">' + (r.semReferencia ? "Rosca provável" : "Rosca encontrada") + "</div>" +
+    '<div class="bitola' + (bitola.length > 6 ? " longa" : "") + '">' + esc(bitola) + '</div><div class="norma">' + titulo + "</div>" +
+    (r.melhor.familia === "mangueira" ? '<div class="tam">rosca ' + esc(r.melhor.rosca) + "</div>" : "") +
+    (r.semReferencia ? '<div class="tam">mais ou menos ' + fmt(r.melhor.diametro, 0) + " mm de diâmetro</div>" : "") +
+    '<span class="selo ' + conf + '">' + confTxt + '</span><div class="barra"><i class="' + conf + '"></i></div>' +
+    (extras.length ? '<div class="selos-extra">' + extras.map(function (x) { return "<span>" + x + "</span>"; }).join("") + "</div>" : "") +
+    "</div>";
+
+  // perguntas que separam normas do mesmo tamanho
+  var temReta = grupo.some(function (g) { return g.familia === "tubo" && g.forma === "reta"; });
+  var temConica = grupo.some(function (g) { return g.forma === "conica"; });
+  if ((temReta && temConica) || estado.formaUsuario) {
     var palpite = m.forma === "reta" ? "parece reta" : m.forma === "conica" ? "parece afunilar" : "";
     h += '<div class="pergunta"><p>Para fechar: olhando a rosca de lado, ela afunila na ponta?</p><div class="tres">' +
-      bt("reta", "Não, é reta") + bt("conica", "Sim, afunila") + bt("", "Não sei") + "</div>" +
+      bt("forma", "reta", "Não, é reta") + bt("forma", "conica", "Sim, afunila") + bt("forma", "", "Não sei") + "</div>" +
       (palpite && estado.origem === "foto" ? '<p class="ia">Pela foto, ' + palpite + ".</p>" : "") + "</div>";
   }
-  if (forma === "conica" && nomes.length > 1) {
-    h += '<div class="aviso atencao" style="margin:0 0 12px">BSPT e NPT têm quase o mesmo tamanho. Para separar, use o pente de rosca: <b>BSP tem filete de 55°</b> e <b>NPT de 60°</b>.</div>';
+  var temJic = grupo.some(function (g) { return g.norma === "JIC"; }), temOrfs = grupo.some(function (g) { return g.norma === "ORFS"; });
+  if ((temJic && temOrfs) || estado.vedUsuario) {
+    h += '<div class="pergunta"><p>Como é a ponta da conexão?</p><div class="tres">' +
+      bt("ved", "cone", "Cone inclinado") + bt("ved", "face", "Face reta com anel") + bt("ved", "", "Não sei") + "</div></div>";
+  }
+  if (estado.formaUsuario === "conica" && grupo.length > 1) {
+    h += '<div class="aviso atencao" style="margin:0 0 12px">BSPT e NPT têm quase o mesmo tamanho. Para separar, use o <b>Pente na tela</b> ou o pente de rosca: <b>BSP tem filete de 55°</b> e <b>NPT de 60°</b>.</div>';
   }
 
-  h += "<h3>Medida " + (estado.origem === "foto" ? "na foto" : "informada") + "</h3><table>" +
-    (m.tem_referencia
-      ? "<tr><th>Diâmetro</th><td><span class=\"conta\" data-v=\"" + m.diametro_mm + "\">" + fmt(m.diametro_mm, 1) + "</span> mm · " + Roscas.pol(m.diametro_mm) + "</td></tr>"
-      : "<tr><th>Filetes no diâmetro</th><td><span class=\"conta\" data-v=\"" + m.razao + "\">" + fmt(m.razao, 1) + "</span> <small style=\"font-weight:500;color:var(--mute)\">(diâmetro ÷ passo)</small></td></tr>" +
-        (m.diametro_estimado_mm ? "<tr><th>Tamanho no olho</th><td>≈ " + fmt(m.diametro_estimado_mm, 0) + " mm</td></tr>" : "")) +
-    (m.fios_por_polegada ? "<tr><th>Fios por polegada</th><td>" + fmt(m.fios_por_polegada, 1).replace(",0", "") + "</td></tr>" : "") +
-    (m.passo_mm ? "<tr><th>Passo</th><td>" + fmt(m.passo_mm, 2) + " mm</td></tr>" : "") +
-    "</table>";
+  h += "<h3>Medida " + (estado.origem === "foto" ? "na foto" : "informada") + "</h3><table>";
+  if (m.tem_referencia) h += "<tr><th>Diâmetro</th><td><span class=\"conta\" data-v=\"" + m.diametro_mm + "\">" + fmt(m.diametro_mm, 1) + "</span> mm · " + Roscas.pol(m.diametro_mm) + "</td></tr>";
+  if (m.razao && !m.tem_referencia) h += "<tr><th>Filetes no diâmetro</th><td><span class=\"conta\" data-v=\"" + m.razao + "\">" + fmt(m.razao, 1) + "</span> <small>(diâmetro ÷ passo)</small></td></tr>";
+  if (m.diametro_estimado_mm && !m.tem_referencia) h += "<tr><th>Tamanho no olho</th><td>≈ " + fmt(m.diametro_estimado_mm, 0) + " mm</td></tr>";
+  if (m.passo_mm) h += "<tr><th>Passo</th><td>" + fmt(m.passo_mm, 2) + " mm <small>(" + fmt(25.4 / m.passo_mm, 1).replace(",0", "") + " fios/pol)</small></td></tr>";
+  h += "</table>";
 
   h += "<h3>Na tabela</h3>";
   grupo.forEach(function (g) {
-    h += '<div class="norma-bloco"><b>' + polB(g.bitola) + " " + Roscas.NORMAS[g.norma].nome + "</b><p>" + g.desc + "</p><table>" +
+    h += '<div class="norma-bloco"><b>' + esc(g.rotulo) + " · " + g.nome + "</b><p>" + g.desc + "</p><table>" +
       "<tr><th>" + (estado.tipo === "femea" ? "Furo (aprox.)" : "Diâmetro externo") + "</th><td>" + fmt(g.diametro, 2) + " mm · " + Roscas.pol(g.diametro) + "</td></tr>" +
       "<tr><th>Fios por polegada</th><td>" + String(g.tpi).replace(".", ",") + "</td></tr>" +
-      "<tr><th>Passo</th><td>" + fmt(g.passo, 3) + " mm</td></tr></table></div>";
+      "<tr><th>Passo</th><td>" + fmt(g.passo, 3) + " mm</td></tr>" +
+      "<tr><th>Ângulo do filete</th><td>" + g.angulo + "°</td></tr></table></div>";
   });
 
   if (r.outras.length) {
-    h += '<h3>Se não bater, pode ser</h3><div class="chips">' + r.outras.map(function (o) { return "<span>" + polB(o.bitola) + " <small style=\"font-weight:500;color:var(--mute)\">≈ " + fmt(o.diametro, 0) + " mm</small></span>"; }).join("") + "</div>";
+    h += '<h3>Se não bater, pode ser</h3><div class="chips">' + r.outras.map(function (o) {
+      return "<span>" + esc(o.rotulo) + " <small>≈ " + fmt(o.diametro, 0) + " mm</small></span>";
+    }).join("") + "</div>";
   }
+  if (estado.origem === "foto" && m.espalho > 0.1) h += '<div class="aviso atencao">As fotos deram medidas diferentes entre si. Toque em <b>Ajustar na foto</b> para corrigir com o dedo.</div>';
   if (estado.origem === "foto" && m.problemas) h += '<div class="aviso atencao">' + esc(m.problemas) + "</div>";
 
-  var zap = "Rosca encontrada pelo " + (NOME ? "medidor da " + NOME : "Rosca Fácil") + ": " + r.melhor.bitola + "\" " + titulo +
+  // ferramentas de precisão
+  h += '<div class="grade2">';
+  if (estado.origem === "foto") {
+    h += '<button type="button" class="btn sec" id="btnAjustar">✋ Ajustar na foto</button>';
+    if (estado.fotos.length < MAX_FOTOS) h += '<label for="arquivo" class="btn sec" role="button" tabindex="0">➕ Outra foto</label>';
+  }
+  h += '<button type="button" class="btn sec" id="btnPenteRes">🔩 Conferir no pente</button></div>';
+
+  var zap = "Rosca encontrada pelo " + (NOME ? "medidor da " + NOME : "Rosca Fácil") + ": " + r.melhor.rotulo + " " + titulo +
     (m.tem_referencia ? " (medida: " + fmt(m.diametro_mm, 1) + " mm / " + Roscas.pol(m.diametro_mm) + ")" : " (cerca de " + fmt(r.melhor.diametro, 0) + " mm de diâmetro)");
-  h += '<div class="linha"><button type="button" class="btn sec" id="btnNovo">Medir outra</button>' +
+  h += '<div class="linha"><button type="button" class="btn sec" id="btnNovo">Medir outra peça</button>' +
     '<a class="btn zap" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(zap) + '">Enviar pelo WhatsApp</a></div>';
 
   var novo = box.hidden || !estado.respondeu;
@@ -485,10 +685,19 @@ function mostrar() {
   if (novo) { box.classList.remove("mostra"); void box.offsetWidth; box.classList.add("mostra"); contar(box); }
   requestAnimationFrame(function () { var i = box.querySelector(".barra i"); if (i) i.style.width = { alta: "92%", "média": "60%", baixa: "28%" }[conf]; });
   box.querySelectorAll(".tres button").forEach(function (b) {
-    b.onclick = function () { estado.formaUsuario = b.dataset.f; estado.respondeu = true; mostrar(); };
+    b.onclick = function () {
+      if (b.dataset.q === "forma") estado.formaUsuario = b.dataset.f; else estado.vedUsuario = b.dataset.f;
+      estado.respondeu = true; mostrar();
+    };
   });
+  if ($("#btnAjustar")) $("#btnAjustar").onclick = editarUltima;
+  $("#btnPenteRes").onclick = function () {
+    var l = Roscas.comparar(medidaAtual(), estado.tipo, estado.familia).slice(0, 8);
+    Medir.abrirPente(l, estado.tipo);
+  };
   $("#btnNovo").onclick = function () {
-    estado.medida = null; box.hidden = true; $("#preview").hidden = true; $("#msgFoto").innerHTML = "";
+    estado.medida = null; estado.fotos = []; box.hidden = true; $("#preview").hidden = true; $("#msgFoto").innerHTML = "";
+    desenharFotos();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   if (!estado.respondeu) box.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -504,7 +713,10 @@ function contar(box) {
     })(t0);
   });
 }
-function bt(f, txt) { return '<button type="button" data-f="' + f + '" aria-pressed="' + (estado.respondeu && estado.formaUsuario === f ? "true" : "false") + '">' + txt + "</button>"; }
+function bt(q, f, txt) {
+  var atual = q === "forma" ? estado.formaUsuario : estado.vedUsuario;
+  return '<button type="button" data-q="' + q + '" data-f="' + f + '" aria-pressed="' + (estado.respondeu && atual === f ? "true" : "false") + '">' + txt + "</button>";
+}
 
 if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} }
 </script>

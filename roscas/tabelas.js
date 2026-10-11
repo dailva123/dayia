@@ -1,10 +1,12 @@
-/* Rosca Fácil by DayIA · tabelas de rosca de tubo e comparação
-   BSPP (ISO 228, "G")  reta  · 55°
-   BSPT (ISO 7, "R")    cônica · 55°  (mesmo diâmetro e passo da BSPP)
-   NPT  (ASME B1.20.1)  cônica · 60°
+/* Rosca Fácil by DayIA · tabelas de rosca e comparação
+   Famílias:
+   - tubo:      BSPP (ISO 228, "G") reta 55° · BSPT (ISO 7, "R") cônica 55° · NPT (ASME B1.20.1) cônica 60°
+   - mangueira: JIC 37° (SAE J514, rosca UNF) · ORFS (SAE J1453, rosca UN) — retas, 60°
+   - metrica:   rosca métrica fina de conexões (ISO 8434 / DIN 2353) — reta, 60°
    Diâmetro nominal = diâmetro externo do macho. Para a fêmea, o furo é
-   aproximado pelo diâmetro menor (nominal menos a altura do filete). */
+   aproximado pelo diâmetro menor (nominal menos 2x a altura do filete). */
 (function (raiz) {
+  var IN = 25.4;
   var TUBO_BSP = {
     "1/16": [7.723, 28], "1/8": [9.728, 28], "1/4": [13.157, 19], "3/8": [16.662, 19],
     "1/2": [20.955, 14], "5/8": [22.911, 14], "3/4": [26.441, 14], "7/8": [30.201, 14],
@@ -17,35 +19,78 @@
     "1.1/2": [48.260, 11.5], "2": [60.325, 11.5], "2.1/2": [73.025, 8], "3": [88.900, 8],
     "4": [114.300, 8]
   };
-  var NORMAS = {
-    BSPP: { tab: TUBO_BSP, forma: "reta", angulo: 55, nome: "BSP reta (BSPP / G)", desc: "Rosca reta inglesa. Veda com anel ou arruela." },
-    BSPT: { tab: TUBO_BSP, forma: "conica", angulo: 55, nome: "BSP cônica (BSPT / R)", desc: "Rosca cônica inglesa. Veda na própria rosca, com fita veda-rosca." },
-    NPT:  { tab: TUBO_NPT, forma: "conica", angulo: 60, nome: "NPT", desc: "Rosca cônica americana. Veda na própria rosca, com fita veda-rosca." }
+  // traço SAE: [diâmetro em polegada, fios por polegada, nome da rosca]
+  var JIC = {
+    "-2": [5 / 16, 24, "5/16\"-24"], "-3": [3 / 8, 24, "3/8\"-24"], "-4": [7 / 16, 20, "7/16\"-20"],
+    "-5": [1 / 2, 20, "1/2\"-20"], "-6": [9 / 16, 18, "9/16\"-18"], "-8": [3 / 4, 16, "3/4\"-16"],
+    "-10": [7 / 8, 14, "7/8\"-14"], "-12": [1 + 1 / 16, 12, "1.1/16\"-12"], "-14": [1 + 3 / 16, 12, "1.3/16\"-12"],
+    "-16": [1 + 5 / 16, 12, "1.5/16\"-12"], "-20": [1 + 5 / 8, 12, "1.5/8\"-12"], "-24": [1 + 7 / 8, 12, "1.7/8\"-12"],
+    "-32": [2 + 1 / 2, 12, "2.1/2\"-12"]
   };
+  var ORFS = {
+    "-4": [9 / 16, 18, "9/16\"-18"], "-6": [11 / 16, 16, "11/16\"-16"], "-8": [13 / 16, 16, "13/16\"-16"],
+    "-10": [1, 14, "1\"-14"], "-12": [1 + 3 / 16, 12, "1.3/16\"-12"], "-16": [1 + 7 / 16, 12, "1.7/16\"-12"],
+    "-20": [1 + 11 / 16, 12, "1.11/16\"-12"], "-24": [2, 12, "2\"-12"]
+  };
+  // métrica: [diâmetro mm, passo mm]
+  var METRICA = {
+    "M8x1": [8, 1], "M10x1": [10, 1], "M12x1,5": [12, 1.5], "M14x1,5": [14, 1.5], "M16x1,5": [16, 1.5],
+    "M18x1,5": [18, 1.5], "M20x1,5": [20, 1.5], "M22x1,5": [22, 1.5], "M24x1,5": [24, 1.5], "M26x1,5": [26, 1.5],
+    "M27x2": [27, 2], "M30x2": [30, 2], "M33x2": [33, 2], "M36x2": [36, 2], "M42x2": [42, 2], "M45x2": [45, 2], "M52x2": [52, 2]
+  };
+
+  var NORMAS = {
+    BSPP: { familia: "tubo", forma: "reta", angulo: 55, nome: "BSP reta (BSPP / G)", desc: "Rosca reta inglesa. Veda com anel ou arruela." },
+    BSPT: { familia: "tubo", forma: "conica", angulo: 55, nome: "BSP cônica (BSPT / R)", desc: "Rosca cônica inglesa. Veda na própria rosca, com fita veda-rosca." },
+    NPT:  { familia: "tubo", forma: "conica", angulo: 60, nome: "NPT", desc: "Rosca cônica americana. Veda na própria rosca, com fita veda-rosca." },
+    JIC:  { familia: "mangueira", forma: "reta", angulo: 60, vedacao: "cone", nome: "JIC 37°", desc: "Conexão de mangueira com assento em cone de 37°. Rosca UNF." },
+    ORFS: { familia: "mangueira", forma: "reta", angulo: 60, vedacao: "face", nome: "ORFS", desc: "Conexão de face plana com anel de borracha (o-ring) na ponta." },
+    MET:  { familia: "metrica", forma: "reta", angulo: 60, nome: "Métrica", desc: "Rosca métrica fina, comum em conexões hidráulicas europeias (DIN)." }
+  };
+  var FAMILIAS = { tubo: "Tubo (BSP / NPT)", mangueira: "Mangueira (JIC / ORFS)", metrica: "Métrica" };
 
   // diferença entre diâmetro externo e diâmetro menor (2 x altura do filete)
   function altura(passo, ang) { return (ang === 55 ? 1.2806 : 1.2269) * passo; }
 
-  function linhas(tipo) {
+  var BASE = (function () {
     var out = [];
-    Object.keys(NORMAS).forEach(function (n) {
-      var N = NORMAS[n];
-      Object.keys(N.tab).forEach(function (b) {
-        var d = N.tab[b][0], tpi = N.tab[b][1], passo = 25.4 / tpi;
-        var diam = tipo === "femea" ? d - altura(passo, N.angulo) : d;
-        out.push({ norma: n, nome: N.nome, desc: N.desc, forma: N.forma, bitola: b,
-          diametro: +diam.toFixed(2), nominal: d, tpi: tpi, passo: +passo.toFixed(3) });
-      });
-    });
+    function add(norma, bitola, nominal, passo, rosca, grupo) {
+      var N = NORMAS[norma];
+      out.push({ norma: norma, familia: N.familia, nome: N.nome, desc: N.desc, forma: N.forma, angulo: N.angulo,
+        vedacao: N.vedacao || "", bitola: bitola, rosca: rosca || "", nominal: nominal, passoExato: passo,
+        tpi: +(IN / passo).toFixed(2), grupo: grupo });
+    }
+    Object.keys(TUBO_BSP).forEach(function (b) { var x = TUBO_BSP[b]; add("BSPP", b + "\"", x[0], IN / x[1], "", "T" + b); add("BSPT", b + "\"", x[0], IN / x[1], "", "T" + b); });
+    Object.keys(TUBO_NPT).forEach(function (b) { var x = TUBO_NPT[b]; add("NPT", b + "\"", x[0], IN / x[1], "", "T" + b); });
+    Object.keys(JIC).forEach(function (b) { var x = JIC[b]; add("JIC", b, x[0] * IN, IN / x[1], x[2], "U" + x[2]); });
+    Object.keys(ORFS).forEach(function (b) { var x = ORFS[b]; add("ORFS", b, x[0] * IN, IN / x[1], x[2], "U" + x[2]); });
+    Object.keys(METRICA).forEach(function (b) { var x = METRICA[b]; add("MET", b, x[0], x[1], "", "M" + b); });
     return out;
+  })();
+
+  function linhas(tipo, familia) {
+    return BASE.filter(function (l) { return !familia || l.familia === familia; }).map(function (l) {
+      var c = {}; for (var k in l) c[k] = l[k];
+      var diam = tipo === "femea" ? l.nominal - altura(l.passoExato, l.angulo) : l.nominal;
+      c.diametro = +diam.toFixed(2);
+      c.passo = +l.passoExato.toFixed(3);
+      c.razao = +(l.nominal / l.passoExato).toFixed(2);
+      c.rotulo = rotulo(c);
+      return c;
+    });
   }
 
-  /* medida: {diametro_mm, fios_por_polegada, razao, diametro_estimado_mm, tem_referencia, forma}
-     - Com referência (cartão/régua): compara o diâmetro em mm (preciso).
+  function rotulo(l) {
+    if (l.familia === "mangueira") return l.norma + " " + l.bitola + " (" + l.rosca + ")";
+    return l.bitola;
+  }
+
+  /* medida: {diametro_mm, tem_referencia, fios_por_polegada, passo_mm, razao, diametro_estimado_mm, forma, vedacao}
+     - Com referência (cartão/régua/tela): compara o diâmetro em mm (preciso) e o passo.
      - Sem referência (só a foto): compara a RAZÃO diâmetro ÷ passo, que não muda
        com a distância da foto, e usa o tamanho estimado só para desempatar.
      Retorna lista ordenada do mais provável ao menos provável. */
-  function comparar(medida, tipo) {
+  function comparar(medida, tipo, familia) {
     var d = Number(medida.diametro_mm);
     var razao = Number(medida.razao) || 0;
     var est = Number(medida.diametro_estimado_mm) || 0;
@@ -53,52 +98,87 @@
     if (!comRef && !(razao > 0)) {
       if (est > 0) { d = est; comRef = true; } else return [];
     }
-    var tpi = Number(medida.fios_por_polegada) || 0;
+    var passo = Number(medida.passo_mm) || (Number(medida.fios_por_polegada) ? IN / Number(medida.fios_por_polegada) : 0);
     var forma = medida.forma === "reta" || medida.forma === "conica" ? medida.forma : "";
-    var lista = linhas(tipo).filter(function (l) { return !forma || l.forma === forma; });
+    var ved = medida.vedacao === "cone" || medida.vedacao === "face" ? medida.vedacao : "";
+    var lista = linhas(tipo, familia).filter(function (l) {
+      if (forma === "reta" && l.forma !== "reta") return false;
+      if (forma === "conica" && l.forma !== "conica") return false;
+      if (ved && l.vedacao && l.vedacao !== ved) return false;
+      return true;
+    });
     lista.forEach(function (l) {
-      var refRazao = l.nominal / (25.4 / l.tpi);
       if (comRef) {
-        var erroD = Math.abs(d - l.diametro) / l.diametro;          // erro relativo do diâmetro
-        var erroT = tpi ? Math.abs(tpi - l.tpi) / l.tpi : 0;         // erro relativo dos fios
-        var erroR = razao ? Math.abs(razao - refRazao) / refRazao : 0;
-        l.erro_mm = +Math.abs(d - l.diametro).toFixed(2);
-        l.pontos = erroD + 0.35 * erroT + 0.2 * erroR;
+        var erroD = Math.abs(d - l.diametro) / l.diametro;
+        var erroP = passo ? Math.abs(passo - l.passo) / l.passo : 0;
+        var erroR = razao && !passo ? Math.abs(razao - l.razao) / l.razao : 0;
+        l.pontos = erroD + 0.35 * erroP + 0.2 * erroR;
       } else {
-        var eR = Math.abs(razao - refRazao) / refRazao;
-        var eE = est > 0 ? Math.abs(Math.log(est / l.diametro)) : 0;  // tamanho "no olho"
+        var eR = Math.abs(razao - l.razao) / l.razao;
+        var eE = est > 0 ? Math.abs(Math.log(est / l.diametro)) : 0;
         l.pontos = eR + 0.12 * eE;
       }
-      l.razao = +refRazao.toFixed(1);
     });
     lista.sort(function (a, b) { return a.pontos - b.pontos; });
     lista.semReferencia = !comRef;
     return lista;
   }
 
-  /* Agrupa normas que empatam na mesma bitola (ex.: BSPP x BSPT, BSPT x NPT) */
+  /* Agrupa normas que empatam no mesmo tamanho (BSPP x BSPT x NPT; JIC x ORFS com a mesma rosca) */
   function resumir(lista) {
     if (!lista.length) return null;
     var m = lista[0];
-    // Na mesma bitola, BSP e NPT diferem 1 a 4% no diâmetro: menos que a
-    // precisão de uma foto. Por isso todas as normas da bitola ficam juntas.
-    var empate = lista.filter(function (l, i) { return i > 0 && l.bitola === m.bitola; });
+    var empate = lista.filter(function (l, i) { return i > 0 && l.grupo === m.grupo; });
     var outras = [], vistos = {};
-    vistos[m.bitola] = 1;
+    vistos[m.grupo] = 1;
     lista.forEach(function (l) {
-      if (vistos[l.bitola] || outras.length >= 2) return;
-      vistos[l.bitola] = 1; outras.push(l);
+      if (vistos[l.grupo] || outras.length >= 3) return;
+      vistos[l.grupo] = 1; outras.push(l);
     });
     var conf = m.pontos < 0.03 ? "alta" : m.pontos < 0.08 ? "média" : "baixa";
-    if (lista.semReferencia) {
-      // sem referência: no máximo "média", e cai se outra bitola ficou perto
-      conf = m.pontos > 0.12 ? "baixa" : "média";
-    }
+    if (lista.semReferencia) conf = m.pontos > 0.12 ? "baixa" : "média";
     return { melhor: m, empate: empate, outras: outras, confianca: conf, semReferencia: !!lista.semReferencia };
   }
 
-  function pol(mm) { return (mm / 25.4).toFixed(3).replace(".", ",") + "\""; }
+  /* Junta medições de várias fotos: mediana ponderada pela certeza;
+     medições ajustadas à mão valem mais que as da IA. */
+  function juntar(medidas) {
+    var ok = medidas.filter(function (m) { return m && (m.razao > 0 || m.tem_referencia); });
+    if (!ok.length) return null;
+    function peso(m) { return (m.ajustada ? 3 : 1) * Math.max(0.2, (Number(m.certeza) || 60) / 100); }
+    function mediana(campo, filtro) {
+      var xs = ok.filter(filtro || function (m) { return Number(m[campo]) > 0; })
+        .map(function (m) { return { v: Number(m[campo]), p: peso(m) }; })
+        .sort(function (a, b) { return a.v - b.v; });
+      if (!xs.length) return null;
+      var tot = xs.reduce(function (s, x) { return s + x.p; }, 0), acc = 0;
+      for (var i = 0; i < xs.length; i++) { acc += xs[i].p; if (acc >= tot / 2) return xs[i].v; }
+      return xs[xs.length - 1].v;
+    }
+    var temRef = function (m) { return m.tem_referencia && Number(m.diametro_mm) > 0; };
+    var comRef = ok.filter(temRef);
+    var formas = {};
+    ok.forEach(function (m) { if (m.forma === "reta" || m.forma === "conica") formas[m.forma] = (formas[m.forma] || 0) + peso(m); });
+    var forma = Object.keys(formas).sort(function (a, b) { return formas[b] - formas[a]; })[0] || "indefinida";
+    var razoes = ok.map(function (m) { return Number(m.razao); }).filter(function (x) { return x > 0; });
+    var espalho = razoes.length > 1 ? (Math.max.apply(null, razoes) - Math.min.apply(null, razoes)) / Math.min.apply(null, razoes) : 0;
+    return {
+      razao: mediana("razao"),
+      diametro_estimado_mm: mediana("diametro_estimado_mm"),
+      tem_referencia: comRef.length > 0,
+      diametro_mm: comRef.length ? mediana("diametro_mm", temRef) : null,
+      passo_mm: comRef.length ? mediana("passo_mm", function (m) { return temRef(m) && Number(m.passo_mm) > 0; }) : null,
+      forma: forma,
+      certeza: Math.round(ok.reduce(function (s, m) { return s + (Number(m.certeza) || 60); }, 0) / ok.length),
+      fotos: ok.length,
+      ajustada: ok.some(function (m) { return m.ajustada; }),
+      espalho: +espalho.toFixed(3),
+      problemas: ok.map(function (m) { return m.problemas; }).filter(Boolean)[0] || ""
+    };
+  }
 
-  var api = { NORMAS: NORMAS, linhas: linhas, comparar: comparar, resumir: resumir, pol: pol };
+  function pol(mm) { return (mm / IN).toFixed(3).replace(".", ",") + "\""; }
+
+  var api = { NORMAS: NORMAS, FAMILIAS: FAMILIAS, linhas: linhas, comparar: comparar, resumir: resumir, juntar: juntar, pol: pol, rotulo: rotulo };
   if (typeof module !== "undefined") module.exports = api; else raiz.Roscas = api;
 })(this);

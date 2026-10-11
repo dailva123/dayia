@@ -26,71 +26,40 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "1.1";
+var VERSAO = "1.2";
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
 // Com as duas chaves (CLAUDE_KEY e GEMINI_KEY), o Claude vem primeiro (mais preciso) e o Gemini fica de reserva.
 // Para mudar a ordem, crie a propriedade IA_PRIMEIRO com o valor "gemini" ou "claude".
-var MODELOS_GEMINI = ["gemini-pro-latest", "gemini-flash-latest", "gemini-flash-lite-latest"];
-var MODELOS_CLAUDE = ["claude-opus-5-5", "claude-sonnet-5-5"];
+// Rápidos primeiro; os mais pesados só se os rápidos estiverem lotados.
+var MODELOS_GEMINI = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-pro-latest"];
+var MODELOS_CLAUDE = ["claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5"];
 
 // Limite de análises por dia, para ninguém gastar sua cota à toa
 var LIMITE_DIA = 300;
 
 var PROMPT = [
-  "Você é um metrologista especialista em roscas de conexões hidráulicas e pneumáticas",
-  "(BSP, NPT, JIC, ORFS e métrica). A foto foi tirada no balcão, normalmente SEM objeto de referência.",
-  "",
-  "Tarefa: MEDIR a rosca na própria imagem. Não tente adivinhar a norma, só meça.",
-  "Use coordenadas de pixel da imagem como ela é (origem no canto de cima à esquerda).",
-  "",
-  "A) Proporção (o mais importante, funciona sem referência):",
-  "   1. Diâmetro em pixels: macho = de pico a pico dos filetes, perpendicular ao eixo da rosca;",
-  "      fêmea = diâmetro do furo nos picos internos.",
-  "   2. Passo em pixels: escolha um trecho nítido ao longo do eixo, conte os PICOS dos filetes,",
-  "      e divida o comprimento entre o primeiro e o último pico pelo número de intervalos.",
-  "   3. Faça a contagem DUAS VEZES, em trechos diferentes da rosca, de forma independente:",
-  "      razao_1 = diametro_px / passo_px do trecho 1; razao_2 = idem para o trecho 2.",
-  "   4. razao_diametro_passo = média das duas. Um filete contado a mais ou a menos muda a bitola, então confira.",
-  "",
-  "B) Tamanho real:",
-  "   - Se houver cartão de banco (85,60 x 53,98 mm), régua ou paquímetro na foto, use para calcular",
-  "     diametro_mm e passo_mm, e marque tem_referencia = true.",
-  "   - Se não houver, deixe diametro_mm e passo_mm como null e estime diametro_estimado_mm",
-  "     pelo contexto: mão ou dedos, ferramentas, bancada, sextavado, espessura da parede, proporções típicas.",
-  "     Sempre preencha diametro_estimado_mm, mesmo com pouca certeza.",
-  "",
-  "C) Forma: reta (mesmo diâmetro no comprimento todo) ou cônica (afunila). Se não der, \"indefinida\".",
-  "   Ponta da conexão: \"cone\" (assento inclinado, tipo JIC), \"face\" (face plana com anel de borracha, tipo ORFS)",
-  "   ou \"indefinida\".",
-  "",
-  "D) Pontos para o atendente conferir na tela, em coordenadas NORMALIZADAS (x e y de 0 a 1):",
-  "   diam_a e diam_b = as duas bordas do diâmetro medido; fil_ini e fil_fim = primeiro e último pico do trecho 1;",
-  "   n_intervalos = número de intervalos entre eles; ref_a e ref_b = pontas da referência (se houver).",
-  "",
-  "O cliente informou que a rosca é: {TIPO}.",
-  "",
-  "Responda SOMENTE com um JSON neste formato, sem texto fora dele:",
-  "{\"rosca_visivel\":true,",
-  " \"tipo\":\"macho|femea|indefinido\",",
-  " \"diametro_px\":0, \"passo_px\":0,",
-  " \"razao_1\":0.0, \"razao_2\":0.0, \"razao_diametro_passo\":0.0,",
-  " \"tem_referencia\":false, \"referencia\":\"cartao|regua|paquimetro|nenhuma\",",
-  " \"diametro_mm\":null, \"passo_mm\":null,",
-  " \"diametro_estimado_mm\":0.0,",
-  " \"forma\":\"reta|conica|indefinida\", \"vedacao\":\"cone|face|indefinida\",",
-  " \"pontos\":{\"diam_a\":[0,0],\"diam_b\":[0,0],\"fil_ini\":[0,0],\"fil_fim\":[0,0],\"n_intervalos\":0,\"ref_a\":null,\"ref_b\":null},",
-  " \"certeza\":0,",
-  " \"problemas\":\"\"}",
-  "\"certeza\" vai de 0 a 100 e diz o quanto você confia na contagem dos filetes.",
-  "Em \"problemas\", escreva em português simples, para um leigo, o que atrapalhou",
-  "(ex.: filetes borrados, foto de frente em vez de lado, pouca luz). Deixe vazio se a foto estiver boa."
+  "Metrologista de roscas de conexões hidráulicas (BSP, NPT, JIC, ORFS, métrica). Responda rápido e só com JSON.",
+  "Meça a rosca na imagem (pixels da imagem, origem no canto superior esquerdo). Não adivinhe a norma.",
+  "1) diametro_px: macho = pico a pico dos filetes, perpendicular ao eixo; fêmea = furo nos picos internos.",
+  "2) passo_px: num trecho nítido, distância entre o 1º e o último pico dividida pelo nº de intervalos.",
+  "3) Conte em DOIS trechos diferentes: razao_1 e razao_2 = diametro_px / passo_px. Um filete a mais muda a bitola: confira.",
+  "4) Se houver cartão (85,60 x 53,98 mm), régua ou paquímetro: diametro_mm e passo_mm, tem_referencia=true. Senão null.",
+  "5) diametro_estimado_mm: estimativa pelo contexto (dedos, sextavado, proporções). Sempre preencha.",
+  "6) forma: reta | conica | indefinida. vedacao: cone | face | indefinida.",
+  "7) pontos normalizados (0 a 1): diam_a, diam_b (bordas do diâmetro), fil_ini, fil_fim (1º e último pico), n_intervalos.",
+  "Rosca informada pelo cliente: {TIPO}.",
+  "JSON: {\"rosca_visivel\":true,\"tipo\":\"macho|femea|indefinido\",\"diametro_px\":0,\"passo_px\":0,\"razao_1\":0,\"razao_2\":0,",
+  "\"tem_referencia\":false,\"diametro_mm\":null,\"passo_mm\":null,\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"vedacao\":\"indefinida\",",
+  "\"pontos\":{\"diam_a\":[0,0],\"diam_b\":[0,0],\"fil_ini\":[0,0],\"fil_fim\":[0,0],\"n_intervalos\":0},\"certeza\":0,\"problemas\":\"\"}",
+  "certeza 0-100 = confiança na contagem. problemas: em português simples para leigo, ou vazio."
 ].join("\n");
 
 /* ---------------- entrada ---------------- */
 function doGet(e) {
   var p = (e && e.parameter) || {};
+  if (p.acao === "ping") return json_({ ok: true });
   if (p.acao === "empresa") {
     var emp = empresas_()[String(p.e || "").toLowerCase()];
     if (!emp || !emp.ativa) return json_({ ok: false });
@@ -217,7 +186,9 @@ function analisarComIA_(texto, b64, mime) {
   throw ultimo || new Error("Nenhuma IA configurada.");
 }
 
-function gemini_(texto, b64, mime, modelo) {
+function gemini_(texto, b64, mime, modelo, cfg) {
+  cfg = cfg || { temperature: 0, responseMimeType: "application/json", maxOutputTokens: 700,
+                 thinkingConfig: { thinkingBudget: /pro/.test(modelo) ? 128 : 0 } };
   var chave = PropertiesService.getScriptProperties().getProperty("GEMINI_KEY");
   var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelo + ":generateContent";
   var r = UrlFetchApp.fetch(url, {
@@ -227,10 +198,14 @@ function gemini_(texto, b64, mime, modelo) {
     muteHttpExceptions: true,
     payload: JSON.stringify({
       contents: [{ parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: texto }] }],
-      generationConfig: { temperature: 0, responseMimeType: "application/json" }
+      generationConfig: cfg
     })
   });
   var d = JSON.parse(r.getContentText());
+  if (r.getResponseCode() === 400 && cfg.thinkingConfig && /think/i.test((d.error && d.error.message) || "")) {
+    delete cfg.thinkingConfig; // modelo não aceita desligar o "pensamento": tenta do jeito padrão
+    return gemini_(texto, b64, mime, modelo, cfg);
+  }
   if (r.getResponseCode() !== 200) throw new Error((d.error && d.error.message) || ("Gemini " + r.getResponseCode()));
   var partes = (((d.candidates || [])[0] || {}).content || {}).parts || [];
   return partes.map(function (p) { return p.text || ""; }).join("");
@@ -245,7 +220,7 @@ function claude_(texto, b64, mime, modelo) {
     muteHttpExceptions: true,
     payload: JSON.stringify({
       model: modelo,
-      max_tokens: 2048,
+      max_tokens: 700,
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
         { type: "text", text: texto }

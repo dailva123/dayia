@@ -351,9 +351,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=16"></script>
-<script src="tabelas.js?v=16"></script>
-<script src="medir.js?v=16"></script>
+<script src="config.js?v=17"></script>
+<script src="tabelas.js?v=17"></script>
+<script src="medir.js?v=17"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -546,7 +546,7 @@ function reduzir(file) {
   return new Promise(function (ok, falha) {
     var img = new Image(), url = URL.createObjectURL(file);
     img.onload = function () {
-      var max = 1600, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+      var max = 1280, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
       var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
@@ -605,11 +605,29 @@ function processarFoto(r0) {
 }
 /* Pede a medida ao servidor. Se a IA estiver lotada, espera um pouco e tenta de novo sozinho. */
 function iaOcupada(d) { return d && !d.ok && (d.ocupado || /demand|overload|ocupad|unavailable|try again/i.test(d.erro || "")); }
+// versão leve só para enviar (máx. 1024 px): sobe bem mais rápido no 4G
+function versaoEnvio(dataUrl) {
+  return new Promise(function (ok) {
+    var im = new Image();
+    im.onload = function () {
+      var max = 1024, k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+      if (k >= 1 && dataUrl.length < 400000) { ok(dataUrl); return; }
+      var c = document.createElement("canvas"); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+      c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+      ok(c.toDataURL("image/jpeg", 0.82));
+    };
+    im.onerror = function () { ok(dataUrl); };
+    im.src = dataUrl;
+  });
+}
 function pedirIA(dataUrl, tentativa) {
+  return versaoEnvio(dataUrl).then(function (leve) { return enviarIA(leve, dataUrl, tentativa); });
+}
+function enviarIA(leve, dataUrl, tentativa) {
   return fetch(API, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ acao: "analisar", e: EMP, tipo: estado.tipo, mime: "image/jpeg", imagem: dataUrl.split(",")[1] }),
+    body: JSON.stringify({ acao: "analisar", e: EMP, tipo: estado.tipo, mime: "image/jpeg", imagem: leve.split(",")[1] }),
     redirect: "follow"
   }).then(function (x) { return x.json(); }).then(function (d) {
     if (iaOcupada(d) && tentativa < 2) {
@@ -889,6 +907,10 @@ function bt(q, f, txt) {
   return '<button type="button" data-q="' + q + '" data-f="' + f + '" aria-pressed="' + (estado.respondeu && atual === f ? "true" : "false") + '">' + txt + "</button>";
 }
 
+// acorda o servidor do Google assim que o app abre (ele "dorme" quando fica parado)
+function acordarServidor() { if (API) try { fetch(API + "?acao=ping", { cache: "no-store" }).catch(function () {}); } catch (e) {} }
+acordarServidor();
+$("#btnFoto").addEventListener("click", acordarServidor);
 if (ls("rf-ja-mediu") !== "1") $("#dicasBox").open = true; // primeira vez: dicas abertas
 restaurarSessao();
 if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} }

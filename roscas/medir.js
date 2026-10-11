@@ -546,11 +546,21 @@
     disparo.onclick = function () {
       var w = video.videoWidth, h = video.videoHeight;
       if (!w || !h) return;
-      var max = 1600, k = Math.min(1, max / Math.max(w, h));
-      var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
-      c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
+      // recorta só a região da moldura amarela (com folga): foto mais leve e rosca maior para a IA
+      var palcoEl = $(".cam-palco", ov), guia = $(".cam-guia", ov);
+      var PW = palcoEl.clientWidth, PH = palcoEl.clientHeight, esc = Math.max(PW / w, PH / h);
+      var offX = (PW - w * esc) / 2, offY = (PH - h * esc) / 2;
+      var gr = guia.getBoundingClientRect(), pr = palcoEl.getBoundingClientRect();
+      var gx = gr.left - pr.left, gy = gr.top - pr.top, gw = gr.width, gh = gr.height;
+      var folga = 0.35;
+      var sx = Math.max(0, (gx - gw * folga - offX) / esc), sy = Math.max(0, (gy - gh * folga - offY) / esc);
+      var sw = Math.min(w - sx, gw * (1 + 2 * folga) / esc), sh = Math.min(h - sy, gh * (1 + 2 * folga) / esc);
+      if (!(sw > 50 && sh > 50)) { sx = 0; sy = 0; sw = w; sh = h; }
+      var max = 1280, k = Math.min(1, max / Math.max(sw, sh));
+      var c = document.createElement("canvas"); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
+      c.getContext("2d").drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
       var fl = $(".cam-flash", ov); fl.classList.add("on"); setTimeout(function () { fl.classList.remove("on"); }, 60);
-      var dataUrl = c.toDataURL("image/jpeg", 0.9);
+      var dataUrl = c.toDataURL("image/jpeg", 0.88);
       c.width = c.height = 0;
       var im = new Image();
       im.onload = function () { fechar(); depoisDeFechar(function () { opts.pronto({ dataUrl: dataUrl, img: im }); }); };

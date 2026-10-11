@@ -26,7 +26,7 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "1.5";
+var VERSAO = "1.6";
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
@@ -52,9 +52,12 @@ var PROMPT = [
   "6) forma: reta | conica | indefinida. vedacao: cone | face | indefinida.",
   "7) pontos normalizados (0 a 1): diam_a, diam_b (bordas do diâmetro), fil_ini, fil_fim (1º e último pico), n_intervalos.",
   "8) marcacao: medida gravada ou impressa na peça, se der para ler (ex.: \"1/2\", \"3/4\", \"-6\", \"M16x1,5\"). Senão \"\".",
+  "9) Se aparecer um PENTE DE ROSCA encostado na rosca: leia o número gravado na lâmina que está encostada",
+  "   (fios por polegada, ex.: 19, ou passo em mm, ex.: 1,5) e o ângulo do pente (55° / WHITWORTH ou 60°).",
+  "   pente_fios, pente_passo_mm e pente_angulo (55 ou 60); null se não houver pente.",
   "Rosca informada pelo cliente: {TIPO}.",
   "JSON: {\"rosca_visivel\":true,\"tipo\":\"macho|femea|indefinido\",\"diametro_px\":0,\"passo_px\":0,\"razao_1\":0,\"razao_2\":0,",
-  "\"tem_referencia\":false,\"diametro_mm\":null,\"passo_mm\":null,\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"vedacao\":\"indefinida\",\"marcacao\":\"\",",
+  "\"tem_referencia\":false,\"diametro_mm\":null,\"passo_mm\":null,\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"vedacao\":\"indefinida\",\"marcacao\":\"\",\"pente_fios\":null,\"pente_passo_mm\":null,\"pente_angulo\":null,",
   "\"pontos\":{\"diam_a\":[0,0],\"diam_b\":[0,0],\"fil_ini\":[0,0],\"fil_fim\":[0,0],\"n_intervalos\":0},\"certeza\":0,\"problemas\":\"\"}",
   "certeza 0-100 = confiança na contagem. problemas: em português simples para leigo, ou vazio."
 ].join("\n");

@@ -209,6 +209,12 @@ form.manual label small{font-weight:500;color:var(--mute)}
 .cam-zoom input{flex:1}
 .cam-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
 .cam-flash.on{opacity:.8;transition:none}
+.pente-box{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#FAFBFD}
+.pente-box summary{font-size:15px}
+.pente-box p{margin:8px 0 6px;font-size:14px;color:var(--ink2)}
+.pente-box select{width:100%;border:2px solid var(--line);border-radius:10px;padding:10px;font-weight:700;background:#fff}
+.pente-box .tres button{border-color:var(--line);line-height:1.2}
+.pente-box .tres small{font-weight:500;font-size:11px}
 .escolha{position:fixed;inset:0;z-index:90;background:rgba(14,34,56,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px;animation:entra .2s ease-out forwards}
 .escolha-caixa{background:#fff;border-radius:18px;padding:18px;width:100%;max-width:440px;display:flex;flex-direction:column;gap:10px;margin-bottom:env(safe-area-inset-bottom)}
 .escolha-caixa>b{font-size:17px}
@@ -329,6 +335,8 @@ form.manual label small{font-weight:500;color:var(--mute)}
         <input id="mFios" inputmode="decimal" placeholder="ex.: 14">
         <select id="mFiosUn" aria-label="Unidade"><option value="tpi">fios/pol</option><option value="mm">passo mm</option></select>
       </div>
+      <label for="mAng">Ângulo do filete <small>(lado do pente que encaixou)</small></label>
+      <div class="campo"><select id="mAng" style="flex:1;padding:12px"><option value="">Não sei</option><option value="55">55° · Whitworth / BSP</option><option value="60">60° · NPT / JIC / métrica</option></select></div>
       <button class="btn" style="margin-top:16px">Ver a rosca</button>
     </form>
   </section>
@@ -351,9 +359,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=19"></script>
-<script src="tabelas.js?v=19"></script>
-<script src="medir.js?v=19"></script>
+<script src="config.js?v=21"></script>
+<script src="tabelas.js?v=21"></script>
+<script src="medir.js?v=21"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -364,7 +372,7 @@ var EMP = (Q.get("e") || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
 var NOME = "";
 var MAX_FOTOS = 3;
 
-var estado = { tipo: "macho", familia: ls("rf-fam") === null ? "tubo" : ls("rf-fam"), fotos: [], medida: null, origem: "", formaUsuario: "", vedUsuario: "", respondeu: false };
+var estado = { pente: null, tipo: "macho", familia: ls("rf-fam") === null ? "tubo" : ls("rf-fam"), fotos: [], medida: null, origem: "", formaUsuario: "", vedUsuario: "", respondeu: false };
 
 /* ---------- empresa do link (a logo continua a da DayIA) ---------- */
 function aplicarEmpresa(nome) {
@@ -521,7 +529,7 @@ function tirarFoto(mesmaPeca) {
 }
 $("#btnFoto").onclick = function () { tirarFoto(); };
 function novaPeca() {
-  estado.medida = null; estado.fotos = [];
+  estado.medida = null; estado.fotos = []; estado.pente = null;
   $("#resultado").hidden = true; $("#preview").hidden = true; $("#msgFoto").innerHTML = "";
   desenharFotos(); salvarSessao();
 }
@@ -736,7 +744,9 @@ $("#formManual").onsubmit = function (e) {
   if (!(v > 0)) return;
   var mm = $("#mUnid").value === "pol" ? v * 25.4 : v;
   var passo = f > 0 ? ($("#mFiosUn").value === "mm" ? f : 25.4 / f) : null;
-  estado.medida = { diametro_mm: mm, tem_referencia: true, passo_mm: passo, forma: "indefinida" };
+  var ang = Number($("#mAng").value) || 0;
+  estado.pente = null;
+  estado.medida = { diametro_mm: mm, tem_referencia: true, passo_mm: passo, forma: "indefinida", pente_angulo: ang || null };
   estado.origem = "manual"; estado.respondeu = false; estado.formaUsuario = ""; estado.vedUsuario = "";
   mostrar();
 };
@@ -770,13 +780,17 @@ function aviso(alvo, tipo, html) { $(alvo).innerHTML = '<div class="aviso ' + ti
 function medidaAtual() {
   var m = estado.medida;
   return { diametro_mm: m.diametro_mm, tem_referencia: m.tem_referencia, passo_mm: m.passo_mm, razao: m.razao,
-    diametro_estimado_mm: m.diametro_estimado_mm, forma: estado.formaUsuario, vedacao: estado.vedUsuario, marcacao: m.marcacao };
+    diametro_estimado_mm: m.diametro_estimado_mm, forma: estado.formaUsuario, vedacao: estado.vedUsuario, marcacao: m.marcacao,
+    pente_fios: estado.pente ? estado.pente.fios : m.pente_fios, pente_passo_mm: estado.pente ? estado.pente.passo : m.pente_passo_mm,
+    pente_angulo: estado.pente && estado.pente.angulo ? estado.pente.angulo : m.pente_angulo };
 }
 function tituloGrupo(grupo) {
   var normas = grupo.map(function (g) { return g.norma; });
   var f = grupo[0].familia;
   if (f === "metrica") return "Rosca métrica";
   if (f === "mangueira") return normas.length > 1 ? "JIC ou ORFS" : Roscas.NORMAS[normas[0]].nome;
+  if (normas.every(function (n) { return n === "NPT"; })) return "NPT";
+  if (normas.indexOf("NPT") < 0 && estado.formaUsuario !== "reta" && estado.formaUsuario !== "conica") return "BSP";
   if (estado.formaUsuario === "reta") return "BSP reta (G)";
   if (estado.formaUsuario === "conica") return normas.length > 1 ? "BSPT ou NPT" : Roscas.NORMAS[normas[0]].nome;
   return normas.indexOf("NPT") >= 0 ? "BSP ou NPT" : "BSP";
@@ -804,6 +818,8 @@ function mostrar() {
   if (estado.origem === "foto" && m.fotos > 1) extras.push(m.fotos + " fotos");
   if (estado.origem === "foto" && m.ajustada) extras.push("✋ ajustada à mão");
   if (estado.origem === "foto" && m.tem_referencia) extras.push("com referência");
+  var pt = estado.pente || (m.pente_fios || m.pente_passo_mm ? { fios: m.pente_fios, passo: m.pente_passo_mm, angulo: m.pente_angulo } : null);
+  if (pt) extras.push("🔩 pente: " + (pt.fios ? fmt(pt.fios, pt.fios % 1 ? 1 : 0) + " fios/pol" : fmt(pt.passo, 2) + " mm") + (pt.angulo ? " · " + pt.angulo + "°" : ""));
   if (estado.origem === "foto" && r.melhor.marcada) extras.push("🔎 medida gravada na peça: " + esc(m.marcacao));
 
   var h = '<div class="res-topo"><div class="rot">' + (r.semReferencia ? "Rosca provável" : "Rosca encontrada") + "</div>" +
@@ -835,7 +851,9 @@ function mostrar() {
   h += "<h3>Medida " + (estado.origem === "foto" ? "na foto" : "informada") + "</h3><table>";
   if (m.tem_referencia) h += "<tr><th>Diâmetro</th><td><span class=\"conta\" data-v=\"" + m.diametro_mm + "\">" + fmt(m.diametro_mm, 1) + "</span> mm · " + Roscas.pol(m.diametro_mm) + "</td></tr>";
   if (m.razao && !m.tem_referencia) h += "<tr><th>Filetes no diâmetro</th><td><span class=\"conta\" data-v=\"" + m.razao + "\">" + fmt(m.razao, 1) + "</span> <small>(diâmetro ÷ passo)</small></td></tr>";
-  if (m.diametro_estimado_mm && !m.tem_referencia) h += "<tr><th>Tamanho no olho</th><td>≈ " + fmt(m.diametro_estimado_mm, 0) + " mm</td></tr>";
+  var pp = pt ? (pt.passo || (pt.fios ? 25.4 / pt.fios : 0)) : 0;
+  if (pp && m.razao && !m.tem_referencia) h += "<tr><th>Diâmetro com o pente</th><td>" + fmt(m.razao * pp, 1) + " mm · " + Roscas.pol(m.razao * pp) + "</td></tr>";
+  if (m.diametro_estimado_mm && !m.tem_referencia && !pp) h += "<tr><th>Tamanho no olho</th><td>≈ " + fmt(m.diametro_estimado_mm, 0) + " mm</td></tr>";
   if (m.passo_mm) h += "<tr><th>Passo</th><td>" + fmt(m.passo_mm, 2) + " mm <small>(" + fmt(25.4 / m.passo_mm, 1).replace(",0", "") + " fios/pol)</small></td></tr>";
   h += "</table>";
 
@@ -856,13 +874,16 @@ function mostrar() {
   if (estado.origem === "foto" && m.espalho > 0.1) h += '<div class="aviso atencao">As fotos deram medidas diferentes entre si. Toque em <b>Ajustar na foto</b> para corrigir com o dedo.</div>';
   if (estado.origem === "foto" && m.problemas) h += '<div class="aviso atencao">' + esc(m.problemas) + "</div>";
 
+  // pente de rosca físico: passo exato + ângulo
+  h += penteBloco();
+
   // ferramentas de precisão
   h += '<div class="grade2">';
   if (estado.origem === "foto") {
     h += '<button type="button" class="btn sec" id="btnAjustar">✋ Ajustar na foto</button>';
     if (estado.fotos.length < MAX_FOTOS) h += '<button type="button" class="btn sec" onclick="tirarFoto(true)">➕ Outra foto da mesma peça</button>';
   }
-  h += '<button type="button" class="btn sec" id="btnPenteRes">🔩 Conferir no pente</button></div>';
+  h += '<button type="button" class="btn sec" id="btnPenteRes">📱 Pente na tela</button></div>';
 
   var zap = "Rosca encontrada pelo " + (NOME ? "medidor da " + NOME : "Rosca Fácil") + ": " + r.melhor.rotulo + " " + titulo +
     (m.tem_referencia ? " (medida: " + fmt(m.diametro_mm, 1) + " mm / " + Roscas.pol(m.diametro_mm) + ")" : " (cerca de " + fmt(r.melhor.diametro, 0) + " mm de diâmetro)");
@@ -874,7 +895,8 @@ function mostrar() {
   box.hidden = false;
   if (novo) { box.classList.remove("mostra"); void box.offsetWidth; box.classList.add("mostra"); contar(box); }
   requestAnimationFrame(function () { var i = box.querySelector(".barra i"); if (i) i.style.width = { alta: "92%", "média": "60%", baixa: "28%" }[conf]; });
-  box.querySelectorAll(".tres button").forEach(function (b) {
+  ligarPente(box);
+  box.querySelectorAll(".tres button[data-q]").forEach(function (b) {
     b.onclick = function () {
       if (b.dataset.q === "forma") estado.formaUsuario = b.dataset.f; else estado.vedUsuario = b.dataset.f;
       estado.respondeu = true; mostrar();
@@ -886,12 +908,50 @@ function mostrar() {
     Medir.abrirPente(l, estado.tipo);
   };
   $("#btnNovo").onclick = function () {
-    estado.medida = null; estado.fotos = []; box.hidden = true; $("#preview").hidden = true; $("#msgFoto").innerHTML = "";
+    estado.medida = null; estado.fotos = []; estado.pente = null; box.hidden = true; $("#preview").hidden = true; $("#msgFoto").innerHTML = "";
     desenharFotos(); salvarSessao();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   if (!estado.respondeu) box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+/* ---------- pente de rosca físico ---------- */
+var LAMINAS_POL = [28, 27, 24, 20, 19, 18, 16, 14, 12, 11.5, 11, 8];
+var LAMINAS_MM = [1, 1.25, 1.5, 2];
+function penteBloco() {
+  var p = estado.pente || {};
+  var val = p.fios ? "f" + p.fios : p.passo ? "m" + p.passo : "";
+  var op = '<option value="">Escolha a lâmina…</option><optgroup label="Polegada (fios por polegada)">' +
+    LAMINAS_POL.map(function (x) { return '<option value="f' + x + '"' + (val === "f" + x ? " selected" : "") + ">" + String(x).replace(".", ",") + " fios/pol</option>"; }).join("") +
+    '</optgroup><optgroup label="Milímetro (passo)">' +
+    LAMINAS_MM.map(function (x) { return '<option value="m' + x + '"' + (val === "m" + x ? " selected" : "") + ">" + String(x).replace(".", ",") + " mm</option>"; }).join("") + "</optgroup>";
+  return '<details class="pente-box"' + (estado.pente ? " open" : "") + '><summary>🔩 Tem pente de rosca? Fica exato</summary>' +
+    '<p>Encoste as lâminas na rosca. Qual encaixou sem folga?</p>' +
+    '<select class="pente-lam" aria-label="Lâmina que encaixou">' + op + '</select>' +
+    '<p style="margin-top:10px">De qual lado do pente ela é?</p><div class="tres pente-ang">' +
+    '<button type="button" data-a="55" aria-pressed="' + (p.angulo === 55) + '">55°<br><small>Whitworth / BSP</small></button>' +
+    '<button type="button" data-a="60" aria-pressed="' + (p.angulo === 60) + '">60°<br><small>NPT / métrica</small></button>' +
+    '<button type="button" data-a="" aria-pressed="' + (!!estado.pente && !p.angulo) + '">Não sei</button></div>' +
+    (estado.pente ? '<button type="button" class="esc-x pente-limpar">Tirar o pente</button>' : "") + "</details>";
+}
+function ligarPente(box) {
+  var sel = box.querySelector(".pente-lam");
+  if (!sel) return;
+  sel.onchange = function () {
+    var v = sel.value, ang = estado.pente && estado.pente.angulo;
+    estado.pente = v ? (v[0] === "f" ? { fios: Number(v.slice(1)), angulo: ang } : { passo: Number(v.slice(1)), angulo: ang }) : null;
+    estado.respondeu = true; mostrar();
+  };
+  box.querySelectorAll(".pente-ang button").forEach(function (b) {
+    b.onclick = function () {
+      estado.pente = estado.pente || {};
+      estado.pente.angulo = b.dataset.a ? Number(b.dataset.a) : 0;
+      estado.respondeu = true; mostrar();
+    };
+  });
+  var lp = box.querySelector(".pente-limpar");
+  if (lp) lp.onclick = function () { estado.pente = null; estado.respondeu = true; mostrar(); };
+}
+
 function contar(box) {
   if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   box.querySelectorAll(".conta").forEach(function (el) {

@@ -109,14 +109,19 @@
     var razao = Number(medida.razao) || 0;
     var est = Number(medida.diametro_estimado_mm) || 0;
     var comRef = d > 0 && medida.tem_referencia !== false;
+    // pente de rosca: passo exato. Com a proporção da foto, dá o diâmetro real (diâmetro = proporção x passo)
+    var pentePasso = Number(medida.pente_passo_mm) || (Number(medida.pente_fios) ? IN / Number(medida.pente_fios) : 0);
+    var penteAng = Number(medida.pente_angulo) === 55 || Number(medida.pente_angulo) === 60 ? Number(medida.pente_angulo) : 0;
+    if (pentePasso > 0 && !comRef && razao > 0) { d = razao * pentePasso; comRef = true; }
     if (!comRef && !(razao > 0)) {
       if (est > 0) { d = est; comRef = true; } else return [];
     }
-    var passo = Number(medida.passo_mm) || (Number(medida.fios_por_polegada) ? IN / Number(medida.fios_por_polegada) : 0);
+    var passo = pentePasso || Number(medida.passo_mm) || (Number(medida.fios_por_polegada) ? IN / Number(medida.fios_por_polegada) : 0);
     var forma = medida.forma === "reta" || medida.forma === "conica" ? medida.forma : "";
     var ved = medida.vedacao === "cone" || medida.vedacao === "face" ? medida.vedacao : "";
     var marca = normMarca(medida.marcacao);
     var lista = linhas(tipo, familia).filter(function (l) {
+      if (penteAng && l.angulo !== penteAng) return false;   // 55° = BSP (Whitworth); 60° = NPT, JIC, ORFS, métrica
       if (forma === "reta" && l.forma !== "reta") return false;
       if (forma === "conica" && l.forma !== "conica") return false;
       if (ved && l.vedacao && l.vedacao !== ved) return false;
@@ -126,6 +131,7 @@
       if (comRef) {
         var erroD = Math.abs(d - l.diametro) / l.diametro;
         var erroP = passo ? Math.abs(passo - l.passo) / l.passo : 0;
+        if (pentePasso) erroP *= 3;
         var erroR = razao && !passo ? Math.abs(razao - l.razao) / l.razao : 0;
         l.pontos = erroD + 0.35 * erroP + 0.2 * erroR;
       } else {
@@ -138,6 +144,7 @@
     if (marca) lista.forEach(function (l) { if (bateMarca(l, marca) && l.pontos < 0.35) { l.pontos *= 0.25; l.marcada = true; } });
     lista.sort(function (a, b) { return a.pontos - b.pontos; });
     lista.semReferencia = !comRef;
+    lista.comPente = pentePasso > 0;
     return lista;
   }
 
@@ -154,6 +161,7 @@
     });
     var conf = m.pontos < 0.03 ? "alta" : m.pontos < 0.08 ? "média" : "baixa";
     if (lista.semReferencia) conf = m.pontos > 0.12 ? "baixa" : "média";
+    if (lista.comPente && m.pontos < 0.06) conf = "alta";
     return { melhor: m, empate: empate, outras: outras, confianca: conf, semReferencia: !!lista.semReferencia };
   }
 
@@ -198,7 +206,10 @@
       ajustada: ok.some(function (m) { return m.ajustada; }),
       espalho: +espalho.toFixed(3),
       problemas: ok.map(function (m) { return m.problemas; }).filter(Boolean)[0] || "",
-      marcacao: ok.map(function (m) { return m.marcacao; }).filter(Boolean)[0] || ""
+      marcacao: ok.map(function (m) { return m.marcacao; }).filter(Boolean)[0] || "",
+      pente_fios: ok.map(function (m) { return Number(m.pente_fios) || 0; }).filter(Boolean)[0] || null,
+      pente_passo_mm: ok.map(function (m) { return Number(m.pente_passo_mm) || 0; }).filter(Boolean)[0] || null,
+      pente_angulo: ok.map(function (m) { return Number(m.pente_angulo) || 0; }).filter(Boolean)[0] || null
     };
   }
 

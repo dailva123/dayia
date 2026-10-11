@@ -201,6 +201,12 @@ form.manual label small{font-weight:500;color:var(--mute)}
 .cam-zoom input{flex:1}
 .cam-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
 .cam-flash.on{opacity:.8;transition:none}
+.escolha{position:fixed;inset:0;z-index:90;background:rgba(14,34,56,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px;animation:entra .2s ease-out forwards}
+.escolha-caixa{background:#fff;border-radius:18px;padding:18px;width:100%;max-width:440px;display:flex;flex-direction:column;gap:10px;margin-bottom:env(safe-area-inset-bottom)}
+.escolha-caixa>b{font-size:17px}
+.escolha-caixa .btn{flex-direction:column;gap:2px;font-size:16px}
+.escolha-caixa .btn small{font-weight:500;font-size:12.5px;opacity:.85}
+.esc-x{background:none;border:0;color:var(--mute);font-weight:700;padding:8px;cursor:pointer}
 .cal-palco{flex:1;position:relative;background:#fff;overflow:hidden}
 .cal-cartao{position:absolute;top:0;left:0;border:3px solid var(--blue);border-top:0;border-left:0;background:repeating-linear-gradient(45deg,var(--bluebg) 0 10px,#fff 10px 20px);display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--blue);font-weight:700;font-size:13px;border-radius:0 0 12px 0}
 .cal-ctrl{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -337,9 +343,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=12"></script>
-<script src="tabelas.js?v=12"></script>
-<script src="medir.js?v=12"></script>
+<script src="config.js?v=14"></script>
+<script src="tabelas.js?v=14"></script>
+<script src="medir.js?v=14"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -482,8 +488,15 @@ $("#btnGaleria").addEventListener("keydown", function (e) { if (e.key === "Enter
 
 /* Câmera dentro do próprio app: não abre a câmera do celular, então o navegador
    não é fechado por falta de memória. Se não der (sem permissão), usa a câmera do celular. */
-function tirarFoto() {
-  if (estado.fotos.length >= MAX_FOTOS) { /* a mais antiga sai */ }
+function tirarFoto(mesmaPeca) {
+  // já tem foto de uma peça: pergunta se a nova é da mesma peça (para não misturar peças diferentes)
+  if (estado.fotos.length && mesmaPeca !== true) {
+    escolherPeca(function (mesma) {
+      if (!mesma) novaPeca();
+      tirarFoto(true);
+    });
+    return;
+  }
   var podeCamera = window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.Medir && typeof Medir.abrirCamera === "function";
   if (podeCamera && ls("rf-camera-externa") !== "1") {
     Medir.abrirCamera({
@@ -498,7 +511,27 @@ function tirarFoto() {
     $("#arquivo").click();
   }
 }
-$("#btnFoto").onclick = tirarFoto;
+$("#btnFoto").onclick = function () { tirarFoto(); };
+function novaPeca() {
+  estado.medida = null; estado.fotos = [];
+  $("#resultado").hidden = true; $("#preview").hidden = true; $("#msgFoto").innerHTML = "";
+  desenharFotos(); salvarSessao();
+}
+function escolherPeca(cb) {
+  var ov = document.createElement("div");
+  ov.className = "escolha";
+  ov.innerHTML = '<div class="escolha-caixa" role="dialog" aria-modal="true" aria-label="Qual peça?"><b>A nova foto é de qual peça?</b>' +
+    '<button type="button" class="btn" data-m="1">📸 Mesma peça <small>junta as fotos e fica mais certo</small></button>' +
+    '<button type="button" class="btn sec" data-m="0">🔩 Outra peça <small>começa uma medição nova</small></button>' +
+    '<button type="button" class="esc-x">Cancelar</button></div>';
+  document.body.appendChild(ov);
+  ov.onclick = function (e) {
+    var b = e.target.closest("button");
+    if (!b && e.target !== ov) return;
+    ov.remove();
+    if (b && b.dataset.m) cb(b.dataset.m === "1");
+  };
+}
 
 /* ---------- fotos ---------- */
 function reduzir(file) {
@@ -552,7 +585,7 @@ function processarFoto(r0) {
       if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
       var m = normalizar(d.medida || {});
       foto.medida = m;
-      if (m.rosca_visivel === false || !(m.razao > 0 || m.tem_referencia)) {
+      if (m.rosca_visivel === false || !(Roscas.razaoPossivel(m.razao) || m.tem_referencia)) {
         foto.status = "erro"; desenharFotos();
         aviso("#msgFoto", "erro", "Não consegui ver os filetes direito. " + esc(m.problemas || "Tente outra foto, mais de perto e de lado.") +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Marcar com o dedo</button>');
@@ -569,6 +602,12 @@ function processarFoto(r0) {
 }
 $("#arquivo").onchange = receberFoto;
 $("#galeria").onchange = receberFoto;
+$("#btnGaleria").addEventListener("click", function (e) {
+  if (!estado.fotos.length || this.dataset.ok === "1") { this.dataset.ok = ""; return; }
+  e.preventDefault();
+  var lbl = this;
+  escolherPeca(function (mesma) { if (!mesma) novaPeca(); lbl.dataset.ok = "1"; $("#galeria").click(); });
+});
 
 /* resposta da IA → medida do app */
 function normalizar(m) {
@@ -779,7 +818,7 @@ function mostrar() {
   h += '<div class="grade2">';
   if (estado.origem === "foto") {
     h += '<button type="button" class="btn sec" id="btnAjustar">✋ Ajustar na foto</button>';
-    if (estado.fotos.length < MAX_FOTOS) h += '<button type="button" class="btn sec" onclick="tirarFoto()">➕ Outra foto</button>';
+    if (estado.fotos.length < MAX_FOTOS) h += '<button type="button" class="btn sec" onclick="tirarFoto(true)">➕ Outra foto da mesma peça</button>';
   }
   h += '<button type="button" class="btn sec" id="btnPenteRes">🔩 Conferir no pente</button></div>';
 

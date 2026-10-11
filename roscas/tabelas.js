@@ -143,8 +143,15 @@
   /* Junta medições de várias fotos: mediana ponderada pela certeza;
      medições ajustadas à mão valem mais que as da IA. */
   function juntar(medidas) {
-    var ok = medidas.filter(function (m) { return m && (m.razao > 0 || m.tem_referencia); });
+    var ok = medidas.filter(function (m) { return m && (razaoPossivel(m.razao) || m.tem_referencia); });
     if (!ok.length) return null;
+    // com 3 fotos, a que destoa muito das outras duas (outra peça, contagem errada) fica de fora
+    if (ok.length >= 3) {
+      var rs = ok.map(function (m) { return Number(m.razao) || 0; }).filter(Boolean).sort(function (a, b) { return a - b; });
+      var med = rs[Math.floor(rs.length / 2)];
+      var dentro = ok.filter(function (m) { return !m.razao || Math.abs(m.razao - med) / med <= 0.2; });
+      if (dentro.length >= 2) ok = dentro;
+    }
     function peso(m) { return (m.ajustada ? 3 : 1) * Math.max(0.2, (Number(m.certeza) || 60) / 100); }
     function mediana(campo, filtro) {
       var xs = ok.filter(filtro || function (m) { return Number(m[campo]) > 0; })
@@ -177,8 +184,12 @@
     };
   }
 
+  /* Nenhuma rosca de conexão tem proporção diâmetro ÷ passo fora desta faixa
+     (a menor é 1/16" ≈ 8,4; a maior, 4" BSP ≈ 49). Fora disso, a marcação está errada. */
+  function razaoPossivel(r) { r = Number(r); return r >= 7.5 && r <= 55; }
+
   function pol(mm) { return (mm / IN).toFixed(3).replace(".", ",") + "\""; }
 
-  var api = { NORMAS: NORMAS, FAMILIAS: FAMILIAS, linhas: linhas, comparar: comparar, resumir: resumir, juntar: juntar, pol: pol, rotulo: rotulo };
+  var api = { razaoPossivel: razaoPossivel, NORMAS: NORMAS, FAMILIAS: FAMILIAS, linhas: linhas, comparar: comparar, resumir: resumir, juntar: juntar, pol: pol, rotulo: rotulo };
   if (typeof module !== "undefined") module.exports = api; else raiz.Roscas = api;
 })(this);

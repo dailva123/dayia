@@ -347,7 +347,18 @@
     }
     empilhar(fechar);
     $(".ed-x", ov).onclick = fechar; $(".ed-cancelar", ov).onclick = fechar;
-    $(".ed-ok", ov).onclick = function () { var m = medida(); fechar(); opts.pronto(m); };
+    $(".ed-ok", ov).onclick = function () {
+      var m = medida();
+      var possivel = m.tem_referencia || (m.razao >= 7.5 && m.razao <= 55);
+      if (!possivel) {
+        var pv = $(".ed-previa", ov);
+        pv.innerHTML = "⚠️ Essa marcação não bate com nenhuma rosca. Confira: <b>amarelas</b> nas duas bordas da rosca e <b>azuis</b> em cima dos picos dos filetes, com o número certo de filetes entre elas.";
+        pv.style.background = "var(--warnbg)"; pv.style.color = "var(--warn)";
+        setTimeout(function () { pv.style.background = ""; pv.style.color = ""; desenhar(); }, 4500);
+        return;
+      }
+      fechar(); opts.pronto(m);
+    };
     window.addEventListener("resize", layout);
     requestAnimationFrame(function () {
       layout();

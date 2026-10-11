@@ -35,7 +35,7 @@ button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;fon
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = &quot;1.3&quot;;
+var VERSAO = &quot;1.4&quot;;
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
@@ -58,9 +58,10 @@ var PROMPT = [
   &quot;5) diametro_estimado_mm: estimativa pelo contexto (dedos, sextavado, proporções). Sempre preencha.&quot;,
   &quot;6) forma: reta | conica | indefinida. vedacao: cone | face | indefinida.&quot;,
   &quot;7) pontos normalizados (0 a 1): diam_a, diam_b (bordas do diâmetro), fil_ini, fil_fim (1º e último pico), n_intervalos.&quot;,
+  &quot;8) marcacao: medida gravada ou impressa na peça, se der para ler (ex.: \&quot;1/2\&quot;, \&quot;3/4\&quot;, \&quot;-6\&quot;, \&quot;M16x1,5\&quot;). Senão \&quot;\&quot;.&quot;,
   &quot;Rosca informada pelo cliente: {TIPO}.&quot;,
   &quot;JSON: {\&quot;rosca_visivel\&quot;:true,\&quot;tipo\&quot;:\&quot;macho|femea|indefinido\&quot;,\&quot;diametro_px\&quot;:0,\&quot;passo_px\&quot;:0,\&quot;razao_1\&quot;:0,\&quot;razao_2\&quot;:0,&quot;,
-  &quot;\&quot;tem_referencia\&quot;:false,\&quot;diametro_mm\&quot;:null,\&quot;passo_mm\&quot;:null,\&quot;diametro_estimado_mm\&quot;:0,\&quot;forma\&quot;:\&quot;indefinida\&quot;,\&quot;vedacao\&quot;:\&quot;indefinida\&quot;,&quot;,
+  &quot;\&quot;tem_referencia\&quot;:false,\&quot;diametro_mm\&quot;:null,\&quot;passo_mm\&quot;:null,\&quot;diametro_estimado_mm\&quot;:0,\&quot;forma\&quot;:\&quot;indefinida\&quot;,\&quot;vedacao\&quot;:\&quot;indefinida\&quot;,\&quot;marcacao\&quot;:\&quot;\&quot;,&quot;,
   &quot;\&quot;pontos\&quot;:{\&quot;diam_a\&quot;:[0,0],\&quot;diam_b\&quot;:[0,0],\&quot;fil_ini\&quot;:[0,0],\&quot;fil_fim\&quot;:[0,0],\&quot;n_intervalos\&quot;:0},\&quot;certeza\&quot;:0,\&quot;problemas\&quot;:\&quot;\&quot;}&quot;,
   &quot;certeza 0-100 = confiança na contagem. problemas: em português simples para leigo, ou vazio.&quot;
 ].join(&quot;\n&quot;);

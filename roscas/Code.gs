@@ -26,7 +26,7 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "1.3";
+var VERSAO = "1.4";
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
@@ -49,9 +49,10 @@ var PROMPT = [
   "5) diametro_estimado_mm: estimativa pelo contexto (dedos, sextavado, proporções). Sempre preencha.",
   "6) forma: reta | conica | indefinida. vedacao: cone | face | indefinida.",
   "7) pontos normalizados (0 a 1): diam_a, diam_b (bordas do diâmetro), fil_ini, fil_fim (1º e último pico), n_intervalos.",
+  "8) marcacao: medida gravada ou impressa na peça, se der para ler (ex.: \"1/2\", \"3/4\", \"-6\", \"M16x1,5\"). Senão \"\".",
   "Rosca informada pelo cliente: {TIPO}.",
   "JSON: {\"rosca_visivel\":true,\"tipo\":\"macho|femea|indefinido\",\"diametro_px\":0,\"passo_px\":0,\"razao_1\":0,\"razao_2\":0,",
-  "\"tem_referencia\":false,\"diametro_mm\":null,\"passo_mm\":null,\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"vedacao\":\"indefinida\",",
+  "\"tem_referencia\":false,\"diametro_mm\":null,\"passo_mm\":null,\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"vedacao\":\"indefinida\",\"marcacao\":\"\",",
   "\"pontos\":{\"diam_a\":[0,0],\"diam_b\":[0,0],\"fil_ini\":[0,0],\"fil_fim\":[0,0],\"n_intervalos\":0},\"certeza\":0,\"problemas\":\"\"}",
   "certeza 0-100 = confiança na contagem. problemas: em português simples para leigo, ou vazio."
 ].join("\n");

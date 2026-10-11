@@ -351,9 +351,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=17"></script>
-<script src="tabelas.js?v=17"></script>
-<script src="medir.js?v=17"></script>
+<script src="config.js?v=19"></script>
+<script src="tabelas.js?v=19"></script>
+<script src="medir.js?v=19"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -688,7 +688,7 @@ function editarFoto(foto) {
     },
     pronto: function (med) {
       med.diametro_estimado_mm = m.diametro_estimado_mm;
-      med.forma = m.forma; med.problemas = "";
+      med.forma = m.forma; med.problemas = ""; med.marcacao = m.marcacao;
       foto.medida = med; foto.status = "aj";
       $("#msgFoto").innerHTML = "";
       desenharFotos();
@@ -770,7 +770,7 @@ function aviso(alvo, tipo, html) { $(alvo).innerHTML = '<div class="aviso ' + ti
 function medidaAtual() {
   var m = estado.medida;
   return { diametro_mm: m.diametro_mm, tem_referencia: m.tem_referencia, passo_mm: m.passo_mm, razao: m.razao,
-    diametro_estimado_mm: m.diametro_estimado_mm, forma: estado.formaUsuario, vedacao: estado.vedUsuario };
+    diametro_estimado_mm: m.diametro_estimado_mm, forma: estado.formaUsuario, vedacao: estado.vedUsuario, marcacao: m.marcacao };
 }
 function tituloGrupo(grupo) {
   var normas = grupo.map(function (g) { return g.norma; });
@@ -804,6 +804,7 @@ function mostrar() {
   if (estado.origem === "foto" && m.fotos > 1) extras.push(m.fotos + " fotos");
   if (estado.origem === "foto" && m.ajustada) extras.push("✋ ajustada à mão");
   if (estado.origem === "foto" && m.tem_referencia) extras.push("com referência");
+  if (estado.origem === "foto" && r.melhor.marcada) extras.push("🔎 medida gravada na peça: " + esc(m.marcacao));
 
   var h = '<div class="res-topo"><div class="rot">' + (r.semReferencia ? "Rosca provável" : "Rosca encontrada") + "</div>" +
     '<div class="bitola' + (bitola.length > 6 ? " longa" : "") + '">' + esc(bitola) + '</div><div class="norma">' + titulo + "</div>" +

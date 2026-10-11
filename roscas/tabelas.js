@@ -80,6 +80,20 @@
     });
   }
 
+  /* Medida gravada/impressa na peça (ex.: "1/2", "3/4\"", "-6", "M16x1,5") → mesma forma dos rótulos da tabela */
+  function normMarca(t) {
+    t = String(t || "").toUpperCase().replace(/(\d+)\s+(\d+\/\d+)/, "$1.$2").replace(/["”″'\s]/g, "").replace(/POL(EGADA)?S?$/, "").replace(",", ".");
+    t = t.replace(/^(\d+)[-.](\d+\/\d+)$/, "$1.$2");      // 1-1/4 ou 1 1/4 → 1.1/4
+    return t;
+  }
+  function bateMarca(l, marca) {
+    if (!marca) return false;
+    var b = normMarca(l.bitola);
+    if (l.familia === "metrica") return marca === b || (/^M\d+$/.test(marca) && b.indexOf(marca + "X") === 0);
+    if (l.familia === "mangueira") return marca === b || marca === b.replace("-", "");
+    return marca === b;
+  }
+
   function rotulo(l) {
     if (l.familia === "mangueira") return l.norma + " " + l.bitola + " (" + l.rosca + ")";
     return l.bitola;
@@ -101,6 +115,7 @@
     var passo = Number(medida.passo_mm) || (Number(medida.fios_por_polegada) ? IN / Number(medida.fios_por_polegada) : 0);
     var forma = medida.forma === "reta" || medida.forma === "conica" ? medida.forma : "";
     var ved = medida.vedacao === "cone" || medida.vedacao === "face" ? medida.vedacao : "";
+    var marca = normMarca(medida.marcacao);
     var lista = linhas(tipo, familia).filter(function (l) {
       if (forma === "reta" && l.forma !== "reta") return false;
       if (forma === "conica" && l.forma !== "conica") return false;
@@ -119,6 +134,8 @@
         l.pontos = eR + 0.12 * eE;
       }
     });
+    // medida gravada na peça e compatível com a medição: vale muito
+    if (marca) lista.forEach(function (l) { if (bateMarca(l, marca) && l.pontos < 0.35) { l.pontos *= 0.25; l.marcada = true; } });
     lista.sort(function (a, b) { return a.pontos - b.pontos; });
     lista.semReferencia = !comRef;
     return lista;
@@ -180,7 +197,8 @@
       fotos: ok.length,
       ajustada: ok.some(function (m) { return m.ajustada; }),
       espalho: +espalho.toFixed(3),
-      problemas: ok.map(function (m) { return m.problemas; }).filter(Boolean)[0] || ""
+      problemas: ok.map(function (m) { return m.problemas; }).filter(Boolean)[0] || "",
+      marcacao: ok.map(function (m) { return m.marcacao; }).filter(Boolean)[0] || ""
     };
   }
 

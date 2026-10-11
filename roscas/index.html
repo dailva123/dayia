@@ -189,7 +189,7 @@ form.manual label small{font-weight:500;color:var(--mute)}
 .cam-palco video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .cam-guia{position:absolute;left:12%;right:12%;top:22%;bottom:22%;border:2px dashed rgba(255,255,255,.75);border-radius:16px;pointer-events:none}
 .cam-guia span{position:absolute;left:0;right:0;top:-34px;text-align:center;color:#fff;font-weight:800;font-size:14px;text-shadow:0 1px 4px rgba(0,0,0,.8)}
-.cam-msg{position:absolute;left:16px;right:16px;top:40%;text-align:center;color:#fff;font-weight:700}
+.cam-msg{position:absolute;left:16px;right:16px;top:34%;text-align:center;color:#fff;font-weight:700}.cam-msg p{margin:0 0 14px}
 .cam-barra{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px calc(16px + env(safe-area-inset-bottom));background:#0B1B2C}
 .cam-barra .lado{width:64px;display:flex;justify-content:center}
 .cam-barra .lado button{background:var(--navy2);border:0;color:#fff;border-radius:12px;width:52px;height:52px;font-size:22px;cursor:pointer}
@@ -337,9 +337,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js"></script>
-<script src="tabelas.js"></script>
-<script src="medir.js"></script>
+<script src="config.js?v=12"></script>
+<script src="tabelas.js?v=12"></script>
+<script src="medir.js?v=12"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -484,7 +484,8 @@ $("#btnGaleria").addEventListener("keydown", function (e) { if (e.key === "Enter
    não é fechado por falta de memória. Se não der (sem permissão), usa a câmera do celular. */
 function tirarFoto() {
   if (estado.fotos.length >= MAX_FOTOS) { /* a mais antiga sai */ }
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && ls("rf-camera-externa") !== "1") {
+  var podeCamera = window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.Medir && typeof Medir.abrirCamera === "function";
+  if (podeCamera && ls("rf-camera-externa") !== "1") {
     Medir.abrirCamera({
       pronto: processarFoto,
       falhou: function (motivo) {

@@ -464,17 +464,24 @@
       '<div class="ed-topo"><button type="button" class="ed-x" aria-label="Fechar">✕</button><b>Foto da rosca</b><button type="button" class="cam-ext">Câmera do celular</button></div>' +
       '<div class="cam-palco"><video playsinline muted autoplay></video>' +
       '<div class="cam-guia"><span>Rosca de lado, bem perto e nítida</span></div>' +
-      '<div class="cam-msg">Abrindo a câmera…</div>' +
+      '<div class="cam-msg"><p>Abrindo a câmera…</p><button type="button" class="btn cam-plan" hidden>📷 Abrir a câmera do celular</button></div>' +
       '<div class="cam-zoom" hidden><span>1x</span><input type="range" aria-label="Zoom da câmera"><span class="cam-zv"></span></div>' +
       '<div class="cam-flash"></div></div>' +
       '<div class="cam-barra"><div class="lado"><button type="button" class="cam-luz" hidden aria-pressed="false" aria-label="Lanterna">🔦</button></div>' +
       '<button type="button" class="cam-disparo" aria-label="Tirar foto" disabled></button>' +
       '<div class="lado"><button type="button" class="cam-virar" aria-label="Trocar câmera">🔄</button></div></div>';
     document.body.appendChild(ov); document.body.style.overflow = "hidden";
-    var video = $("video", ov), msg = $(".cam-msg", ov), disparo = $(".cam-disparo", ov);
+    var video = $("video", ov), msg = $(".cam-msg", ov), msgTxt = $(".cam-msg p", ov), plan = $(".cam-plan", ov), disparo = $(".cam-disparo", ov);
+    var espera = null;
+    // se a câmera do app não abrir, mostra um botão (o toque do dedo é necessário para abrir a câmera do celular)
+    function planoB(texto) {
+      clearTimeout(espera);
+      msg.hidden = false; msgTxt.textContent = texto; plan.hidden = false; disparo.disabled = true;
+    }
+    plan.onclick = function () { fechar(); if (opts.externa) opts.externa(); };
     var stream = null, track = null, frente = false, luz = false;
 
-    function parar() { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; track = null; }
+    function parar() { clearTimeout(espera); if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; track = null; }
     function fechar(viaVoltar) {
       if (!ov.parentNode) return;
       parar(); ov.remove(); document.body.style.overflow = "";
@@ -484,17 +491,20 @@
 
     function iniciar() {
       parar();
-      msg.hidden = false; msg.textContent = "Abrindo a câmera…"; disparo.disabled = true;
+      msg.hidden = false; msgTxt.textContent = "Abrindo a câmera…"; plan.hidden = true; disparo.disabled = true;
+      clearTimeout(espera);
+      espera = setTimeout(function () { planoB("A câmera do app está demorando para abrir neste celular."); }, 7000);
       var c = { audio: false, video: { facingMode: frente ? "user" : { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1440 } } };
       navigator.mediaDevices.getUserMedia(c).then(function (st) {
         stream = st; track = st.getVideoTracks()[0];
         video.srcObject = st;
         var p = video.play(); if (p && p.catch) p.catch(function () {});
-        video.onloadedmetadata = function () { msg.hidden = true; disparo.disabled = false; };
+        video.onloadedmetadata = function () { clearTimeout(espera); msg.hidden = true; disparo.disabled = false; };
         recursos();
       }).catch(function (err) {
         var negado = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
-        fechar(); depoisDeFechar(function () { if (opts.falhou) opts.falhou(negado ? "negado" : "erro"); });
+        planoB(negado ? "O app não tem permissão para usar a câmera. Toque abaixo para usar a câmera do celular, ou libere a câmera nas permissões do site."
+                      : "Não foi possível abrir a câmera do app neste celular.");
       });
     }
     // zoom da câmera e lanterna, quando o celular permite

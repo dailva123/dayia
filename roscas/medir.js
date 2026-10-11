@@ -34,12 +34,12 @@
       '<div class="ed-topo"><button type="button" class="ed-x" aria-label="Fechar">✕</button><b>Ajustar na foto</b><span></span></div>' +
       '<div class="ed-palco"><canvas class="ed-foto"></canvas><canvas class="ed-lupa" width="240" height="240"></canvas>' +
       '<div class="ed-zoom"><button type="button" data-z="in" aria-label="Aumentar a foto">+</button><button type="button" data-z="out" aria-label="Diminuir a foto">−</button>' +
-      '<button type="button" data-z="trazer" aria-label="Trazer os marcadores para cá">📍</button><button type="button" data-z="rosca" aria-label="Ir para os marcadores">🎯</button><button type="button" data-z="tudo" aria-label="Ver a foto inteira">⤢</button></div>' +
+      '<button type="button" data-z="trazer" aria-label="Trazer os marcadores para cá">📍</button><button type="button" data-z="rosca" aria-label="Ir para os marcadores">🎯</button><button type="button" data-z="tudo" aria-label="Ver a foto inteira">⤢</button><button type="button" data-z="trava" class="ed-trava" aria-label="Foto travada: toque para soltar">🔒</button></div>' +
       '<div class="ed-zoom-tag" aria-live="polite"></div></div>' +
       '<div class="ed-painel">' +
-      '<p class="ed-dica">🔍 Use <b>dois dedos</b> para aumentar a foto e <b>um dedo</b> para arrastar. ' +
+      '<p class="ed-dica">🔍 <b>Dois dedos</b> aumentam e movem a foto. <b>Um dedo</b> só ajusta: a foto fica travada 🔒. ' +
       '<span class="bol am"></span><b>Amarelas</b> nas bordas da rosca. <span class="bol az"></span><b>Azuis</b> em dois picos de filete; ' +
-      'o <b>botão de setas</b> ✥ arrasta o pente inteiro sem mudar o tamanho. 📍 traz tudo para onde você está olhando.</p>' +
+      'encostando em <b>qualquer tracinho</b> (ou no botão ✥) você arrasta o pente inteiro sem mudar o tamanho. 📍 traz tudo para onde você está olhando.</p>' +
       '<div class="ed-linha"><span>Filetes entre as azuis</span><div class="ed-n"><button type="button" data-n="-1" aria-label="Menos">−</button><output>' + n + '</output><button type="button" data-n="1" aria-label="Mais">+</button></div></div>' +
       '<div class="ed-linha"><span>Referência na foto</span><select aria-label="Referência na foto">' +
       '<option value="nenhuma">Nenhuma</option><option value="cartao_maior">Cartão · lado maior</option>' +
@@ -183,15 +183,37 @@
       lupa.hidden = false;
     }
     function ponto(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+    // distância (na tela) de um ponto até um segmento
+    function distSeg(s, p, q) {
+      var a = tela(p), b = tela(q), vx = b[0] - a[0], vy = b[1] - a[1], L = vx * vx + vy * vy;
+      var t = L ? Math.max(0, Math.min(1, ((s[0] - a[0]) * vx + (s[1] - a[1]) * vy) / L)) : 0;
+      return Math.hypot(s[0] - (a[0] + vx * t), s[1] - (a[1] + vy * t));
+    }
+    // o dedo está em cima do pente (qualquer tracinho azul ou entre eles)?
+    function noPente(s) {
+      var vx = h.d[0] - h.c[0], vy = h.d[1] - h.c[1], len = Math.hypot(vx, vy) || 1;
+      var px = -vy / len, py = vx / len, meio = Math.max(dist(h.a, h.b) * 0.55, 12 / S());
+      var f = foto(s[0], s[1]), rx = f[0] - h.c[0], ry = f[1] - h.c[1];
+      var ao = (rx * vx + ry * vy) / len, lado = Math.abs(rx * px + ry * py), folga = 14 / S();
+      return ao >= -folga && ao <= len + folga && lado <= meio + folga;
+    }
     function alvoEm(s) {
-      var melhor = null, md = 30;
+      // 1) bolinhas e puxadores (área de toque grande)
+      var melhor = null, md = 38;
       var chaves = ["a", "b", "c", "d", "m", "ma"].concat(sel.value !== "nenhuma" ? ["r1", "r2"] : []);
       chaves.forEach(function (k) {
         var q = tela(centro(k)), dd = Math.hypot(q[0] - s[0], q[1] - s[1]);
         if (dd < md) { md = dd; melhor = k; }
       });
-      return melhor;
+      if (melhor) return melhor;
+      // 2) linha amarela inteira → move o diâmetro; 3) pente inteiro → move o pente
+      if (distSeg(s, h.a, h.b) < 22) return "ma";
+      if (noPente(s)) return "m";
+      if (sel.value !== "nenhuma" && distSeg(s, h.r1, h.r2) < 22) return null;
+      return null;
     }
+    ov._estado = function () { return { h: JSON.parse(JSON.stringify(h)), tx: tx, ty: ty, zoom: zoom }; }; // usado nos testes
+    var travada = true; // foto travada: um dedo só ajusta; dois dedos aumentam e movem a foto
     cv.addEventListener("pointerdown", function (e) {
       e.preventDefault();
       try { cv.setPointerCapture(e.pointerId); } catch (x) {}
@@ -211,7 +233,8 @@
         arrastando = { k: k, dx: base0[0] - f[0], dy: base0[1] - f[1] };
         lupaEm(base0);
       } else {
-        pan = { x: s[0], y: s[1], tx: tx, ty: ty };
+        if (!travada) pan = { x: s[0], y: s[1], tx: tx, ty: ty };
+        else pan = { x: s[0], y: s[1], tx: tx, ty: ty, parado: true }; // só para o toque duplo
       }
     });
     cv.addEventListener("pointermove", function (e) {
@@ -237,7 +260,7 @@
           h[arrastando.k] = [nx, ny];
           desenhar(); lupaEm(h[arrastando.k]);
         }
-      } else if (pan) {
+      } else if (pan && !pan.parado) {
         tx = pan.tx + s[0] - pan.x; ty = pan.ty + s[1] - pan.y;
         limitar(); desenhar();
       }
@@ -266,6 +289,13 @@
         else if (z === "out") zoomEm(zoom / 1.6, pw / 2, ph / 2);
         else if (z === "rosca") irRosca();
         else if (z === "trazer") trazer();
+        else if (z === "trava") {
+          travada = !travada;
+          b.textContent = travada ? "🔒" : "🔓";
+          b.setAttribute("aria-label", travada ? "Foto travada: toque para soltar" : "Foto solta: toque para travar");
+          var dica = $(".ed-zoom-tag", ov); dica.textContent = travada ? "Foto travada" : "Foto solta: um dedo arrasta a foto";
+          setTimeout(mostraZoom, 1600);
+        }
         else { zoom = 1; limitar(); desenhar(); mostraZoom(); }
       };
     });

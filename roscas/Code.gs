@@ -26,11 +26,14 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "1.0";
+var VERSAO = "1.1";
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
-var MODELO_GEMINI = "gemini-flash-latest";
-var MODELO_CLAUDE = "claude-sonnet-5-5";
+// Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
+// Com as duas chaves (CLAUDE_KEY e GEMINI_KEY), o Claude vem primeiro (mais preciso) e o Gemini fica de reserva.
+// Para mudar a ordem, crie a propriedade IA_PRIMEIRO com o valor "gemini" ou "claude".
+var MODELOS_GEMINI = ["gemini-pro-latest", "gemini-flash-latest", "gemini-flash-lite-latest"];
+var MODELOS_CLAUDE = ["claude-opus-5-5", "claude-sonnet-5-5"];
 
 // Limite de análises por dia, para ninguém gastar sua cota à toa
 var LIMITE_DIA = 300;
@@ -111,16 +114,17 @@ function doPost(e) {
     var texto = PROMPT.replace("{TIPO}", tipo);
     var mime = corpo.mime || "image/jpeg";
 
-    var bruto = provedor_() === "gemini"
-      ? gemini_(texto, corpo.imagem, mime)
-      : claude_(texto, corpo.imagem, mime);
+    var bruto = analisarComIA_(texto, corpo.imagem, mime);
 
     var medida = extrairJson_(bruto);
     if (!medida) return json_({ ok: false, erro: "A IA não conseguiu ler a foto. Tente outra foto." });
     contarUso_(emp ? emp.id : "_dayia");
     return json_({ ok: true, medida: medida });
   } catch (err) {
-    return json_({ ok: false, erro: "Erro no servidor: " + err.message });
+    var msg = String(err.message || err);
+    if (/demand|overload|unavailable|503|529|429|rate|quota|exhausted/i.test(msg))
+      return json_({ ok: false, ocupado: true, erro: "A IA está muito ocupada agora. Tente de novo em alguns segundos, ou marque com o dedo." });
+    return json_({ ok: false, erro: "Erro no servidor: " + msg });
   }
 }
 
@@ -179,14 +183,43 @@ function painel_(c) {
 /* ---------------- IAs ---------------- */
 function provedor_() {
   var p = PropertiesService.getScriptProperties();
-  if (p.getProperty("GEMINI_KEY")) return "gemini";
-  if (p.getProperty("CLAUDE_KEY")) return "claude";
+  var tem = { claude: !!p.getProperty("CLAUDE_KEY"), gemini: !!p.getProperty("GEMINI_KEY") };
+  var pref = String(p.getProperty("IA_PRIMEIRO") || "").toLowerCase();
+  if (tem[pref]) return pref;
+  if (tem.claude) return "claude";
+  if (tem.gemini) return "gemini";
   return "";
 }
 
-function gemini_(texto, b64, mime) {
+/* Tenta cada modelo disponível, na ordem, até um responder.
+   Erros de "lotado"/limite (429, 500, 503, 529) passam para o próximo; o último erro é devolvido. */
+function analisarComIA_(texto, b64, mime) {
+  var p = PropertiesService.getScriptProperties(), fila = [];
+  var ordem = provedor_() === "gemini" ? ["gemini", "claude"] : ["claude", "gemini"];
+  ordem.forEach(function (prov) {
+    if (prov === "claude" && p.getProperty("CLAUDE_KEY")) MODELOS_CLAUDE.forEach(function (m) { fila.push(["claude", m]); });
+    if (prov === "gemini" && p.getProperty("GEMINI_KEY")) MODELOS_GEMINI.forEach(function (m) { fila.push(["gemini", m]); });
+  });
+  var ultimo = null;
+  for (var i = 0; i < fila.length; i++) {
+    try {
+      return fila[i][0] === "claude" ? claude_(texto, b64, mime, fila[i][1]) : gemini_(texto, b64, mime, fila[i][1]);
+    } catch (err) {
+      ultimo = err;
+      if (!/lotado|demand|overload|unavailable|rate|quota|exhausted|not found|404|429|500|503|529/i.test(String(err.message))) {
+        // erro de chave/permissão: tenta o outro fornecedor, se houver, mas não insiste no mesmo
+        while (i + 1 < fila.length && fila[i + 1][0] === fila[i][0]) i++;
+      } else {
+        Utilities.sleep(800);
+      }
+    }
+  }
+  throw ultimo || new Error("Nenhuma IA configurada.");
+}
+
+function gemini_(texto, b64, mime, modelo) {
   var chave = PropertiesService.getScriptProperties().getProperty("GEMINI_KEY");
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/" + MODELO_GEMINI + ":generateContent";
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelo + ":generateContent";
   var r = UrlFetchApp.fetch(url, {
     method: "post",
     contentType: "application/json",
@@ -203,7 +236,7 @@ function gemini_(texto, b64, mime) {
   return partes.map(function (p) { return p.text || ""; }).join("");
 }
 
-function claude_(texto, b64, mime) {
+function claude_(texto, b64, mime, modelo) {
   var chave = PropertiesService.getScriptProperties().getProperty("CLAUDE_KEY");
   var r = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
     method: "post",
@@ -211,7 +244,7 @@ function claude_(texto, b64, mime) {
     headers: { "x-api-key": chave, "anthropic-version": "2023-06-01" },
     muteHttpExceptions: true,
     payload: JSON.stringify({
-      model: MODELO_CLAUDE,
+      model: modelo,
       max_tokens: 2048,
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: mime, data: b64 } },

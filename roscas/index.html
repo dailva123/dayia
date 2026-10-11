@@ -343,9 +343,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=14"></script>
-<script src="tabelas.js?v=14"></script>
-<script src="medir.js?v=14"></script>
+<script src="config.js?v=15"></script>
+<script src="tabelas.js?v=15"></script>
+<script src="medir.js?v=15"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -574,12 +574,7 @@ function processarFoto(r0) {
       return;
     }
     comecarScan();
-    return fetch(API, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ acao: "analisar", e: EMP, tipo: estado.tipo, mime: "image/jpeg", imagem: r.dataUrl.split(",")[1] }),
-      redirect: "follow"
-    }).then(function (x) { return x.json(); }).then(function (d) {
+    return pedirIA(r.dataUrl, 0).then(function (d) {
       return pararScan(!!d.ok).then(function () { return d; });
     }).then(function (d) {
       if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
@@ -598,6 +593,24 @@ function processarFoto(r0) {
   }).catch(function () {
     pararScan(false);
     aviso("#msgFoto", "erro", "Sem conexão com a internet, ou o servidor não respondeu. Tente de novo, ou marque com o dedo.");
+  });
+}
+/* Pede a medida ao servidor. Se a IA estiver lotada, espera um pouco e tenta de novo sozinho. */
+function iaOcupada(d) { return d && !d.ok && (d.ocupado || /demand|overload|ocupad|unavailable|try again/i.test(d.erro || "")); }
+function pedirIA(dataUrl, tentativa) {
+  return fetch(API, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ acao: "analisar", e: EMP, tipo: estado.tipo, mime: "image/jpeg", imagem: dataUrl.split(",")[1] }),
+    redirect: "follow"
+  }).then(function (x) { return x.json(); }).then(function (d) {
+    if (iaOcupada(d) && tentativa < 2) {
+      var li = document.querySelectorAll("#etapas li")[0];
+      if (li) li.lastChild.textContent = "A IA está ocupada, tentando de novo…";
+      return new Promise(function (ok) { setTimeout(ok, 3000 + tentativa * 2000); }).then(function () { return pedirIA(dataUrl, tentativa + 1); });
+    }
+    if (iaOcupada(d)) d.erro = "A IA está muito ocupada agora. Tente de novo em alguns segundos, ou marque com o dedo.";
+    return d;
   });
 }
 $("#arquivo").onchange = receberFoto;
@@ -673,6 +686,7 @@ function comecarScan() {
   $("#preview").classList.add("medindo"); $("#carregando").hidden = false;
   scanPasso = 0;
   etapas().forEach(function (li, i) { li.className = i === 0 ? "ativo" : ""; });
+  etapas()[0].lastChild.textContent = "Achando a rosca na foto";
   clearInterval(scanTimer);
   scanTimer = setInterval(function () {
     var l = etapas();

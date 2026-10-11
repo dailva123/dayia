@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rosca Fácil by DayIA</title>
+<meta name="description" content="Tire uma foto da peça e descubra a medida da rosca: BSP ou NPT, em milímetro e polegada.">
+<meta name="theme-color" content="#0E2238">
+<link rel="icon" href="dayia-simbolo.png">
+<link rel="apple-touch-icon" href="dayia-simbolo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0E2238;--navy2:#16304F;--sky:#8EC5E8;--sun:#F2C230;--bg:#EEF2F7;--card:#fff;--ink:#0E2238;--ink2:#4A5B75;--mute:#7B8BA3;--line:#D6DFEA;
+--ok:#1F8A5B;--okbg:#E3F4EC;--warn:#8A5A12;--warnbg:#FBF0D9;--bad:#C0392B;--badbg:#FBE4E1;--blue:#2B6CB0;--bluebg:#E2EEFA;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* abertura padrão DayIA */
+#intro{position:fixed;inset:0;z-index:99;background:var(--navy);display:flex;align-items:center;justify-content:center;transition:opacity .5s}
+#intro.fim{opacity:0;pointer-events:none}
+.quadro{width:76px;height:76px;background:#fff;border-radius:16px;padding:7px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:cresce 1.4s cubic-bezier(.2,.8,.2,1) forwards}
+.quadro img{width:100%;height:100%;display:block;border-radius:10px}
+@keyframes cresce{0%{transform:scale(.6) rotate(0);opacity:0}20%{opacity:1}55%{transform:scale(1.6) rotate(0)}100%{transform:scale(1.6) rotate(360deg)}}
+.by{position:absolute;display:flex;align-items:center;gap:10px;font-size:22px;color:#CFE2F2;opacity:0;transition:opacity .45s}
+.by img{height:40px;width:auto;display:block}
+#intro.passo2 .quadro{opacity:0;transition:opacity .3s}
+#intro.passo2 .by{opacity:1}
+
+header.top{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
+header.top h1{margin:0;font-size:20px;font-stretch:112%;font-weight:800}
+.by2{display:flex;align-items:center;gap:6px;color:#B9CCE2;font-size:13px}
+.by2 img{height:20px}
+.abas{display:flex;gap:4px;background:var(--navy);padding:0 16px 12px}
+.abas button{flex:1;background:var(--navy2);border:0;color:#B9CCE2;font-weight:700;font-size:14px;padding:10px 8px;border-radius:10px;cursor:pointer}
+.abas button[aria-pressed="true"]{background:#fff;color:var(--navy)}
+
+main{max-width:560px;margin:0 auto;padding:16px 16px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:17px;font-weight:800;font-stretch:108%}
+.num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;margin-right:8px;vertical-align:1px}
+.esc{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.esc button{background:#fff;border:2px solid var(--line);border-radius:14px;padding:12px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:15px}
+.esc button small{font-weight:500;color:var(--mute);font-size:12.5px}
+.esc button[aria-pressed="true"]{border-color:var(--navy);background:var(--bluebg)}
+.esc svg{width:56px;height:40px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:0;border-radius:14px;padding:15px;font-weight:800;font-size:17px;cursor:pointer;background:var(--navy);color:#fff;text-decoration:none}
+.btn.sec{background:#fff;color:var(--navy);border:2px solid var(--line);font-size:15px;padding:12px}
+.btn.zap{background:#1F8A5B;font-size:15px;padding:12px}
+.btn svg{width:22px;height:22px}
+.linha{display:flex;gap:10px;margin-top:10px}.linha>*{flex:1}
+details{margin-top:12px;font-size:14.5px;color:var(--ink2)}
+summary{cursor:pointer;font-weight:700;color:var(--navy)}
+.dicas{display:grid;grid-template-columns:120px 1fr;gap:12px;margin-top:10px;align-items:start}
+.dicas img{width:100%;border-radius:10px;border:1px solid var(--line)}
+.dicas ul{margin:0;padding-left:18px}.dicas li{margin-bottom:4px}
+.foto{position:relative;margin-top:12px;border-radius:12px;overflow:hidden;background:#000}
+.foto img{display:block;width:100%;max-height:340px;object-fit:contain}
+.carregando{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:var(--bluebg);color:var(--blue);font-weight:700;margin-top:12px}
+.roda{width:22px;height:22px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:gira .8s linear infinite}
+@keyframes gira{to{transform:rotate(1turn)}}
+@media (prefers-reduced-motion:reduce){.roda{animation-duration:3s}}
+.aviso{padding:12px 14px;border-radius:12px;font-size:14.5px;margin-top:12px}
+.aviso.erro{background:var(--badbg);color:var(--bad)}
+.aviso.atencao{background:var(--warnbg);color:var(--warn)}
+.aviso.info{background:var(--bluebg);color:var(--blue)}
+
+.res-topo{text-align:center;padding:6px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.res-topo .rot{font-size:13px;color:var(--mute);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.res-topo .bitola{font-size:54px;line-height:1.05;font-weight:800;font-stretch:115%;margin:4px 0}
+.res-topo .norma{font-size:20px;font-weight:800;color:var(--blue)}
+.selo{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:99px;font-size:12.5px;font-weight:800}
+.selo.alta{background:var(--okbg);color:var(--ok)}.selo.média{background:var(--warnbg);color:var(--warn)}.selo.baixa{background:var(--badbg);color:var(--bad)}
+.pergunta{background:var(--warnbg);border-radius:12px;padding:12px;margin-bottom:12px}
+.pergunta p{margin:0 0 8px;font-weight:700;color:var(--warn)}
+.pergunta .ia{font-weight:500;font-size:13.5px;margin:6px 0 0}
+.tres{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tres button{background:#fff;border:2px solid #E6CF9A;border-radius:10px;padding:9px 4px;font-weight:700;font-size:14px;cursor:pointer;color:var(--navy)}
+.tres button[aria-pressed="true"]{border-color:var(--navy);background:var(--navy);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:600;width:46%}
+td{font-weight:700;font-variant-numeric:tabular-nums}
+h3{font-size:14px;margin:16px 0 6px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
+.norma-bloco{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.norma-bloco b{display:block;font-size:15.5px}
+.norma-bloco p{margin:2px 0 6px;color:var(--ink2);font-size:13.5px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:13.5px;font-weight:700}
+
+form.manual label{display:block;font-weight:700;font-size:14.5px;margin:12px 0 6px}
+form.manual label small{font-weight:500;color:var(--mute)}
+.campo{display:flex;gap:8px}
+.campo input{flex:1;min-width:0;border:2px solid var(--line);border-radius:12px;padding:12px;font-size:18px;font-weight:700;background:#fff}
+.campo select{border:2px solid var(--line);border-radius:12px;padding:0 10px;font-weight:700;background:#fff}
+.pe{text-align:center;color:var(--mute);font-size:13px;padding:8px 16px 28px;max-width:560px;margin:0 auto}
+.pe .by2{justify-content:center;margin-top:10px;color:var(--mute)}
+</style>
+</head>
+<body>
+
+<div id="intro" aria-hidden="true">
+  <div class="quadro"><img src="dayia-simbolo.png" alt=""></div>
+  <div class="by">by <img src="dayia-logo.png" alt="DayIA"></div>
+</div>
+
+<header class="top">
+  <div>
+    <h1>Rosca Fácil</h1>
+    <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
+  </div>
+</header>
+<nav class="abas" aria-label="Modo">
+  <button type="button" data-aba="foto" aria-pressed="true">📸 Pela foto</button>
+  <button type="button" data-aba="manual" aria-pressed="false">📏 Já tenho a medida</button>
+</nav>
+
+<main>
+  <!-- tipo da rosca (vale para os dois modos) -->
+  <section class="card">
+    <h2><span class="num">1</span>Onde fica a rosca na peça?</h2>
+    <div class="esc" id="tipo">
+      <button type="button" data-tipo="macho" aria-pressed="true">
+        <svg viewBox="0 0 56 40" aria-hidden="true"><rect x="4" y="12" width="14" height="16" rx="2" fill="#8EC5E8"/><path d="M18 14h34v12H18z" fill="#D6DFEA"/><path d="M22 12v16M27 12v16M32 12v16M37 12v16M42 12v16M47 12v16" stroke="#0E2238" stroke-width="2"/></svg>
+        Por fora<small>macho</small>
+      </button>
+      <button type="button" data-tipo="femea" aria-pressed="false">
+        <svg viewBox="0 0 56 40" aria-hidden="true"><path d="M8 6l10-4h20l10 4v28l-10 4H18L8 34z" fill="#8EC5E8"/><circle cx="28" cy="20" r="11" fill="#fff" stroke="#0E2238" stroke-width="2"/><circle cx="28" cy="20" r="7.5" fill="none" stroke="#0E2238" stroke-width="1.5" stroke-dasharray="3 2"/></svg>
+        Por dentro<small>fêmea</small>
+      </button>
+    </div>
+  </section>
+
+  <!-- MODO FOTO -->
+  <section class="card" id="modoFoto">
+    <h2><span class="num">2</span>Tire a foto com um cartão ao lado</h2>
+    <input type="file" id="arquivo" accept="image/*" capture="environment" hidden>
+    <label for="arquivo" class="btn" role="button" tabindex="0" id="btnFoto">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="4"/></svg>
+      Tirar foto da peça
+    </label>
+    <details id="dicasBox">
+      <summary>Como tirar a foto certa</summary>
+      <div class="dicas">
+        <img src="exemplo.jpg" alt="Exemplo: cartão de banco deitado ao lado da conexão, foto tirada de cima">
+        <ul>
+          <li>Coloque um <b>cartão de banco</b> (ou uma régua) ao lado da peça.</li>
+          <li>Tire a foto <b>de cima</b>, com o celular reto.</li>
+          <li>Deixe a rosca <b>de lado</b>, mostrando os filetes.</li>
+          <li>Cartão inteiro na foto, sem cortar.</li>
+          <li>Lugar claro, sem tremer.</li>
+        </ul>
+      </div>
+    </details>
+    <div class="foto" id="preview" hidden><img alt="Foto enviada"></div>
+    <div class="carregando" id="carregando" hidden><span class="roda"></span>Medindo a rosca… leva uns segundos</div>
+    <div id="msgFoto"></div>
+  </section>
+
+  <!-- MODO MANUAL -->
+  <section class="card" id="modoManual" hidden>
+    <h2><span class="num">2</span>Digite a medida</h2>
+    <form class="manual" id="formManual">
+      <label for="mDiam">Diâmetro da rosca <small>(por fora no macho, o furo na fêmea)</small></label>
+      <div class="campo">
+        <input id="mDiam" inputmode="decimal" placeholder="ex.: 20,9" required>
+        <select id="mUnid" aria-label="Unidade"><option value="mm">mm</option><option value="pol">pol</option></select>
+      </div>
+      <label for="mFios">Fios por polegada <small>(se souber; conte os filetes em 1 polegada)</small></label>
+      <div class="campo"><input id="mFios" inputmode="decimal" placeholder="ex.: 14"></div>
+      <button class="btn" style="margin-top:16px">Ver a rosca</button>
+    </form>
+  </section>
+
+  <!-- RESULTADO -->
+  <section class="card" id="resultado" hidden aria-live="polite"></section>
+</main>
+
+<footer class="pe">
+  O resultado é uma estimativa. Antes de fazer o pedido, confirme com o pente de rosca.
+  <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
+</footer>
+
+<script src="tabelas.js"></script>
+<script>
+/* Endereço do servidor (Apps Script). Pode vir no link com ?api=… */
+var API_PADRAO = "";
+
+var $ = function (s) { return document.querySelector(s); };
+var Q = new URLSearchParams(location.search);
+function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+if (Q.get("api")) ls("rf-api", Q.get("api"));
+var API = API_PADRAO || ls("rf-api") || "";
+
+var estado = { tipo: "macho", medida: null, formaUsuario: "", origem: "" };
+
+/* abertura */
+(function () {
+  var intro = $("#intro");
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { intro.classList.add("fim"); return; }
+  setTimeout(function () { intro.classList.add("passo2"); }, 1500);
+  setTimeout(function () { intro.classList.add("fim"); }, 2700);
+})();
+
+/* abas */
+document.querySelectorAll(".abas button").forEach(function (b) {
+  b.onclick = function () {
+    document.querySelectorAll(".abas button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); });
+    $("#modoFoto").hidden = b.dataset.aba !== "foto";
+    $("#modoManual").hidden = b.dataset.aba !== "manual";
+    $("#resultado").hidden = true;
+  };
+});
+
+/* tipo macho / fêmea */
+document.querySelectorAll("#tipo button").forEach(function (b) {
+  b.onclick = function () {
+    document.querySelectorAll("#tipo button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); });
+    estado.tipo = b.dataset.tipo;
+    if (estado.medida) mostrar();
+  };
+});
+$("#btnFoto").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#arquivo").click(); } });
+
+/* foto */
+$("#arquivo").onchange = function () {
+  var f = this.files && this.files[0];
+  this.value = "";
+  if (!f) return;
+  $("#msgFoto").innerHTML = "";
+  $("#resultado").hidden = true;
+  reduzir(f).then(function (dataUrl) {
+    $("#preview").hidden = false;
+    $("#preview img").src = dataUrl;
+    if (!API) {
+      aviso("#msgFoto", "info", "A medição pela foto ainda está sendo ligada. Por enquanto, use a aba <b>Já tenho a medida</b>.");
+      return;
+    }
+    $("#carregando").hidden = false;
+    return fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ acao: "analisar", tipo: estado.tipo, mime: "image/jpeg", imagem: dataUrl.split(",")[1] }),
+      redirect: "follow"
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      $("#carregando").hidden = true;
+      if (!d.ok) { aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.")); return; }
+      var m = d.medida || {};
+      if (m.rosca_visivel === false || !(Number(m.diametro_mm) > 0)) {
+        aviso("#msgFoto", "erro", "Não consegui ver a rosca direito. " + esc(m.problemas || "Tente outra foto seguindo as dicas.")); $("#dicasBox").open = true; return;
+      }
+      if (m.referencia === "nenhuma") {
+        aviso("#msgFoto", "erro", "Não achei o cartão ou a régua na foto. Sem ele não dá para saber o tamanho. Coloque um cartão ao lado e tire de novo."); $("#dicasBox").open = true; return;
+      }
+      if (m.tipo === "macho" || m.tipo === "femea") marcarTipo(m.tipo);
+      estado.medida = m; estado.formaUsuario = ""; estado.respondeu = false; estado.origem = "foto";
+      mostrar();
+    });
+  }).catch(function () {
+    $("#carregando").hidden = true;
+    aviso("#msgFoto", "erro", "Sem conexão com a internet, ou o servidor não respondeu. Tente de novo.");
+  });
+};
+
+function marcarTipo(t) {
+  estado.tipo = t;
+  document.querySelectorAll("#tipo button").forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.tipo === t); });
+}
+
+function reduzir(file) {
+  return new Promise(function (ok, falha) {
+    var img = new Image(), url = URL.createObjectURL(file);
+    img.onload = function () {
+      var max = 1600, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+      var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      ok(c.toDataURL("image/jpeg", 0.88));
+    };
+    img.onerror = function () { falha(new Error("img")); };
+    img.src = url;
+  });
+}
+
+/* manual */
+$("#formManual").onsubmit = function (e) {
+  e.preventDefault();
+  var v = num($("#mDiam").value), fios = num($("#mFios").value);
+  if (!(v > 0)) return;
+  var mm = $("#mUnid").value === "pol" ? v * 25.4 : v;
+  estado.medida = { diametro_mm: mm, fios_por_polegada: fios > 0 ? fios : null, passo_mm: fios > 0 ? 25.4 / fios : null, forma: "indefinida" };
+  estado.formaUsuario = ""; estado.respondeu = false; estado.origem = "manual";
+  mostrar();
+};
+function num(s) { return parseFloat(String(s || "").replace(/\s/g, "").replace(",", ".")); }
+
+/* resultado */
+function fmt(n, c) { return Number(n).toFixed(c === undefined ? 2 : c).replace(".", ","); }
+function polB(b) { return b + "\""; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]; }); }
+function aviso(alvo, tipo, html) { $(alvo).innerHTML = '<div class="aviso ' + tipo + '">' + html + "</div>"; }
+
+function mostrar() {
+  var m = estado.medida, forma = estado.formaUsuario;
+  var lista = Roscas.comparar({ diametro_mm: m.diametro_mm, fios_por_polegada: m.fios_por_polegada, forma: forma }, estado.tipo);
+  var r = Roscas.resumir(lista);
+  var box = $("#resultado");
+  if (!r) { box.hidden = true; return; }
+  var grupo = [r.melhor].concat(r.empate);
+  var nomes = grupo.map(function (g) { return g.norma; });
+  var titulo;
+  if (forma === "reta") titulo = "BSP reta (G)";
+  else if (forma === "conica") titulo = nomes.length > 1 ? "BSPT ou NPT" : Roscas.NORMAS[nomes[0]].nome;
+  else titulo = nomes.indexOf("NPT") >= 0 ? "BSP ou NPT" : "BSP";
+
+  var conf = r.confianca;
+  if (estado.origem === "foto" && Number(m.certeza) < 50 && conf === "alta") conf = "média";
+  var confTxt = { alta: "Medida bem próxima da tabela", "média": "Medida razoável, vale conferir", baixa: "Medida longe da tabela, confira" }[conf];
+
+  var h = '<div class="res-topo"><div class="rot">Rosca encontrada</div>' +
+    '<div class="bitola">' + polB(r.melhor.bitola) + '</div><div class="norma">' + titulo + '</div>' +
+    '<span class="selo ' + conf + '">' + confTxt + "</span></div>";
+
+  // pergunta reta ou cônica (resolve BSP reta x cônica)
+  var temReta = grupo.some(function (g) { return g.forma === "reta"; }) || forma === "reta";
+  var temConica = grupo.some(function (g) { return g.forma === "conica"; }) || forma === "conica";
+  if (temReta && temConica || forma) {
+    var palpite = m.forma === "reta" ? "parece reta" : m.forma === "conica" ? "parece afunilar" : "";
+    h += '<div class="pergunta"><p>Para fechar: olhando a rosca de lado, ela afunila na ponta?</p><div class="tres">' +
+      bt("reta", "Não, é reta") + bt("conica", "Sim, afunila") + bt("", "Não sei") + "</div>" +
+      (palpite && estado.origem === "foto" ? '<p class="ia">Pela foto, ' + palpite + ".</p>" : "") + "</div>";
+  }
+  if (forma === "conica" && nomes.length > 1) {
+    h += '<div class="aviso atencao" style="margin:0 0 12px">BSPT e NPT têm quase o mesmo tamanho. Para separar, use o pente de rosca: <b>BSP tem filete de 55°</b> e <b>NPT de 60°</b>.</div>';
+  }
+
+  h += "<h3>Medida " + (estado.origem === "foto" ? "na foto" : "informada") + "</h3><table>" +
+    "<tr><th>Diâmetro</th><td>" + fmt(m.diametro_mm, 1) + " mm · " + Roscas.pol(m.diametro_mm) + "</td></tr>" +
+    (m.fios_por_polegada ? "<tr><th>Fios por polegada</th><td>" + fmt(m.fios_por_polegada, 1).replace(",0", "") + "</td></tr>" : "") +
+    (m.passo_mm ? "<tr><th>Passo</th><td>" + fmt(m.passo_mm, 2) + " mm</td></tr>" : "") +
+    "</table>";
+
+  h += "<h3>Na tabela</h3>";
+  grupo.forEach(function (g) {
+    h += '<div class="norma-bloco"><b>' + polB(g.bitola) + " " + Roscas.NORMAS[g.norma].nome + "</b><p>" + g.desc + "</p><table>" +
+      "<tr><th>" + (estado.tipo === "femea" ? "Furo (aprox.)" : "Diâmetro externo") + "</th><td>" + fmt(g.diametro, 2) + " mm · " + Roscas.pol(g.diametro) + "</td></tr>" +
+      "<tr><th>Fios por polegada</th><td>" + String(g.tpi).replace(".", ",") + "</td></tr>" +
+      "<tr><th>Passo</th><td>" + fmt(g.passo, 3) + " mm</td></tr></table></div>";
+  });
+
+  if (r.outras.length) {
+    h += '<h3>Se não bater, pode ser</h3><div class="chips">' + r.outras.map(function (o) { return "<span>" + polB(o.bitola) + "</span>"; }).join("") + "</div>";
+  }
+  if (estado.origem === "foto" && m.problemas) h += '<div class="aviso atencao">' + esc(m.problemas) + "</div>";
+
+  var zap = "Rosca encontrada pelo Rosca Fácil: " + r.melhor.bitola + "\" " + titulo +
+    " (medida: " + fmt(m.diametro_mm, 1) + " mm / " + Roscas.pol(m.diametro_mm) + ")";
+  h += '<div class="linha"><button type="button" class="btn sec" id="btnNovo">Medir outra</button>' +
+    '<a class="btn zap" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(zap) + '">Enviar pelo WhatsApp</a></div>';
+
+  box.innerHTML = h;
+  box.hidden = false;
+  box.querySelectorAll(".tres button").forEach(function (b) {
+    b.onclick = function () { estado.formaUsuario = b.dataset.f; estado.respondeu = true; mostrar(); };
+  });
+  $("#btnNovo").onclick = function () {
+    estado.medida = null; box.hidden = true; $("#preview").hidden = true; $("#msgFoto").innerHTML = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  if (!estado.respondeu) box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function bt(f, txt) { return '<button type="button" data-f="' + f + '" aria-pressed="' + (estado.respondeu && estado.formaUsuario === f ? "true" : "false") + '">' + txt + "</button>"; }
+
+if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} }
+</script>
+</body>
+</html>

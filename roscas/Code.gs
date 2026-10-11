@@ -26,7 +26,7 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "1.2";
+var VERSAO = "1.3";
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
@@ -175,7 +175,7 @@ function analisarComIA_(texto, b64, mime) {
       return fila[i][0] === "claude" ? claude_(texto, b64, mime, fila[i][1]) : gemini_(texto, b64, mime, fila[i][1]);
     } catch (err) {
       ultimo = err;
-      if (!/lotado|demand|overload|unavailable|rate|quota|exhausted|not found|404|429|500|503|529/i.test(String(err.message))) {
+      if (!/lotado|demand|overload|unavailable|rate|quota|exhausted|not found|invalid argument|404|400|429|500|503|529/i.test(String(err.message))) {
         // erro de chave/permissão: tenta o outro fornecedor, se houver, mas não insiste no mesmo
         while (i + 1 < fila.length && fila[i + 1][0] === fila[i][0]) i++;
       } else {
@@ -186,29 +186,45 @@ function analisarComIA_(texto, b64, mime) {
   throw ultimo || new Error("Nenhuma IA configurada.");
 }
 
-function gemini_(texto, b64, mime, modelo, cfg) {
-  cfg = cfg || { temperature: 0, responseMimeType: "application/json", maxOutputTokens: 700,
-                 thinkingConfig: { thinkingBudget: /pro/.test(modelo) ? 128 : 0 } };
-  var chave = PropertiesService.getScriptProperties().getProperty("GEMINI_KEY");
+/* Jeitos de pedir resposta rápida, do mais rápido ao padrão. Cada modelo do Google aceita um;
+   o servidor testa na ordem e guarda o que funcionou para aquele modelo (sem errar de novo). */
+var JEITOS_GEMINI = [
+  { thinkingConfig: { thinkingLevel: "minimal" } },
+  { thinkingConfig: { thinkingLevel: "low" } },
+  { thinkingConfig: { thinkingBudget: 0 } },
+  {}
+];
+function gemini_(texto, b64, mime, modelo) {
+  var props = PropertiesService.getScriptProperties();
+  var chave = props.getProperty("GEMINI_KEY");
   var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelo + ":generateContent";
-  var r = UrlFetchApp.fetch(url, {
-    method: "post",
-    contentType: "application/json",
-    headers: { "x-goog-api-key": chave },
-    muteHttpExceptions: true,
-    payload: JSON.stringify({
-      contents: [{ parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: texto }] }],
-      generationConfig: cfg
-    })
-  });
-  var d = JSON.parse(r.getContentText());
-  if (r.getResponseCode() === 400 && cfg.thinkingConfig && /think/i.test((d.error && d.error.message) || "")) {
-    delete cfg.thinkingConfig; // modelo não aceita desligar o "pensamento": tenta do jeito padrão
-    return gemini_(texto, b64, mime, modelo, cfg);
+  var salvo = Number(props.getProperty("JEITO_" + modelo));
+  var inicio = salvo >= 0 && salvo < JEITOS_GEMINI.length ? salvo : 0;
+  var ultimoErro = null;
+  for (var k = inicio; k < JEITOS_GEMINI.length; k++) {
+    var cfg = { temperature: 0, responseMimeType: "application/json" };
+    if (JEITOS_GEMINI[k].thinkingConfig) cfg.thinkingConfig = JEITOS_GEMINI[k].thinkingConfig;
+    var r = UrlFetchApp.fetch(url, {
+      method: "post",
+      contentType: "application/json",
+      headers: { "x-goog-api-key": chave },
+      muteHttpExceptions: true,
+      payload: JSON.stringify({
+        contents: [{ parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: texto }] }],
+        generationConfig: cfg
+      })
+    });
+    var code = r.getResponseCode(), d = {};
+    try { d = JSON.parse(r.getContentText()); } catch (e) {}
+    if (code === 200) {
+      if (salvo !== k) props.setProperty("JEITO_" + modelo, String(k));
+      var partes = (((d.candidates || [])[0] || {}).content || {}).parts || [];
+      return partes.filter(function (p) { return !p.thought; }).map(function (p) { return p.text || ""; }).join("");
+    }
+    ultimoErro = new Error((d.error && d.error.message) || ("Gemini " + code));
+    if (code !== 400) throw ultimoErro;   // lotado, chave errada etc.: não adianta mudar o jeito
   }
-  if (r.getResponseCode() !== 200) throw new Error((d.error && d.error.message) || ("Gemini " + r.getResponseCode()));
-  var partes = (((d.candidates || [])[0] || {}).content || {}).parts || [];
-  return partes.map(function (p) { return p.text || ""; }).join("");
+  throw ultimoErro;
 }
 
 function claude_(texto, b64, mime, modelo) {

@@ -1,0 +1,265 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Código do servidor · Rosca Fácil</title>
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#EEF2F7;color:#0E2238}main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:6px 0}p{margin:6px 0 12px;color:#4A5B75}
+button{background:#0E2238;color:#fff;border:0;border-radius:12px;padding:14px 22px;font-size:17px;font-weight:800;cursor:pointer}
+button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;font:12px/1.4 ui-monospace,Consolas,monospace;border:1px solid #D6DFEA;border-radius:12px;padding:10px;box-sizing:border-box;background:#fff}</style></head>
+<body><main><h1>Código do servidor · Rosca Fácil by DayIA</h1>
+<p>Clique no botão, depois vá no Apps Script, apague tudo do Código.gs e cole (Ctrl+V).</p>
+<button id="b">📋 Copiar código</button>
+<textarea id="t" readonly>/* =====================================================================
+   ROSCA FÁCIL by DayIA  ·  servidor (Google Apps Script)
+   ---------------------------------------------------------------------
+   Recebe a foto da peça enviada pelo app, pede para uma IA de visão
+   medir a rosca (usando o cartão ou a régua da foto como referência)
+   e devolve as medidas. A comparação com as tabelas BSP / NPT é feita
+   no próprio app.
+
+   A chave da IA fica guardada aqui, escondida. Ela nunca aparece no app.
+
+   Instalação (uma vez só, uns 5 minutos):
+   1. Entre em script.google.com com a conta da DayIA &gt; Novo projeto.
+   2. Apague o que estiver lá e cole este arquivo inteiro.
+   3. Pegue uma chave de IA:
+        Gemini (tem uso grátis): aistudio.google.com &gt; &quot;Get API key&quot;
+        ou Claude: console.anthropic.com &gt; API Keys
+   4. No Apps Script: engrenagem (Configurações do projeto) &gt;
+      Propriedades do script &gt; Adicionar propriedade:
+        nome  GEMINI_KEY  (ou CLAUDE_KEY)   valor  a chave copiada
+        nome  PIN_DONO                      valor  uma senha só sua (para o painel)
+   5. Implantar &gt; Nova implantação &gt; tipo &quot;App da Web&quot;
+        Executar como: Eu  ·  Quem pode acessar: Qualquer pessoa
+   6. Copie o endereço que termina em /exec e mande para colocar no app.
+
+   Empresas: cadastradas pelo painel (painel.html), só com o nome.
+   Cada empresa recebe um link próprio do app. Nada de planilha.
+   ===================================================================== */
+
+var VERSAO = &quot;1.0&quot;;
+
+// Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
+var MODELO_GEMINI = &quot;gemini-flash-latest&quot;;
+var MODELO_CLAUDE = &quot;claude-sonnet-5-5&quot;;
+
+// Limite de análises por dia, para ninguém gastar sua cota à toa
+var LIMITE_DIA = 300;
+
+var PROMPT = [
+  &quot;Você é um metrologista especialista em roscas de conexões hidráulicas e pneumáticas&quot;,
+  &quot;(BSP, NPT, JIC, ORFS e métrica). A foto foi tirada no balcão, normalmente SEM objeto de referência.&quot;,
+  &quot;&quot;,
+  &quot;Tarefa: MEDIR a rosca na própria imagem. Não tente adivinhar a norma, só meça.&quot;,
+  &quot;Use coordenadas de pixel da imagem como ela é (origem no canto de cima à esquerda).&quot;,
+  &quot;&quot;,
+  &quot;A) Proporção (o mais importante, funciona sem referência):&quot;,
+  &quot;   1. Diâmetro em pixels: macho = de pico a pico dos filetes, perpendicular ao eixo da rosca;&quot;,
+  &quot;      fêmea = diâmetro do furo nos picos internos.&quot;,
+  &quot;   2. Passo em pixels: escolha um trecho nítido ao longo do eixo, conte os PICOS dos filetes,&quot;,
+  &quot;      e divida o comprimento entre o primeiro e o último pico pelo número de intervalos.&quot;,
+  &quot;   3. Faça a contagem DUAS VEZES, em trechos diferentes da rosca, de forma independente:&quot;,
+  &quot;      razao_1 = diametro_px / passo_px do trecho 1; razao_2 = idem para o trecho 2.&quot;,
+  &quot;   4. razao_diametro_passo = média das duas. Um filete contado a mais ou a menos muda a bitola, então confira.&quot;,
+  &quot;&quot;,
+  &quot;B) Tamanho real:&quot;,
+  &quot;   - Se houver cartão de banco (85,60 x 53,98 mm), régua ou paquímetro na foto, use para calcular&quot;,
+  &quot;     diametro_mm e passo_mm, e marque tem_referencia = true.&quot;,
+  &quot;   - Se não houver, deixe diametro_mm e passo_mm como null e estime diametro_estimado_mm&quot;,
+  &quot;     pelo contexto: mão ou dedos, ferramentas, bancada, sextavado, espessura da parede, proporções típicas.&quot;,
+  &quot;     Sempre preencha diametro_estimado_mm, mesmo com pouca certeza.&quot;,
+  &quot;&quot;,
+  &quot;C) Forma: reta (mesmo diâmetro no comprimento todo) ou cônica (afunila). Se não der, \&quot;indefinida\&quot;.&quot;,
+  &quot;   Ponta da conexão: \&quot;cone\&quot; (assento inclinado, tipo JIC), \&quot;face\&quot; (face plana com anel de borracha, tipo ORFS)&quot;,
+  &quot;   ou \&quot;indefinida\&quot;.&quot;,
+  &quot;&quot;,
+  &quot;D) Pontos para o atendente conferir na tela, em coordenadas NORMALIZADAS (x e y de 0 a 1):&quot;,
+  &quot;   diam_a e diam_b = as duas bordas do diâmetro medido; fil_ini e fil_fim = primeiro e último pico do trecho 1;&quot;,
+  &quot;   n_intervalos = número de intervalos entre eles; ref_a e ref_b = pontas da referência (se houver).&quot;,
+  &quot;&quot;,
+  &quot;O cliente informou que a rosca é: {TIPO}.&quot;,
+  &quot;&quot;,
+  &quot;Responda SOMENTE com um JSON neste formato, sem texto fora dele:&quot;,
+  &quot;{\&quot;rosca_visivel\&quot;:true,&quot;,
+  &quot; \&quot;tipo\&quot;:\&quot;macho|femea|indefinido\&quot;,&quot;,
+  &quot; \&quot;diametro_px\&quot;:0, \&quot;passo_px\&quot;:0,&quot;,
+  &quot; \&quot;razao_1\&quot;:0.0, \&quot;razao_2\&quot;:0.0, \&quot;razao_diametro_passo\&quot;:0.0,&quot;,
+  &quot; \&quot;tem_referencia\&quot;:false, \&quot;referencia\&quot;:\&quot;cartao|regua|paquimetro|nenhuma\&quot;,&quot;,
+  &quot; \&quot;diametro_mm\&quot;:null, \&quot;passo_mm\&quot;:null,&quot;,
+  &quot; \&quot;diametro_estimado_mm\&quot;:0.0,&quot;,
+  &quot; \&quot;forma\&quot;:\&quot;reta|conica|indefinida\&quot;, \&quot;vedacao\&quot;:\&quot;cone|face|indefinida\&quot;,&quot;,
+  &quot; \&quot;pontos\&quot;:{\&quot;diam_a\&quot;:[0,0],\&quot;diam_b\&quot;:[0,0],\&quot;fil_ini\&quot;:[0,0],\&quot;fil_fim\&quot;:[0,0],\&quot;n_intervalos\&quot;:0,\&quot;ref_a\&quot;:null,\&quot;ref_b\&quot;:null},&quot;,
+  &quot; \&quot;certeza\&quot;:0,&quot;,
+  &quot; \&quot;problemas\&quot;:\&quot;\&quot;}&quot;,
+  &quot;\&quot;certeza\&quot; vai de 0 a 100 e diz o quanto você confia na contagem dos filetes.&quot;,
+  &quot;Em \&quot;problemas\&quot;, escreva em português simples, para um leigo, o que atrapalhou&quot;,
+  &quot;(ex.: filetes borrados, foto de frente em vez de lado, pouca luz). Deixe vazio se a foto estiver boa.&quot;
+].join(&quot;\n&quot;);
+
+/* ---------------- entrada ---------------- */
+function doGet(e) {
+  var p = (e &amp;&amp; e.parameter) || {};
+  if (p.acao === &quot;empresa&quot;) {
+    var emp = empresas_()[String(p.e || &quot;&quot;).toLowerCase()];
+    if (!emp || !emp.ativa) return json_({ ok: false });
+    return json_({ ok: true, empresa: { id: emp.id, nome: emp.nome } });
+  }
+  return json_({ ok: true, app: &quot;Rosca Fácil by DayIA&quot;, versao: VERSAO, ia: provedor_() || &quot;não configurada&quot; });
+}
+
+function doPost(e) {
+  try {
+    var corpo = JSON.parse(e.postData.contents || &quot;{}&quot;);
+    if (corpo.acao === &quot;painel&quot;) return painel_(corpo);
+    if (corpo.acao !== &quot;analisar&quot;) return json_({ ok: false, erro: &quot;Ação desconhecida.&quot; });
+    var emp = corpo.e ? empresas_()[String(corpo.e).toLowerCase()] : null;
+    if (corpo.e &amp;&amp; (!emp || !emp.ativa)) return json_({ ok: false, erro: &quot;Este link está desativado. Fale com quem te passou o app.&quot; });
+    if (!corpo.imagem) return json_({ ok: false, erro: &quot;Nenhuma foto recebida.&quot; });
+    if (!provedor_()) return json_({ ok: false, erro: &quot;A IA ainda não foi configurada.&quot; });
+    if (!dentroDoLimite_()) return json_({ ok: false, erro: &quot;O limite de análises de hoje acabou. Tente amanhã ou use a medida manual.&quot; });
+
+    var tipo = corpo.tipo === &quot;femea&quot; ? &quot;fêmea (filetes por dentro)&quot; : &quot;macho (filetes por fora)&quot;;
+    var texto = PROMPT.replace(&quot;{TIPO}&quot;, tipo);
+    var mime = corpo.mime || &quot;image/jpeg&quot;;
+
+    var bruto = provedor_() === &quot;gemini&quot;
+      ? gemini_(texto, corpo.imagem, mime)
+      : claude_(texto, corpo.imagem, mime);
+
+    var medida = extrairJson_(bruto);
+    if (!medida) return json_({ ok: false, erro: &quot;A IA não conseguiu ler a foto. Tente outra foto.&quot; });
+    contarUso_(emp ? emp.id : &quot;_dayia&quot;);
+    return json_({ ok: true, medida: medida });
+  } catch (err) {
+    return json_({ ok: false, erro: &quot;Erro no servidor: &quot; + err.message });
+  }
+}
+
+
+/* ---------------- empresas (painel da dona) ---------------- */
+function empresas_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;EMPRESAS&quot;) || &quot;{}&quot;); }
+  catch (e) { return {}; }
+}
+function gravarEmpresas_(lista) {
+  PropertiesService.getScriptProperties().setProperty(&quot;EMPRESAS&quot;, JSON.stringify(lista));
+}
+function slug_(t) {
+  return String(t).normalize(&quot;NFD&quot;).replace(/[\u0300-\u036f]/g, &quot;&quot;).toLowerCase()
+    .replace(/[^a-z0-9]+/g, &quot;-&quot;).replace(/^-+|-+$/g, &quot;&quot;).slice(0, 30) || &quot;empresa&quot;;
+}
+function mesAtual_() { return Utilities.formatDate(new Date(), &quot;America/Sao_Paulo&quot;, &quot;yyyy-MM&quot;); }
+
+function contarUso_(id) {
+  var p = PropertiesService.getScriptProperties(), k = &quot;USO_&quot; + id + &quot;_&quot; + mesAtual_();
+  p.setProperty(k, String(Number(p.getProperty(k) || 0) + 1));
+}
+
+function painel_(c) {
+  var pin = PropertiesService.getScriptProperties().getProperty(&quot;PIN_DONO&quot;);
+  if (!pin) return json_({ ok: false, erro: &quot;Defina o PIN_DONO nas propriedades do script.&quot; });
+  if (String(c.pin || &quot;&quot;) !== pin) return json_({ ok: false, erro: &quot;Senha errada.&quot; });
+
+  var lock = LockService.getScriptLock(); lock.waitLock(5000);
+  try {
+    var lista = empresas_();
+    if (c.op === &quot;nova&quot;) {
+      var nome = String(c.nome || &quot;&quot;).trim().slice(0, 60);
+      if (!nome) return json_({ ok: false, erro: &quot;Digite o nome da empresa.&quot; });
+      var id = slug_(nome), base = id, n = 2;
+      while (lista[id]) id = base + &quot;-&quot; + (n++);
+      lista[id] = { id: id, nome: nome, ativa: true, criada: new Date().toISOString() };
+      gravarEmpresas_(lista);
+    } else if (c.op === &quot;editar&quot; &amp;&amp; lista[c.id]) {
+      if (c.nome !== undefined &amp;&amp; String(c.nome).trim()) lista[c.id].nome = String(c.nome).trim().slice(0, 60);
+      if (c.ativa !== undefined) lista[c.id].ativa = !!c.ativa;
+      gravarEmpresas_(lista);
+    } else if (c.op === &quot;remover&quot; &amp;&amp; lista[c.id]) {
+      delete lista[c.id];
+      gravarEmpresas_(lista);
+    }
+    var p = PropertiesService.getScriptProperties(), mes = mesAtual_();
+    var saida = Object.keys(lista).map(function (k) {
+      var x = lista[k];
+      return { id: x.id, nome: x.nome, ativa: x.ativa, criada: x.criada, usoMes: Number(p.getProperty(&quot;USO_&quot; + x.id + &quot;_&quot; + mes) || 0) };
+    }).sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+    return json_({ ok: true, empresas: saida, ia: provedor_() || &quot;&quot;, usoDayia: Number(p.getProperty(&quot;USO__dayia_&quot; + mes) || 0) });
+  } finally { lock.releaseLock(); }
+}
+
+/* ---------------- IAs ---------------- */
+function provedor_() {
+  var p = PropertiesService.getScriptProperties();
+  if (p.getProperty(&quot;GEMINI_KEY&quot;)) return &quot;gemini&quot;;
+  if (p.getProperty(&quot;CLAUDE_KEY&quot;)) return &quot;claude&quot;;
+  return &quot;&quot;;
+}
+
+function gemini_(texto, b64, mime) {
+  var chave = PropertiesService.getScriptProperties().getProperty(&quot;GEMINI_KEY&quot;);
+  var url = &quot;https://generativelanguage.googleapis.com/v1beta/models/&quot; + MODELO_GEMINI + &quot;:generateContent&quot;;
+  var r = UrlFetchApp.fetch(url, {
+    method: &quot;post&quot;,
+    contentType: &quot;application/json&quot;,
+    headers: { &quot;x-goog-api-key&quot;: chave },
+    muteHttpExceptions: true,
+    payload: JSON.stringify({
+      contents: [{ parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: texto }] }],
+      generationConfig: { temperature: 0, responseMimeType: &quot;application/json&quot; }
+    })
+  });
+  var d = JSON.parse(r.getContentText());
+  if (r.getResponseCode() !== 200) throw new Error((d.error &amp;&amp; d.error.message) || (&quot;Gemini &quot; + r.getResponseCode()));
+  var partes = (((d.candidates || [])[0] || {}).content || {}).parts || [];
+  return partes.map(function (p) { return p.text || &quot;&quot;; }).join(&quot;&quot;);
+}
+
+function claude_(texto, b64, mime) {
+  var chave = PropertiesService.getScriptProperties().getProperty(&quot;CLAUDE_KEY&quot;);
+  var r = UrlFetchApp.fetch(&quot;https://api.anthropic.com/v1/messages&quot;, {
+    method: &quot;post&quot;,
+    contentType: &quot;application/json&quot;,
+    headers: { &quot;x-api-key&quot;: chave, &quot;anthropic-version&quot;: &quot;2023-06-01&quot; },
+    muteHttpExceptions: true,
+    payload: JSON.stringify({
+      model: MODELO_CLAUDE,
+      max_tokens: 2048,
+      messages: [{ role: &quot;user&quot;, content: [
+        { type: &quot;image&quot;, source: { type: &quot;base64&quot;, media_type: mime, data: b64 } },
+        { type: &quot;text&quot;, text: texto }
+      ] }]
+    })
+  });
+  var d = JSON.parse(r.getContentText());
+  if (r.getResponseCode() !== 200) throw new Error((d.error &amp;&amp; d.error.message) || (&quot;Claude &quot; + r.getResponseCode()));
+  return (d.content || []).map(function (c) { return c.text || &quot;&quot;; }).join(&quot;&quot;);
+}
+
+/* ---------------- utilidades ---------------- */
+function extrairJson_(t) {
+  if (!t) return null;
+  var i = t.indexOf(&quot;{&quot;), f = t.lastIndexOf(&quot;}&quot;);
+  if (i &lt; 0 || f &lt;= i) return null;
+  try { return JSON.parse(t.slice(i, f + 1)); } catch (e) { return null; }
+}
+
+function dentroDoLimite_() {
+  var hoje = Utilities.formatDate(new Date(), &quot;America/Sao_Paulo&quot;, &quot;yyyy-MM-dd&quot;);
+  var p = PropertiesService.getScriptProperties();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    var dia = p.getProperty(&quot;CONTA_DIA&quot;), n = Number(p.getProperty(&quot;CONTA_N&quot;) || 0);
+    if (dia !== hoje) { dia = hoje; n = 0; }
+    if (n &gt;= LIMITE_DIA) return false;
+    p.setProperties({ CONTA_DIA: dia, CONTA_N: String(n + 1) });
+    return true;
+  } finally { lock.releaseLock(); }
+}
+
+function json_(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+</textarea></main>
+<script>var b=document.getElementById("b"),t=document.getElementById("t");
+b.onclick=function(){t.select();var ok=function(){b.textContent="✅ Copiado! Agora cole no Apps Script";b.className="ok"};
+if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(ok,function(){document.execCommand("copy");ok()})}else{document.execCommand("copy");ok()}};</script>
+</body></html>

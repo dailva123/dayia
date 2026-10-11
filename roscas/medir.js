@@ -451,6 +451,94 @@
     requestAnimationFrame(mostra);
   }
 
-  raiz.Medir = { abrirEditor: abrirEditor, abrirPente: abrirPente, calibrar: calibrar, pxPorMm: pxPorMm, aoVoltar: null,
+
+  /* =================================================================
+     3) CÂMERA DENTRO DO APP
+     A câmera roda na própria página, então o celular não fecha o navegador
+     por falta de memória (como acontece ao abrir o app de câmera).
+     ================================================================= */
+  function abrirCamera(opts) {
+    var ov = document.createElement("div");
+    ov.className = "editor camera";
+    ov.innerHTML =
+      '<div class="ed-topo"><button type="button" class="ed-x" aria-label="Fechar">✕</button><b>Foto da rosca</b><button type="button" class="cam-ext">Câmera do celular</button></div>' +
+      '<div class="cam-palco"><video playsinline muted autoplay></video>' +
+      '<div class="cam-guia"><span>Rosca de lado, bem perto e nítida</span></div>' +
+      '<div class="cam-msg">Abrindo a câmera…</div>' +
+      '<div class="cam-zoom" hidden><span>1x</span><input type="range" aria-label="Zoom da câmera"><span class="cam-zv"></span></div>' +
+      '<div class="cam-flash"></div></div>' +
+      '<div class="cam-barra"><div class="lado"><button type="button" class="cam-luz" hidden aria-pressed="false" aria-label="Lanterna">🔦</button></div>' +
+      '<button type="button" class="cam-disparo" aria-label="Tirar foto" disabled></button>' +
+      '<div class="lado"><button type="button" class="cam-virar" aria-label="Trocar câmera">🔄</button></div></div>';
+    document.body.appendChild(ov); document.body.style.overflow = "hidden";
+    var video = $("video", ov), msg = $(".cam-msg", ov), disparo = $(".cam-disparo", ov);
+    var stream = null, track = null, frente = false, luz = false;
+
+    function parar() { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; track = null; }
+    function fechar(viaVoltar) {
+      if (!ov.parentNode) return;
+      parar(); ov.remove(); document.body.style.overflow = "";
+      if (viaVoltar !== true) desempilhar(fechar);
+    }
+    empilhar(fechar);
+
+    function iniciar() {
+      parar();
+      msg.hidden = false; msg.textContent = "Abrindo a câmera…"; disparo.disabled = true;
+      var c = { audio: false, video: { facingMode: frente ? "user" : { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1440 } } };
+      navigator.mediaDevices.getUserMedia(c).then(function (st) {
+        stream = st; track = st.getVideoTracks()[0];
+        video.srcObject = st;
+        var p = video.play(); if (p && p.catch) p.catch(function () {});
+        video.onloadedmetadata = function () { msg.hidden = true; disparo.disabled = false; };
+        recursos();
+      }).catch(function (err) {
+        var negado = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
+        fechar(); depoisDeFechar(function () { if (opts.falhou) opts.falhou(negado ? "negado" : "erro"); });
+      });
+    }
+    // zoom da câmera e lanterna, quando o celular permite
+    function recursos() {
+      var cap = track && track.getCapabilities ? track.getCapabilities() : {};
+      var zbox = $(".cam-zoom", ov), rg = $("input", zbox);
+      if (cap.zoom && cap.zoom.max > cap.zoom.min) {
+        zbox.hidden = false; rg.min = cap.zoom.min; rg.max = Math.min(cap.zoom.max, 8); rg.step = cap.zoom.step || 0.1;
+        rg.value = (track.getSettings && track.getSettings().zoom) || cap.zoom.min;
+        $(".cam-zv", zbox).textContent = Number(rg.value).toFixed(1).replace(".", ",") + "x";
+        rg.oninput = function () {
+          $(".cam-zv", zbox).textContent = Number(rg.value).toFixed(1).replace(".", ",") + "x";
+          track.applyConstraints({ advanced: [{ zoom: Number(rg.value) }] }).catch(function () {});
+        };
+      } else zbox.hidden = true;
+      var bl = $(".cam-luz", ov);
+      bl.hidden = !cap.torch;
+      bl.onclick = function () {
+        luz = !luz; bl.setAttribute("aria-pressed", luz);
+        track.applyConstraints({ advanced: [{ torch: luz }] }).catch(function () { luz = false; bl.setAttribute("aria-pressed", "false"); });
+      };
+      // foco contínuo, se disponível
+      if (cap.focusMode && cap.focusMode.indexOf("continuous") >= 0) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(function () {});
+    }
+
+    disparo.onclick = function () {
+      var w = video.videoWidth, h = video.videoHeight;
+      if (!w || !h) return;
+      var max = 1600, k = Math.min(1, max / Math.max(w, h));
+      var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
+      var fl = $(".cam-flash", ov); fl.classList.add("on"); setTimeout(function () { fl.classList.remove("on"); }, 60);
+      var dataUrl = c.toDataURL("image/jpeg", 0.9);
+      c.width = c.height = 0;
+      var im = new Image();
+      im.onload = function () { fechar(); depoisDeFechar(function () { opts.pronto({ dataUrl: dataUrl, img: im }); }); };
+      im.src = dataUrl;
+    };
+    $(".cam-virar", ov).onclick = function () { frente = !frente; iniciar(); };
+    $(".ed-x", ov).onclick = fechar;
+    $(".cam-ext", ov).onclick = function () { fechar(); depoisDeFechar(function () { if (opts.externa) opts.externa(); }); };
+    iniciar();
+  }
+
+  raiz.Medir = { abrirEditor: abrirEditor, abrirCamera: abrirCamera, abrirPente: abrirPente, calibrar: calibrar, pxPorMm: pxPorMm, aoVoltar: null,
     telaAberta: function () { return pilha.length > 0; } };
 })(this);

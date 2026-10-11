@@ -185,6 +185,22 @@ form.manual label small{font-weight:500;color:var(--mute)}
 .ed-ref-dica{font-size:13px;color:var(--ink2);margin-bottom:8px}
 .ed-previa{background:var(--bluebg);color:var(--blue);border-radius:10px;padding:8px 10px;font-size:14px;margin-bottom:10px}
 .ed-acoes{display:flex;gap:10px}.ed-acoes .btn{font-size:15px;padding:12px}
+.cam-palco{position:relative;flex:1;min-height:0;background:#000;overflow:hidden}
+.cam-palco video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cam-guia{position:absolute;left:12%;right:12%;top:22%;bottom:22%;border:2px dashed rgba(255,255,255,.75);border-radius:16px;pointer-events:none}
+.cam-guia span{position:absolute;left:0;right:0;top:-34px;text-align:center;color:#fff;font-weight:800;font-size:14px;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.cam-msg{position:absolute;left:16px;right:16px;top:40%;text-align:center;color:#fff;font-weight:700}
+.cam-barra{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px calc(16px + env(safe-area-inset-bottom));background:#0B1B2C}
+.cam-barra .lado{width:64px;display:flex;justify-content:center}
+.cam-barra .lado button{background:var(--navy2);border:0;color:#fff;border-radius:12px;width:52px;height:52px;font-size:22px;cursor:pointer}
+.cam-barra .lado button[aria-pressed="true"]{background:var(--sun);color:var(--navy)}
+.cam-disparo{width:76px;height:76px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;position:relative}
+.cam-disparo::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#fff;transition:transform .1s}
+.cam-disparo:active::after{transform:scale(.88)}
+.cam-zoom{position:absolute;left:24px;right:24px;bottom:16px;display:flex;align-items:center;gap:10px;color:#fff;font-weight:800}
+.cam-zoom input{flex:1}
+.cam-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+.cam-flash.on{opacity:.8;transition:none}
 .cal-palco{flex:1;position:relative;background:#fff;overflow:hidden}
 .cal-cartao{position:absolute;top:0;left:0;border:3px solid var(--blue);border-top:0;border-left:0;background:repeating-linear-gradient(45deg,var(--bluebg) 0 10px,#fff 10px 20px);display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--blue);font-weight:700;font-size:13px;border-radius:0 0 12px 0}
 .cal-ctrl{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -252,10 +268,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
     <h2><span class="num">2</span>Tire a foto da rosca</h2>
     <input type="file" id="arquivo" accept="image/*" capture="environment" hidden>
     <input type="file" id="galeria" accept="image/*" hidden>
-    <label for="arquivo" class="btn" role="button" tabindex="0" id="btnFoto">
+    <button type="button" class="btn" id="btnFoto">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="4"/></svg>
       <span id="txtFoto">Tirar foto da peça</span>
-    </label>
+    </button>
     <label for="galeria" class="btn sec" role="button" tabindex="0" id="btnGaleria" style="margin-top:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>
       Escolher foto salva
@@ -462,9 +478,26 @@ marcarFamilia(estado.familia);
 document.querySelectorAll("#familia button").forEach(function (b) {
   b.onclick = function () { marcarFamilia(b.dataset.f); estado.respondeu = false; estado.formaUsuario = ""; estado.vedUsuario = ""; if (estado.medida) mostrar(); if (!$("#modoPente").hidden) listaPente(); };
 });
-["#btnFoto", "#btnGaleria"].forEach(function (id) {
-  $(id).addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $(id === "#btnFoto" ? "#arquivo" : "#galeria").click(); } });
-});
+$("#btnGaleria").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#galeria").click(); } });
+
+/* Câmera dentro do próprio app: não abre a câmera do celular, então o navegador
+   não é fechado por falta de memória. Se não der (sem permissão), usa a câmera do celular. */
+function tirarFoto() {
+  if (estado.fotos.length >= MAX_FOTOS) { /* a mais antiga sai */ }
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && ls("rf-camera-externa") !== "1") {
+    Medir.abrirCamera({
+      pronto: processarFoto,
+      falhou: function (motivo) {
+        if (motivo === "negado") aviso("#msgFoto", "atencao", "O app não recebeu permissão para usar a câmera. Vou abrir a câmera do celular. Para usar a câmera do app, libere a câmera nas permissões do site.");
+        $("#arquivo").click();
+      },
+      externa: function () { $("#arquivo").click(); }
+    });
+  } else {
+    $("#arquivo").click();
+  }
+}
+$("#btnFoto").onclick = tirarFoto;
 
 /* ---------- fotos ---------- */
 function reduzir(file) {
@@ -488,9 +521,12 @@ function receberFoto() {
   var f = this.files && this.files[0];
   this.value = "";
   if (!f) return;
+  reduzir(f).then(processarFoto, function () { aviso("#msgFoto", "erro", "Não consegui abrir essa foto. Tente outra."); });
+}
+function processarFoto(r0) {
   $("#msgFoto").innerHTML = "";
   if (estado.fotos.length >= MAX_FOTOS) estado.fotos.shift();
-  reduzir(f).then(function (r) {
+  Promise.resolve(r0).then(function (r) {
     var foto = { dataUrl: r.dataUrl, img: r.img, medida: null, status: "nova" };
     estado.fotos.push(foto);
     salvarSessao();
@@ -742,7 +778,7 @@ function mostrar() {
   h += '<div class="grade2">';
   if (estado.origem === "foto") {
     h += '<button type="button" class="btn sec" id="btnAjustar">✋ Ajustar na foto</button>';
-    if (estado.fotos.length < MAX_FOTOS) h += '<label for="arquivo" class="btn sec" role="button" tabindex="0">➕ Outra foto</label>';
+    if (estado.fotos.length < MAX_FOTOS) h += '<button type="button" class="btn sec" onclick="tirarFoto()">➕ Outra foto</button>';
   }
   h += '<button type="button" class="btn sec" id="btnPenteRes">🔩 Conferir no pente</button></div>';
 

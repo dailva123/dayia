@@ -474,7 +474,9 @@
     ov.innerHTML =
       '<div class="ed-topo"><button type="button" class="ed-x" aria-label="Fechar">✕</button><b>Foto da rosca</b><button type="button" class="cam-ext">Câmera do celular</button></div>' +
       '<div class="cam-palco"><video playsinline muted autoplay></video>' +
-      '<div class="cam-guia"><span>Rosca de lado, bem perto e nítida</span></div>' +
+      '<div class="cam-dicas"><span>📏 <b>Bem perto:</b> a rosca enchendo a moldura</span><span>↔️ <b>De lado:</b> com os filetes aparecendo</span>' +
+      '<span>💡 <b>Claro:</b> use a lanterna 🔦 se precisar</span><span>✋ <b>Parado:</b> espere ficar nítido</span></div>' +
+      '<div class="cam-guia"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><span>Coloque a rosca aqui</span></div>' +
       '<div class="cam-msg"><p>Abrindo a câmera…</p><button type="button" class="btn cam-plan" hidden>📷 Abrir a câmera do celular</button></div>' +
       '<div class="cam-zoom" hidden><span>1x</span><input type="range" aria-label="Zoom da câmera"><span class="cam-zv"></span></div>' +
       '<div class="cam-flash"></div></div>' +

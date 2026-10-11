@@ -187,8 +187,16 @@ form.manual label small{font-weight:500;color:var(--mute)}
 .ed-acoes{display:flex;gap:10px}.ed-acoes .btn{font-size:15px;padding:12px}
 .cam-palco{position:relative;flex:1;min-height:0;background:#000;overflow:hidden}
 .cam-palco video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.cam-guia{position:absolute;left:12%;right:12%;top:22%;bottom:22%;border:2px dashed rgba(255,255,255,.75);border-radius:16px;pointer-events:none}
-.cam-guia span{position:absolute;left:0;right:0;top:-34px;text-align:center;color:#fff;font-weight:800;font-size:14px;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.cam-guia{position:absolute;left:14%;right:14%;top:30%;bottom:24%;pointer-events:none}
+.cam-guia i{position:absolute;width:34px;height:34px;border:4px solid var(--sun);filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+.cam-guia .c1{top:0;left:0;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
+.cam-guia .c2{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 10px 0 0}
+.cam-guia .c3{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 10px}
+.cam-guia .c4{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 10px 0}
+.cam-guia span{position:absolute;left:0;right:0;bottom:-30px;text-align:center;color:#fff;font-weight:800;font-size:14px;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.cam-dicas{position:absolute;left:10px;right:10px;top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;pointer-events:none}
+.cam-dicas span{background:rgba(14,34,56,.78);color:#fff;font-size:12px;line-height:1.3;padding:6px 8px;border-radius:10px}
+.cam-dicas b{color:var(--sun)}
 .cam-msg{position:absolute;left:16px;right:16px;top:34%;text-align:center;color:#fff;font-weight:700}.cam-msg p{margin:0 0 14px}
 .cam-barra{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px calc(16px + env(safe-area-inset-bottom));background:#0B1B2C}
 .cam-barra .lado{width:64px;display:flex;justify-content:center}
@@ -343,9 +351,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=15"></script>
-<script src="tabelas.js?v=15"></script>
-<script src="medir.js?v=15"></script>
+<script src="config.js?v=16"></script>
+<script src="tabelas.js?v=16"></script>
+<script src="medir.js?v=16"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -672,6 +680,7 @@ function editarFoto(foto) {
 }
 
 function atualizarMedida() {
+  ls("rf-ja-mediu", "1");
   salvarSessao();
   var j = Roscas.juntar(estado.fotos.map(function (f) { return f.medida; }));
   if (!j) return;
@@ -880,6 +889,7 @@ function bt(q, f, txt) {
   return '<button type="button" data-q="' + q + '" data-f="' + f + '" aria-pressed="' + (estado.respondeu && atual === f ? "true" : "false") + '">' + txt + "</button>";
 }
 
+if (ls("rf-ja-mediu") !== "1") $("#dicasBox").open = true; // primeira vez: dicas abertas
 restaurarSessao();
 if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} }
 </script>

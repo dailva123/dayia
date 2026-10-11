@@ -32,10 +32,14 @@
     ov.className = "editor";
     ov.innerHTML =
       '<div class="ed-topo"><button type="button" class="ed-x" aria-label="Fechar">✕</button><b>Ajustar na foto</b><span></span></div>' +
-      '<div class="ed-palco"><canvas></canvas><canvas class="ed-lupa" width="240" height="240"></canvas></div>' +
+      '<div class="ed-palco"><canvas class="ed-foto"></canvas><canvas class="ed-lupa" width="240" height="240"></canvas>' +
+      '<div class="ed-zoom"><button type="button" data-z="in" aria-label="Aumentar a foto">+</button><button type="button" data-z="out" aria-label="Diminuir a foto">−</button>' +
+      '<button type="button" data-z="trazer" aria-label="Trazer os marcadores para cá">📍</button><button type="button" data-z="rosca" aria-label="Ir para os marcadores">🎯</button><button type="button" data-z="tudo" aria-label="Ver a foto inteira">⤢</button></div>' +
+      '<div class="ed-zoom-tag" aria-live="polite"></div></div>' +
       '<div class="ed-painel">' +
-      '<p class="ed-dica"><span class="bol am"></span>Arraste as <b>amarelas</b> até as bordas da rosca (pico a pico). ' +
-      '<span class="bol az"></span>Arraste as <b>azuis</b> até dois picos de filete e ajuste os tracinhos em cima dos filetes.</p>' +
+      '<p class="ed-dica">🔍 Use <b>dois dedos</b> para aumentar a foto e <b>um dedo</b> para arrastar. ' +
+      '<span class="bol am"></span><b>Amarelas</b> nas bordas da rosca. <span class="bol az"></span><b>Azuis</b> em dois picos de filete; ' +
+      'o <b>botão de setas</b> ✥ arrasta o pente inteiro sem mudar o tamanho. 📍 traz tudo para onde você está olhando.</p>' +
       '<div class="ed-linha"><span>Filetes entre as azuis</span><div class="ed-n"><button type="button" data-n="-1" aria-label="Menos">−</button><output>' + n + '</output><button type="button" data-n="1" aria-label="Mais">+</button></div></div>' +
       '<div class="ed-linha"><span>Referência na foto</span><select aria-label="Referência na foto">' +
       '<option value="nenhuma">Nenhuma</option><option value="cartao_maior">Cartão · lado maior</option>' +
@@ -46,22 +50,57 @@
       "</div>";
     document.body.appendChild(ov);
     document.body.style.overflow = "hidden";
-    var cv = $(".ed-palco canvas", ov), ctx = cv.getContext("2d");
+    var palco = $(".ed-palco", ov);
+    var cv = $(".ed-foto", ov), ctx = cv.getContext("2d");
     var lupa = $(".ed-lupa", ov), lctx = lupa.getContext("2d");
     var sel = $("select", ov); sel.value = ref;
-    var escala = 1, ox = 0, oy = 0, arrastando = null, dpr = window.devicePixelRatio || 1;
+    var dpr = window.devicePixelRatio || 1;
+    // vista: tela = ponto_da_foto * S + (tx, ty);  S = base * zoom
+    var base = 1, zoom = 1, tx = 0, ty = 0, pw = 0, ph = 0, ZMAX = 12;
+    var dedos = {}, arrastando = null, pinca = null, pan = null;
 
-    function layout() {
-      var palco = $(".ed-palco", ov), pw = palco.clientWidth, ph = palco.clientHeight;
-      escala = Math.min(pw / W, ph / H);
-      var cw = W * escala, ch = H * escala;
-      cv.style.width = cw + "px"; cv.style.height = ch + "px";
-      cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
-      ox = (pw - cw) / 2; oy = (ph - ch) / 2;
-      cv.style.left = ox + "px"; cv.style.top = oy + "px";
+    function S() { return base * zoom; }
+    function tela(p) { return [p[0] * S() + tx, p[1] * S() + ty]; }
+    function foto(sx, sy) { return [(sx - tx) / S(), (sy - ty) / S()]; }
+    function mostraZoom() { $(".ed-zoom-tag", ov).textContent = zoom > 1.05 ? zoom.toFixed(1).replace(".", ",") + "x" : ""; }
+    function limitar() {
+      // não deixa a foto sumir da tela
+      var w = W * S(), hh = H * S(), m = 60;
+      tx = w < pw ? (pw - w) / 2 : Math.min(m, Math.max(pw - w - m, tx));
+      ty = hh < ph ? (ph - hh) / 2 : Math.min(m, Math.max(ph - hh - m, ty));
+    }
+    function zoomEm(novo, sx, sy) {
+      novo = Math.max(1, Math.min(ZMAX, novo));
+      var p = foto(sx, sy);
+      zoom = novo;
+      tx = sx - p[0] * S(); ty = sy - p[1] * S();
+      limitar(); desenhar(); mostraZoom();
+    }
+    function enquadrar(pts, folga) {
+      var xs = pts.map(function (q) { return q[0]; }), ys = pts.map(function (q) { return q[1]; });
+      var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+      var bw = Math.max(40, x1 - x0) * folga, bh = Math.max(40, y1 - y0) * folga;
+      zoom = Math.max(1, Math.min(ZMAX, Math.min(pw / bw, ph / bh) / base));
+      tx = pw / 2 - (x0 + x1) / 2 * S(); ty = ph / 2 - (y0 + y1) / 2 * S();
+      limitar(); desenhar(); mostraZoom();
+    }
+    function irRosca() { enquadrar([h.a, h.b, h.c, h.d], 1.8); }
+    function visivel(p) { var q = tela(p); return q[0] >= 0 && q[0] <= pw && q[1] >= 0 && q[1] <= ph; }
+    // coloca os marcadores no meio do que está aparecendo (útil depois de aumentar a foto)
+    function trazer() {
+      var c = foto(pw / 2, ph / 2), lx = pw * 0.22 / S(), ly = ph * 0.2 / S();
+      h.a = [c[0] - lx, c[1]]; h.b = [c[0] + lx, c[1]];
+      h.c = [c[0] + lx * 0.25, c[1] - ly]; h.d = [c[0] + lx * 0.25, c[1] + ly];
       desenhar();
     }
-    function tela(p) { return [p[0] * escala, p[1] * escala]; }
+    function trazerSeSumiram() { if (![h.a, h.b, h.c, h.d].some(visivel)) trazer(); }
+    function layout() {
+      pw = palco.clientWidth; ph = palco.clientHeight;
+      cv.style.width = pw + "px"; cv.style.height = ph + "px";
+      cv.width = Math.round(pw * dpr); cv.height = Math.round(ph * dpr);
+      base = Math.min(pw / W, ph / H);
+      limitar(); desenhar();
+    }
     function medida() {
       var dpx = dist(h.a, h.b), passoPx = dist(h.c, h.d) / n;
       var m = { razao: passoPx > 0 ? dpx / passoPx : 0, diametro_px: dpx, passo_px: passoPx, ajustada: true, certeza: 90, tem_referencia: false };
@@ -72,36 +111,65 @@
       }
       return m;
     }
+    function meioCD() { return [(h.c[0] + h.d[0]) / 2, (h.c[1] + h.d[1]) / 2]; }
+    function meioAB() { return [(h.a[0] + h.b[0]) / 2, (h.a[1] + h.b[1]) / 2]; }
+    // puxador: arrasta o par inteiro (pente ou diâmetro) sem mudar tamanho nem inclinação
+    var PARES = { m: ["c", "d"], ma: ["a", "b"] };
+    function centro(k) { return k === "m" ? meioCD() : k === "ma" ? meioAB() : h[k]; }
     function bolinha(p, cor, rot) {
       var s = tela(p);
-      ctx.beginPath(); ctx.arc(s[0], s[1], 11, 0, 7); ctx.fillStyle = cor; ctx.globalAlpha = .35; ctx.fill(); ctx.globalAlpha = 1;
-      ctx.beginPath(); ctx.arc(s[0], s[1], 5, 0, 7); ctx.fillStyle = cor; ctx.fill();
+      ctx.beginPath(); ctx.arc(s[0], s[1], 13, 0, 7); ctx.fillStyle = cor; ctx.globalAlpha = .3; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(s[0], s[1], 4, 0, 7); ctx.fillStyle = cor; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
-      if (rot) { ctx.font = "700 11px Archivo, sans-serif"; ctx.fillStyle = "#fff"; ctx.fillText(rot, s[0] + 13, s[1] - 9); }
+      if (rot) { ctx.font = "700 11px Archivo, sans-serif"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.strokeText(rot, s[0] + 15, s[1] - 10); ctx.fillStyle = "#fff"; ctx.fillText(rot, s[0] + 15, s[1] - 10); }
+    }
+    function puxador(p, cor) {
+      // botão de mover (setas nas 4 direções), sempre do mesmo tamanho na tela
+      var s = tela(p), r = 13, x = s[0], y = s[1];
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 6;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x - r, y - r, 2 * r, 2 * r, 7); else ctx.rect(x - r, y - r, 2 * r, 2 * r);
+      ctx.fillStyle = cor; ctx.fill();
+      ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+      ctx.strokeStyle = "#fff"; ctx.fillStyle = "#fff"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x - 7, y); ctx.lineTo(x + 7, y); ctx.moveTo(x, y - 7); ctx.lineTo(x, y + 7); ctx.stroke();
+      [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(function (d) {
+        var ax = x + d[0] * 8, ay = y + d[1] * 8;
+        ctx.beginPath(); ctx.moveTo(ax, ay);
+        ctx.lineTo(ax - d[0] * 3.5 - d[1] * 3, ay - d[1] * 3.5 - d[0] * 3);
+        ctx.lineTo(ax - d[0] * 3.5 + d[1] * 3, ay - d[1] * 3.5 + d[0] * 3);
+        ctx.closePath(); ctx.fill();
+      });
+      ctx.restore();
     }
     function linha(p, q, cor, w) { var s = tela(p), t = tela(q); ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(t[0], t[1]); ctx.strokeStyle = cor; ctx.lineWidth = w || 2; ctx.stroke(); }
     function desenhar() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.drawImage(img, 0, 0, W * escala, H * escala);
-      // pente virtual sobre os filetes
+      ctx.fillStyle = "#0B1B2C"; ctx.fillRect(0, 0, pw, ph);
+      ctx.imageSmoothingEnabled = zoom < 4;
+      ctx.drawImage(img, tx, ty, W * S(), H * S());
+      // pente virtual: tracinhos finos com contorno escuro, para aparecer em metal claro ou escuro
       var vx = h.d[0] - h.c[0], vy = h.d[1] - h.c[1], len = Math.hypot(vx, vy) || 1;
-      var px = -vy / len, py = vx / len, meio = dist(h.a, h.b) * 0.35 || 20;
+      var px = -vy / len, py = vx / len, meio = Math.max(dist(h.a, h.b) * 0.55, 12 / S());
       ctx.lineCap = "round";
       for (var i = 0; i <= n; i++) {
         var t = i / n, cx = h.c[0] + vx * t, cy = h.c[1] + vy * t;
-        linha([cx - px * meio, cy - py * meio], [cx + px * meio, cy + py * meio], "rgba(43,140,232,.95)", i === 0 || i === n ? 2.5 : 1.6);
+        var p1 = [cx - px * meio, cy - py * meio], p2 = [cx + px * meio, cy + py * meio];
+        linha(p1, p2, "rgba(0,0,0,.55)", 3.5);
+        linha(p1, p2, i === 0 || i === n ? "#2B8CE8" : "#7FC4FF", i === 0 || i === n ? 2 : 1.4);
       }
-      linha(h.c, h.d, "rgba(43,140,232,.6)", 1.5);
-      linha(h.a, h.b, "#F2C230", 2.5);
+      linha(h.c, h.d, "rgba(43,140,232,.5)", 1.2);
+      linha(h.a, h.b, "rgba(0,0,0,.5)", 4); linha(h.a, h.b, "#F2C230", 2);
       bolinha(h.a, "#F2C230"); bolinha(h.b, "#F2C230", "diâmetro");
       bolinha(h.c, "#2B8CE8"); bolinha(h.d, "#2B8CE8", n + " filetes");
+      puxador(meioCD(), "#2B8CE8"); puxador(meioAB(), "#C99A0E");
       if (sel.value !== "nenhuma") { linha(h.r1, h.r2, "#1F8A5B", 2.5); bolinha(h.r1, "#1F8A5B"); bolinha(h.r2, "#1F8A5B", "referência"); }
       var m = medida(), txt = opts.previa ? opts.previa(m) : "";
       $(".ed-previa", ov).innerHTML = "Proporção <b>" + fmt(m.razao) + "</b>" + (m.tem_referencia ? " · diâmetro <b>" + fmt(m.diametro_mm) + " mm</b>" : "") + (txt ? " → " + txt : "");
     }
     function lupaEm(p) {
-      var z = 3, L = 240, s = L / z / escala; // região da imagem original
+      var L = 240, z = Math.max(2.5, 6 / zoom), s = L / z / S(); // região da foto mostrada na lupa
       lctx.clearRect(0, 0, L, L);
       lctx.save(); lctx.beginPath(); lctx.arc(L / 2, L / 2, L / 2 - 2, 0, 7); lctx.clip();
       lctx.fillStyle = "#000"; lctx.fillRect(0, 0, L, L);
@@ -110,30 +178,97 @@
       lctx.strokeStyle = "#F2C230"; lctx.lineWidth = 2;
       lctx.beginPath(); lctx.moveTo(L / 2 - 16, L / 2); lctx.lineTo(L / 2 + 16, L / 2); lctx.moveTo(L / 2, L / 2 - 16); lctx.lineTo(L / 2, L / 2 + 16); lctx.stroke();
       lctx.beginPath(); lctx.arc(L / 2, L / 2, L / 2 - 2, 0, 7); lctx.lineWidth = 4; lctx.strokeStyle = "#fff"; lctx.stroke();
-      var sx = p[0] * escala + ox;
-      lupa.style.left = (sx < ov.clientWidth / 2 ? ov.clientWidth - 140 : 20) + "px";
+      var sx = tela(p)[0];
+      lupa.style.left = (sx < pw / 2 ? pw - 140 : 20) + "px";
       lupa.hidden = false;
     }
-    function pos(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / escala, (e.clientY - r.top) / escala]; }
-    cv.addEventListener("pointerdown", function (e) {
-      var p = pos(e), melhor = null, md = 34 / escala;
-      ["a", "b", "c", "d"].concat(sel.value !== "nenhuma" ? ["r1", "r2"] : []).forEach(function (k) {
-        var dd = dist(p, h[k]); if (dd < md) { md = dd; melhor = k; }
+    function ponto(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+    function alvoEm(s) {
+      var melhor = null, md = 30;
+      var chaves = ["a", "b", "c", "d", "m", "ma"].concat(sel.value !== "nenhuma" ? ["r1", "r2"] : []);
+      chaves.forEach(function (k) {
+        var q = tela(centro(k)), dd = Math.hypot(q[0] - s[0], q[1] - s[1]);
+        if (dd < md) { md = dd; melhor = k; }
       });
-      if (!melhor) return;
-      arrastando = { k: melhor, dx: h[melhor][0] - p[0], dy: h[melhor][1] - p[1] };
-      cv.setPointerCapture(e.pointerId); lupaEm(h[melhor]); e.preventDefault();
+      return melhor;
+    }
+    cv.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+      dedos[e.pointerId] = ponto(e);
+      var ids = Object.keys(dedos);
+      if (ids.length === 2) {
+        // dois dedos: pinça para aumentar/diminuir (cancela o arraste)
+        arrastando = null; pan = null; lupa.hidden = true;
+        var a = dedos[ids[0]], b = dedos[ids[1]];
+        pinca = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z: zoom, c: foto((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) };
+        return;
+      }
+      if (ids.length > 2) return;
+      var s = dedos[e.pointerId], k = alvoEm(s);
+      if (k) {
+        var f = foto(s[0], s[1]), base0 = centro(k);
+        arrastando = { k: k, dx: base0[0] - f[0], dy: base0[1] - f[1] };
+        lupaEm(base0);
+      } else {
+        pan = { x: s[0], y: s[1], tx: tx, ty: ty };
+      }
     });
     cv.addEventListener("pointermove", function (e) {
-      if (!arrastando) return;
-      var p = pos(e);
-      h[arrastando.k] = [Math.max(0, Math.min(W, p[0] + arrastando.dx)), Math.max(0, Math.min(H, p[1] + arrastando.dy))];
-      desenhar(); lupaEm(h[arrastando.k]);
+      if (!dedos[e.pointerId]) return;
+      dedos[e.pointerId] = ponto(e);
+      var ids = Object.keys(dedos);
+      if (pinca && ids.length >= 2) {
+        var a = dedos[ids[0]], b = dedos[ids[1]], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
+        var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        zoom = Math.max(1, Math.min(ZMAX, pinca.z * d / pinca.d));
+        tx = mx - pinca.c[0] * S(); ty = my - pinca.c[1] * S();
+        limitar(); desenhar(); mostraZoom();
+        return;
+      }
+      var s = dedos[e.pointerId];
+      if (arrastando) {
+        var f = foto(s[0], s[1]), nx = Math.max(0, Math.min(W, f[0] + arrastando.dx)), ny = Math.max(0, Math.min(H, f[1] + arrastando.dy));
+        if (PARES[arrastando.k]) {
+          var par = PARES[arrastando.k], m0 = centro(arrastando.k), ddx = nx - m0[0], ddy = ny - m0[1];
+          h[par[0]] = [h[par[0]][0] + ddx, h[par[0]][1] + ddy]; h[par[1]] = [h[par[1]][0] + ddx, h[par[1]][1] + ddy];
+          desenhar(); lupaEm(h[par[0]]);
+        } else {
+          h[arrastando.k] = [nx, ny];
+          desenhar(); lupaEm(h[arrastando.k]);
+        }
+      } else if (pan) {
+        tx = pan.tx + s[0] - pan.x; ty = pan.ty + s[1] - pan.y;
+        limitar(); desenhar();
+      }
     });
-    function solta() { arrastando = null; lupa.hidden = true; }
+    var ultimoToque = 0;
+    function solta(e) {
+      var s = dedos[e.pointerId], eraPan = pan && s && Math.hypot(s[0] - pan.x, s[1] - pan.y) < 8;
+      delete dedos[e.pointerId];
+      if (pinca && Object.keys(dedos).length < 2) { pinca = null; trazerSeSumiram(); }
+      if (!Object.keys(dedos).length) { arrastando = null; pan = null; lupa.hidden = true; }
+      // toque duplo na foto (fora das bolinhas): aumenta 2x ali, ou volta se já estiver bem perto
+      if (e.type === "pointerup" && eraPan) {
+        var agora = Date.now();
+        if (agora - ultimoToque < 320) { zoomEm(zoom >= ZMAX * 0.7 ? 1 : zoom * 2, s[0], s[1]); ultimoToque = 0; }
+        else ultimoToque = agora;
+      }
+    }
     cv.addEventListener("pointerup", solta); cv.addEventListener("pointercancel", solta);
+    cv.addEventListener("wheel", function (e) { e.preventDefault(); var s = ponto(e); zoomEm(zoom * (e.deltaY < 0 ? 1.2 : 1 / 1.2), s[0], s[1]); }, { passive: false });
     lupa.hidden = true;
 
+    ov.querySelectorAll("[data-z]").forEach(function (b) {
+      b.onclick = function () {
+        var z = b.dataset.z;
+        if (z === "in") { zoomEm(zoom * 1.6, pw / 2, ph / 2); trazerSeSumiram(); }
+        else if (z === "out") zoomEm(zoom / 1.6, pw / 2, ph / 2);
+        else if (z === "rosca") irRosca();
+        else if (z === "trazer") trazer();
+        else { zoom = 1; limitar(); desenhar(); mostraZoom(); }
+      };
+    });
     ov.querySelectorAll("[data-n]").forEach(function (b) {
       b.onclick = function () { n = Math.max(1, Math.min(40, n + Number(b.dataset.n))); $("output", ov).textContent = n; desenhar(); };
     });
@@ -151,7 +286,10 @@
     $(".ed-x", ov).onclick = fechar; $(".ed-cancelar", ov).onclick = fechar;
     $(".ed-ok", ov).onclick = function () { var m = medida(); fechar(); opts.pronto(m); };
     window.addEventListener("resize", layout);
-    requestAnimationFrame(layout);
+    requestAnimationFrame(function () {
+      layout();
+      if (opts.pontos) irRosca(); // a IA já marcou: abre aproximado na rosca
+    });
   }
 
   /* =================================================================

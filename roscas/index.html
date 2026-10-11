@@ -185,7 +185,7 @@ header.top>*{position:relative;z-index:1}
 
   <!-- MODO FOTO -->
   <section class="card entra" id="modoFoto" style="animation-delay:2.9s">
-    <h2><span class="num">2</span>Foto da peça com um cartão ao lado</h2>
+    <h2><span class="num">2</span>Tire a foto da rosca</h2>
     <input type="file" id="arquivo" accept="image/*" capture="environment" hidden>
     <input type="file" id="galeria" accept="image/*" hidden>
     <label for="arquivo" class="btn" role="button" tabindex="0" id="btnFoto">
@@ -199,21 +199,21 @@ header.top>*{position:relative;z-index:1}
     <details id="dicasBox">
       <summary>Como tirar a foto certa</summary>
       <div class="dicas">
-        <img src="exemplo.jpg" alt="Exemplo: cartão de banco deitado ao lado da conexão, foto tirada de cima">
+        <img src="exemplo.jpg" alt="Exemplo: conexão fotografada de perto, com a rosca de lado e os filetes nítidos">
         <ul>
-          <li>Coloque um <b>cartão de banco</b> (ou uma régua) ao lado da peça.</li>
-          <li>Tire a foto <b>de cima</b>, com o celular reto.</li>
+          <li>Tire a foto <b>de perto</b>, com a rosca ocupando boa parte da tela.</li>
           <li>Deixe a rosca <b>de lado</b>, mostrando os filetes.</li>
-          <li>Cartão inteiro na foto, sem cortar.</li>
+          <li>Espere ficar <b>nítido</b>: os filetes precisam aparecer bem.</li>
           <li>Lugar claro, sem tremer.</li>
+          <li>Tem um cartão ou régua por perto? Coloque ao lado: a medida fica ainda mais certa. Mas não é obrigatório.</li>
         </ul>
       </div>
     </details>
     <div class="foto" id="preview" hidden><img alt="Foto enviada"><div class="scan"><div class="grade"></div><div class="laser"></div><span class="canto c1"></span><span class="canto c2"></span><span class="canto c3"></span><span class="canto c4"></span></div></div>
     <div class="carregando" id="carregando" hidden><ul class="etapas" id="etapas">
-      <li><span class="ck"></span>Achando o cartão de referência</li>
-      <li><span class="ck"></span>Medindo o diâmetro da rosca</li>
+      <li><span class="ck"></span>Achando a rosca na foto</li>
       <li><span class="ck"></span>Contando os filetes</li>
+      <li><span class="ck"></span>Medindo a proporção da rosca</li>
       <li><span class="ck"></span>Comparando com as tabelas BSP e NPT</li>
     </ul></div>
     <div id="msgFoto"></div>
@@ -337,11 +337,10 @@ function receberFoto() {
     }).then(function (d) {
       if (!d.ok) { aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.")); return; }
       var m = d.medida || {};
-      if (m.rosca_visivel === false || !(Number(m.diametro_mm) > 0)) {
-        aviso("#msgFoto", "erro", "Não consegui ver a rosca direito. " + esc(m.problemas || "Tente outra foto seguindo as dicas.")); $("#dicasBox").open = true; return;
-      }
-      if (m.referencia === "nenhuma") {
-        aviso("#msgFoto", "erro", "Não achei o cartão ou a régua na foto. Sem ele não dá para saber o tamanho real da rosca. Fotos tiradas da internet normalmente não têm essa referência: coloque um cartão ao lado da peça e tire uma foto nova, ou use a aba <b>Já tenho a medida</b>."); $("#dicasBox").open = true; return;
+      m.razao = Number(m.razao_diametro_passo) || (m.diametro_px && m.passo_px ? m.diametro_px / m.passo_px : 0);
+      m.tem_referencia = !!m.tem_referencia && Number(m.diametro_mm) > 0;
+      if (m.rosca_visivel === false || !(m.razao > 0 || m.tem_referencia)) {
+        aviso("#msgFoto", "erro", "Não consegui ver os filetes direito. " + esc(m.problemas || "Tente outra foto, mais de perto e de lado.")); $("#dicasBox").open = true; return;
       }
       if (m.tipo === "macho" || m.tipo === "femea") marcarTipo(m.tipo);
       estado.medida = m; estado.formaUsuario = ""; estado.respondeu = false; estado.origem = "foto";
@@ -404,7 +403,7 @@ $("#formManual").onsubmit = function (e) {
   var v = num($("#mDiam").value), fios = num($("#mFios").value);
   if (!(v > 0)) return;
   var mm = $("#mUnid").value === "pol" ? v * 25.4 : v;
-  estado.medida = { diametro_mm: mm, fios_por_polegada: fios > 0 ? fios : null, passo_mm: fios > 0 ? 25.4 / fios : null, forma: "indefinida" };
+  estado.medida = { diametro_mm: mm, tem_referencia: true, fios_por_polegada: fios > 0 ? fios : null, passo_mm: fios > 0 ? 25.4 / fios : null, forma: "indefinida" };
   estado.formaUsuario = ""; estado.respondeu = false; estado.origem = "manual";
   mostrar();
 };
@@ -418,7 +417,7 @@ function aviso(alvo, tipo, html) { $(alvo).innerHTML = '<div class="aviso ' + ti
 
 function mostrar() {
   var m = estado.medida, forma = estado.formaUsuario;
-  var lista = Roscas.comparar({ diametro_mm: m.diametro_mm, fios_por_polegada: m.fios_por_polegada, forma: forma }, estado.tipo);
+  var lista = Roscas.comparar({ diametro_mm: m.diametro_mm, tem_referencia: m.tem_referencia, fios_por_polegada: m.fios_por_polegada, razao: m.razao, diametro_estimado_mm: m.diametro_estimado_mm, forma: forma }, estado.tipo);
   var r = Roscas.resumir(lista);
   var box = $("#resultado");
   if (!r) { box.hidden = true; return; }
@@ -431,10 +430,13 @@ function mostrar() {
 
   var conf = r.confianca;
   if (estado.origem === "foto" && Number(m.certeza) < 50 && conf === "alta") conf = "média";
-  var confTxt = { alta: "Medida bem próxima da tabela", "média": "Medida razoável, vale conferir", baixa: "Medida longe da tabela, confira" }[conf];
+  var confTxt = r.semReferencia
+    ? { "média": "Confira o tamanho com a peça na mão", baixa: "Foto difícil, confira com a peça" }[conf] || "Confira com a peça na mão"
+    : { alta: "Medida bem próxima da tabela", "média": "Medida razoável, vale conferir", baixa: "Medida longe da tabela, confira" }[conf];
 
-  var h = '<div class="res-topo"><div class="rot">Rosca encontrada</div>' +
+  var h = '<div class="res-topo"><div class="rot">' + (r.semReferencia ? "Rosca provável" : "Rosca encontrada") + '</div>' +
     '<div class="bitola">' + polB(r.melhor.bitola) + '</div><div class="norma">' + titulo + '</div>' +
+    (r.semReferencia ? '<div style="color:var(--mute);font-size:14px;margin-top:4px">mais ou menos ' + fmt(r.melhor.diametro, 0) + ' mm de diâmetro</div>' : "") +
     '<span class="selo ' + conf + '">' + confTxt + '</span><div class="barra"><i class="' + conf + '"></i></div></div>';
 
   // pergunta reta ou cônica (resolve BSP reta x cônica)
@@ -451,7 +453,10 @@ function mostrar() {
   }
 
   h += "<h3>Medida " + (estado.origem === "foto" ? "na foto" : "informada") + "</h3><table>" +
-    "<tr><th>Diâmetro</th><td><span class=\"conta\" data-v=\"" + m.diametro_mm + "\">" + fmt(m.diametro_mm, 1) + "</span> mm · " + Roscas.pol(m.diametro_mm) + "</td></tr>" +
+    (m.tem_referencia
+      ? "<tr><th>Diâmetro</th><td><span class=\"conta\" data-v=\"" + m.diametro_mm + "\">" + fmt(m.diametro_mm, 1) + "</span> mm · " + Roscas.pol(m.diametro_mm) + "</td></tr>"
+      : "<tr><th>Filetes no diâmetro</th><td><span class=\"conta\" data-v=\"" + m.razao + "\">" + fmt(m.razao, 1) + "</span> <small style=\"font-weight:500;color:var(--mute)\">(diâmetro ÷ passo)</small></td></tr>" +
+        (m.diametro_estimado_mm ? "<tr><th>Tamanho no olho</th><td>≈ " + fmt(m.diametro_estimado_mm, 0) + " mm</td></tr>" : "")) +
     (m.fios_por_polegada ? "<tr><th>Fios por polegada</th><td>" + fmt(m.fios_por_polegada, 1).replace(",0", "") + "</td></tr>" : "") +
     (m.passo_mm ? "<tr><th>Passo</th><td>" + fmt(m.passo_mm, 2) + " mm</td></tr>" : "") +
     "</table>";
@@ -465,12 +470,12 @@ function mostrar() {
   });
 
   if (r.outras.length) {
-    h += '<h3>Se não bater, pode ser</h3><div class="chips">' + r.outras.map(function (o) { return "<span>" + polB(o.bitola) + "</span>"; }).join("") + "</div>";
+    h += '<h3>Se não bater, pode ser</h3><div class="chips">' + r.outras.map(function (o) { return "<span>" + polB(o.bitola) + " <small style=\"font-weight:500;color:var(--mute)\">≈ " + fmt(o.diametro, 0) + " mm</small></span>"; }).join("") + "</div>";
   }
   if (estado.origem === "foto" && m.problemas) h += '<div class="aviso atencao">' + esc(m.problemas) + "</div>";
 
   var zap = "Rosca encontrada pelo " + (NOME ? "medidor da " + NOME : "Rosca Fácil") + ": " + r.melhor.bitola + "\" " + titulo +
-    " (medida: " + fmt(m.diametro_mm, 1) + " mm / " + Roscas.pol(m.diametro_mm) + ")";
+    (m.tem_referencia ? " (medida: " + fmt(m.diametro_mm, 1) + " mm / " + Roscas.pol(m.diametro_mm) + ")" : " (cerca de " + fmt(r.melhor.diametro, 0) + " mm de diâmetro)");
   h += '<div class="linha"><button type="button" class="btn sec" id="btnNovo">Medir outra</button>' +
     '<a class="btn zap" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(zap) + '">Enviar pelo WhatsApp</a></div>';
 

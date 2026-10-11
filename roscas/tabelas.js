@@ -40,21 +40,39 @@
     return out;
   }
 
-  /* medida: {diametro_mm, fios_por_polegada, forma: reta|conica|indefinida}
+  /* medida: {diametro_mm, fios_por_polegada, razao, diametro_estimado_mm, tem_referencia, forma}
+     - Com referência (cartão/régua): compara o diâmetro em mm (preciso).
+     - Sem referência (só a foto): compara a RAZÃO diâmetro ÷ passo, que não muda
+       com a distância da foto, e usa o tamanho estimado só para desempatar.
      Retorna lista ordenada do mais provável ao menos provável. */
   function comparar(medida, tipo) {
     var d = Number(medida.diametro_mm);
-    if (!(d > 0)) return [];
+    var razao = Number(medida.razao) || 0;
+    var est = Number(medida.diametro_estimado_mm) || 0;
+    var comRef = d > 0 && medida.tem_referencia !== false;
+    if (!comRef && !(razao > 0)) {
+      if (est > 0) { d = est; comRef = true; } else return [];
+    }
     var tpi = Number(medida.fios_por_polegada) || 0;
     var forma = medida.forma === "reta" || medida.forma === "conica" ? medida.forma : "";
     var lista = linhas(tipo).filter(function (l) { return !forma || l.forma === forma; });
     lista.forEach(function (l) {
-      var erroD = Math.abs(d - l.diametro) / l.diametro;          // erro relativo do diâmetro
-      var erroT = tpi ? Math.abs(tpi - l.tpi) / l.tpi : 0;         // erro relativo dos fios
-      l.erro_mm = +Math.abs(d - l.diametro).toFixed(2);
-      l.pontos = erroD + 0.35 * erroT;
+      var refRazao = l.nominal / (25.4 / l.tpi);
+      if (comRef) {
+        var erroD = Math.abs(d - l.diametro) / l.diametro;          // erro relativo do diâmetro
+        var erroT = tpi ? Math.abs(tpi - l.tpi) / l.tpi : 0;         // erro relativo dos fios
+        var erroR = razao ? Math.abs(razao - refRazao) / refRazao : 0;
+        l.erro_mm = +Math.abs(d - l.diametro).toFixed(2);
+        l.pontos = erroD + 0.35 * erroT + 0.2 * erroR;
+      } else {
+        var eR = Math.abs(razao - refRazao) / refRazao;
+        var eE = est > 0 ? Math.abs(Math.log(est / l.diametro)) : 0;  // tamanho "no olho"
+        l.pontos = eR + 0.12 * eE;
+      }
+      l.razao = +refRazao.toFixed(1);
     });
     lista.sort(function (a, b) { return a.pontos - b.pontos; });
+    lista.semReferencia = !comRef;
     return lista;
   }
 
@@ -72,7 +90,11 @@
       vistos[l.bitola] = 1; outras.push(l);
     });
     var conf = m.pontos < 0.03 ? "alta" : m.pontos < 0.08 ? "média" : "baixa";
-    return { melhor: m, empate: empate, outras: outras, confianca: conf };
+    if (lista.semReferencia) {
+      // sem referência: no máximo "média", e cai se outra bitola ficou perto
+      conf = m.pontos > 0.12 ? "baixa" : "média";
+    }
+    return { melhor: m, empate: empate, outras: outras, confianca: conf, semReferencia: !!lista.semReferencia };
   }
 
   function pol(mm) { return (mm / 25.4).toFixed(3).replace(".", ",") + "\""; }

@@ -207,6 +207,7 @@
       espalho: +espalho.toFixed(3),
       problemas: ok.map(function (m) { return m.problemas; }).filter(Boolean)[0] || "",
       marcacao: ok.map(function (m) { return m.marcacao; }).filter(Boolean)[0] || "",
+      pente_auto: ok.map(function (m) { return m.pente_auto; }).filter(Boolean)[0] || "",
       pente_fios: ok.map(function (m) { return Number(m.pente_fios) || 0; }).filter(Boolean)[0] || null,
       pente_passo_mm: ok.map(function (m) { return Number(m.pente_passo_mm) || 0; }).filter(Boolean)[0] || null,
       pente_angulo: ok.map(function (m) { return Number(m.pente_angulo) || 0; }).filter(Boolean)[0] || null

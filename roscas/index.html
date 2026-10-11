@@ -359,9 +359,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=21"></script>
-<script src="tabelas.js?v=21"></script>
-<script src="medir.js?v=21"></script>
+<script src="config.js?v=22"></script>
+<script src="tabelas.js?v=22"></script>
+<script src="medir.js?v=22"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -596,6 +596,13 @@ function processarFoto(r0) {
       if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
       var m = normalizar(d.medida || {});
       foto.medida = m;
+      if (m.rosca_visivel !== false && !(Roscas.razaoPossivel(m.razao) || m.tem_referencia) && m.pontos) {
+        // a IA achou a rosca mas a contagem não fechou: o app encaixa o pente de rosca na foto sozinho
+        foto.status = "erro"; desenharFotos();
+        aviso("#msgFoto", "info", "Vou encaixar o pente de rosca na foto para conferir os filetes…");
+        setTimeout(function () { editarFoto(foto); }, 400);
+        return;
+      }
       if (m.rosca_visivel === false || !(Roscas.razaoPossivel(m.razao) || m.tem_referencia)) {
         foto.status = "erro"; desenharFotos();
         aviso("#msgFoto", "erro", "Não consegui ver os filetes direito. " + esc(m.problemas || "Tente outra foto, mais de perto e de lado.") +
@@ -690,6 +697,8 @@ function editarFoto(foto) {
     img: foto.img,
     pontos: foto.rascunho || m.pontos || null,
     salvar: function (p) { foto.rascunho = p; salvarSessao(); },
+    laminas: function () { return Roscas.linhas(estado.tipo, estado.familia); },
+    estimado: m.diametro_estimado_mm,
     previa: function (med) {
       var r = Roscas.resumir(Roscas.comparar(Object.assign({ diametro_estimado_mm: m.diametro_estimado_mm }, med), estado.tipo, estado.familia));
       return r ? "<b>" + r.melhor.rotulo + "</b>" : "";
@@ -816,10 +825,11 @@ function mostrar() {
 
   var extras = [];
   if (estado.origem === "foto" && m.fotos > 1) extras.push(m.fotos + " fotos");
-  if (estado.origem === "foto" && m.ajustada) extras.push("✋ ajustada à mão");
+  if (estado.origem === "foto" && m.ajustada && !m.pente_auto) extras.push("✋ ajustada à mão");
   if (estado.origem === "foto" && m.tem_referencia) extras.push("com referência");
   var pt = estado.pente || (m.pente_fios || m.pente_passo_mm ? { fios: m.pente_fios, passo: m.pente_passo_mm, angulo: m.pente_angulo } : null);
   if (pt) extras.push("🔩 pente: " + (pt.fios ? fmt(pt.fios, pt.fios % 1 ? 1 : 0) + " fios/pol" : fmt(pt.passo, 2) + " mm") + (pt.angulo ? " · " + pt.angulo + "°" : ""));
+  if (estado.origem === "foto" && m.pente_auto) extras.push("🔩 pente encaixado: " + esc(m.pente_auto));
   if (estado.origem === "foto" && r.melhor.marcada) extras.push("🔎 medida gravada na peça: " + esc(m.marcacao));
 
   var h = '<div class="res-topo"><div class="rot">' + (r.semReferencia ? "Rosca provável" : "Rosca encontrada") + "</div>" +
@@ -874,13 +884,11 @@ function mostrar() {
   if (estado.origem === "foto" && m.espalho > 0.1) h += '<div class="aviso atencao">As fotos deram medidas diferentes entre si. Toque em <b>Ajustar na foto</b> para corrigir com o dedo.</div>';
   if (estado.origem === "foto" && m.problemas) h += '<div class="aviso atencao">' + esc(m.problemas) + "</div>";
 
-  // pente de rosca físico: passo exato + ângulo
-  h += penteBloco();
 
   // ferramentas de precisão
   h += '<div class="grade2">';
   if (estado.origem === "foto") {
-    h += '<button type="button" class="btn sec" id="btnAjustar">✋ Ajustar na foto</button>';
+    h += '<button type="button" class="btn sec" id="btnAjustar">🔩 Pente na foto</button>';
     if (estado.fotos.length < MAX_FOTOS) h += '<button type="button" class="btn sec" onclick="tirarFoto(true)">➕ Outra foto da mesma peça</button>';
   }
   h += '<button type="button" class="btn sec" id="btnPenteRes">📱 Pente na tela</button></div>';

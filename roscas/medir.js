@@ -58,10 +58,11 @@
       '<button type="button" data-z="trazer" aria-label="Trazer os marcadores para cá">📍</button><button type="button" data-z="rosca" aria-label="Ir para os marcadores">🎯</button><button type="button" data-z="tudo" aria-label="Ver a foto inteira">⤢</button><button type="button" data-z="trava" class="ed-trava" aria-label="Foto travada: toque para soltar">🔒</button></div>' +
       '<div class="ed-zoom-tag" aria-live="polite"></div></div>' +
       '<div class="ed-painel">' +
-      '<p class="ed-dica">🔍 <b>Dois dedos</b> aumentam e movem a foto. <b>Um dedo</b> só ajusta: a foto fica travada 🔒. ' +
-      '<span class="bol am"></span><b>Amarelas</b> nas bordas da rosca. <span class="bol az"></span><b>Azuis</b> em dois picos de filete; ' +
-      'encostando em <b>qualquer tracinho</b> (ou no botão ✥) você arrasta o pente inteiro sem mudar o tamanho. 📍 traz tudo para onde você está olhando.</p>' +
-      '<div class="ed-linha"><span>Filetes entre as azuis</span><div class="ed-n"><button type="button" data-n="-1" aria-label="Menos">−</button><output>' + n + '</output><button type="button" data-n="1" aria-label="Mais">+</button></div></div>' +
+      '<button type="button" class="btn ed-auto">🔩 Encaixar o pente de rosca</button>' +
+      '<div class="ed-auto-msg" aria-live="polite"></div>' +
+      '<p class="ed-dica">O app testa as lâminas do pente nos filetes e encaixa a que serve. Se precisar: <b>dois dedos</b> aumentam a foto, ' +
+      '<span class="bol am"></span><b>amarelas</b> nas bordas da rosca, e o pente se arrasta pelo botão ✥.</p>' +
+      '<div class="ed-linha"><span>Dentes do pente</span><div class="ed-n"><button type="button" data-n="-1" aria-label="Menos">−</button><output>' + n + '</output><button type="button" data-n="1" aria-label="Mais">+</button></div></div>' +
       '<div class="ed-linha"><span>Referência na foto</span><select aria-label="Referência na foto">' +
       '<option value="nenhuma">Nenhuma</option><option value="cartao_maior">Cartão · lado maior</option>' +
       '<option value="cartao_menor">Cartão · lado menor</option><option value="outra">Outra medida…</option></select></div>' +
@@ -79,6 +80,7 @@
     // vista: tela = ponto_da_foto * S + (tx, ty);  S = base * zoom
     var base = 1, zoom = 1, tx = 0, ty = 0, pw = 0, ph = 0, ZMAX = 12;
     var dedos = {}, arrastando = null, pinca = null, pan = null;
+    var lamina = null; // lâmina do pente que o app encaixou (rótulo, fios, ângulo)
 
     function S() { return base * zoom; }
     function tela(p) { return [p[0] * S() + tx, p[1] * S() + ty]; }
@@ -124,7 +126,8 @@
     }
     function medida() {
       var dpx = dist(h.a, h.b), passoPx = dist(h.c, h.d) / n;
-      var m = { razao: passoPx > 0 ? dpx / passoPx : 0, diametro_px: dpx, passo_px: passoPx, ajustada: true, certeza: 90, tem_referencia: false };
+      var m = { razao: passoPx > 0 ? dpx / passoPx : 0, diametro_px: dpx, passo_px: passoPx, ajustada: true, certeza: 90, tem_referencia: false,
+        pente_auto: lamina ? lamina.texto : "" };
       var mmRef = ref === "outra" ? refOutra : REFS[ref];
       if (mmRef > 0) {
         var k = mmRef / dist(h.r1, h.r2);
@@ -170,25 +173,160 @@
       ctx.fillStyle = "#0B1B2C"; ctx.fillRect(0, 0, pw, ph);
       ctx.imageSmoothingEnabled = zoom < 4;
       ctx.drawImage(img, tx, ty, W * S(), H * S());
-      // pente virtual: tracinhos finos com contorno escuro, para aparecer em metal claro ou escuro
-      var vx = h.d[0] - h.c[0], vy = h.d[1] - h.c[1], len = Math.hypot(vx, vy) || 1;
-      var px = -vy / len, py = vx / len, meio = Math.max(dist(h.a, h.b) * 0.55, 12 / S());
-      ctx.lineCap = "round";
-      for (var i = 0; i <= n; i++) {
-        var t = i / n, cx = h.c[0] + vx * t, cy = h.c[1] + vy * t;
-        var p1 = [cx - px * meio, cy - py * meio], p2 = [cx + px * meio, cy + py * meio];
-        linha(p1, p2, "rgba(0,0,0,.55)", 3.5);
-        linha(p1, p2, i === 0 || i === n ? "#2B8CE8" : "#7FC4FF", i === 0 || i === n ? 2 : 1.4);
-      }
-      linha(h.c, h.d, "rgba(43,140,232,.5)", 1.2);
+      desenharLamina();
+      linha(h.c, h.d, "rgba(43,140,232,.45)", 1);
       linha(h.a, h.b, "rgba(0,0,0,.5)", 4); linha(h.a, h.b, "#F2C230", 2);
       bolinha(h.a, "#F2C230"); bolinha(h.b, "#F2C230", "diâmetro");
-      bolinha(h.c, "#2B8CE8"); bolinha(h.d, "#2B8CE8", n + " filetes");
+      bolinha(h.c, "#2B8CE8"); bolinha(h.d, "#2B8CE8");
       puxador(meioCD(), "#2B8CE8"); puxador(meioAB(), "#C99A0E");
       if (sel.value !== "nenhuma") { linha(h.r1, h.r2, "#1F8A5B", 2.5); bolinha(h.r1, "#1F8A5B"); bolinha(h.r2, "#1F8A5B", "referência"); }
       var m = medida(), txt = opts.previa ? opts.previa(m) : "";
       $(".ed-previa", ov).innerHTML = "Proporção <b>" + fmt(m.razao) + "</b>" + (m.tem_referencia ? " · diâmetro <b>" + fmt(m.diametro_mm) + " mm</b>" : "") + (txt ? " → " + txt : "");
     }
+    /* Lâmina de pente de rosca desenhada sobre a borda da rosca, com dentes no passo atual */
+    function geoPente() {
+      var vx = h.d[0] - h.c[0], vy = h.d[1] - h.c[1], len = Math.hypot(vx, vy) || 1;
+      var ux = vx / len, uy = vy / len, qx = -uy, qy = ux;
+      var sa = (h.a[0] - h.c[0]) * qx + (h.a[1] - h.c[1]) * qy;      // borda amarela "a" em relação ao eixo
+      var lado = sa >= 0 ? 1 : -1, borda = Math.abs(sa);
+      var pp = len / n, dente = pp * 0.62, corpo = Math.max(pp * 2.2, 16 / S());
+      return { len: len, ux: ux, uy: uy, qx: qx * lado, qy: qy * lado, borda: borda, pp: pp, dente: dente, corpo: corpo };
+    }
+    function PL(g, t, o) { return [h.c[0] + g.ux * t + g.qx * o, h.c[1] + g.uy * t + g.qy * o]; }
+    function desenharLamina() {
+      var g = geoPente(), pts = [];
+      var base = g.borda + g.dente * 0.15, ponta = g.borda - g.dente * 0.85, fora = base + g.corpo;
+      var t0 = -g.pp * 0.5, t1 = g.len + g.pp * 0.5;
+      pts.push(PL(g, t0, fora)); pts.push(PL(g, t0, base));
+      for (var k = 0; k <= n; k++) {
+        var t = k * g.pp;
+        pts.push(PL(g, t - g.pp / 2, base)); pts.push(PL(g, t, ponta)); pts.push(PL(g, t + g.pp / 2, base));
+      }
+      pts.push(PL(g, t1, base)); pts.push(PL(g, t1, fora));
+      ctx.save();
+      ctx.beginPath();
+      pts.forEach(function (q, i) { var s2 = tela(q); if (i) ctx.lineTo(s2[0], s2[1]); else ctx.moveTo(s2[0], s2[1]); });
+      ctx.closePath();
+      var a1 = tela(PL(g, 0, ponta)), a2 = tela(PL(g, 0, fora));
+      var gr = ctx.createLinearGradient(a1[0], a1[1], a2[0], a2[1]);
+      gr.addColorStop(0, "rgba(236,241,246,.92)"); gr.addColorStop(.5, "rgba(190,200,210,.9)"); gr.addColorStop(1, "rgba(150,162,176,.9)");
+      ctx.fillStyle = gr; ctx.fill();
+      ctx.lineWidth = 1.2; ctx.strokeStyle = lamina ? "rgba(31,138,91,.95)" : "rgba(40,50,62,.9)"; ctx.stroke();
+      // texto gravado na lâmina
+      var meioT = tela(PL(g, g.len / 2, base + g.corpo * 0.55)), ang = Math.atan2(g.uy, g.ux);
+      if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
+      var fs = Math.max(10, Math.min(15, g.corpo * S() * 0.42));
+      ctx.translate(meioT[0], meioT[1]); ctx.rotate(ang);
+      ctx.font = "800 " + fs + "px Archivo, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(40,50,62,.85)";
+      ctx.fillText(lamina ? lamina.texto : (n + " dentes"), 0, 0);
+      ctx.restore();
+    }
+
+    /* ---- Pente automático: mede o passo dos filetes na própria imagem e encaixa a lâmina que serve ---- */
+    var dadosImg = null;
+    function pixels() {
+      if (dadosImg) return dadosImg;
+      var c = document.createElement("canvas"); c.width = W; c.height = H;
+      var cx = c.getContext("2d"); cx.drawImage(img, 0, 0);
+      try { dadosImg = cx.getImageData(0, 0, W, H).data; } catch (e) { dadosImg = null; }
+      c.width = c.height = 0;
+      return dadosImg;
+    }
+    function brilho(x, y) {
+      var d = pixels(); x = Math.round(x); y = Math.round(y);
+      if (!d || x < 0 || y < 0 || x >= W || y >= H) return NaN;
+      var i = (y * W + x) * 4; return 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+    }
+    // perfil de brilho ao longo do eixo (média numa faixa no meio da rosca)
+    function perfil(ini, ux, uy, comp, larg) {
+      var qx = -uy, qy = ux, out = [];
+      for (var t = 0; t < comp; t++) {
+        var soma = 0, cont = 0;
+        for (var o = -larg; o <= larg; o += Math.max(1, larg / 8)) {
+          var v = brilho(ini[0] + ux * t + qx * o, ini[1] + uy * t + qy * o);
+          if (!isNaN(v)) { soma += v; cont++; }
+        }
+        out.push(cont ? soma / cont : 0);
+      }
+      return out;
+    }
+    function semTendencia(v, jan) {
+      var out = [], acc = 0, q = [];
+      for (var i = 0; i < v.length; i++) {
+        var a = Math.max(0, i - jan), b = Math.min(v.length - 1, i + jan), s2 = 0;
+        for (var k = a; k <= b; k++) s2 += v[k];
+        out.push(v[i] - s2 / (b - a + 1));
+      }
+      return out;
+    }
+    function medirPasso() {
+      var g = geoPente(), D = dist(h.a, h.b);
+      // mede num trecho longo da rosca (mais filetes = passo mais preciso), centrado no pente
+      var comp = Math.round(Math.max(g.len * 1.3, D * 1.4)), t0 = g.len / 2 - comp / 2, ini = PL(g, t0, 0);
+      if (comp < 30) return null;
+      // tira a variação lenta de brilho (reflexos) mantendo só a "ondinha" dos filetes (passo nunca passa de D/8)
+      var v = semTendencia(perfil(ini, g.ux, g.uy, comp, Math.max(3, D * 0.18)), Math.max(4, Math.round(D / 10)));
+      var ac0 = 0; v.forEach(function (x) { ac0 += x * x; });
+      if (!ac0) return null;
+      var melhor = 0, lagM = 0, minLag = 3, maxLag = Math.round(comp / 2.5);
+      var ac = [];
+      for (var lag = 0; lag <= maxLag; lag++) {
+        var s2 = 0; for (var i = 0; i + lag < v.length; i++) s2 += v[i] * v[i + lag];
+        ac.push(s2 / ac0);
+      }
+      // primeiro vale, depois o maior pico
+      var z = minLag; while (z < maxLag && ac[z] > 0) z++;
+      for (var L2 = z; L2 < maxLag; L2++) if (ac[L2] > melhor && ac[L2] >= ac[L2 - 1] && ac[L2] >= ac[L2 + 1]) { melhor = ac[L2]; lagM = L2; }
+      if (!lagM) return null;
+      var y0 = ac[lagM - 1], y1 = ac[lagM], y2 = ac[lagM + 1], den = y0 - 2 * y1 + y2;
+      var fino = lagM + (den ? 0.5 * (y0 - y2) / den : 0);
+      return { passo: fino, qualidade: melhor, perfil: v, ini: t0 };
+    }
+    function encaixarPente(silencioso) {
+      var msg = $(".ed-auto-msg", ov), D = dist(h.a, h.b);
+      var r = medirPasso();
+      if (!r || r.qualidade < 0.12 || !opts.laminas) {
+        lamina = null; desenhar();
+        if (!silencioso) msg.innerHTML = "⚠️ Não consegui ver os filetes direito aqui. Coloque as <b>amarelas</b> nas bordas da rosca e o pente em cima dos filetes, ou aproxime a foto.";
+        return false;
+      }
+      // compara com as lâminas reais (passo de cada rosca da tabela), aceitando o dobro/metade do passo medido
+      var cand = opts.laminas(), melhor = null, est = Number(opts.estimado) || 0;
+      cand.forEach(function (l) {
+        var pp = D / l.razao, prior = est > 0 ? 0.12 * Math.abs(Math.log(est / l.diametro)) : 0;
+        [[1, 0], [2, 0.1], [0.5, 0.1]].forEach(function (hx) {
+          var e = Math.abs(r.passo * hx[0] - pp) / pp + hx[1] + prior;
+          if (!melhor || e < melhor.e) melhor = { l: l, pp: pp, e: e };
+        });
+      });
+      if (!melhor || melhor.e > 0.3) {
+        lamina = null; desenhar();
+        if (!silencioso) msg.innerHTML = "⚠️ Nenhuma lâmina encaixou bem. Confira as <b>amarelas</b> nas bordas da rosca.";
+        return false;
+      }
+      // ajusta o pente: número de dentes e posição (fase) para os dentes caírem nos filetes
+      var g = geoPente(), pp = melhor.pp, nn = Math.max(3, Math.round(g.len / pp));
+      var melhorF = 0, melhorS = -Infinity;
+      for (var f = 0; f < pp; f += Math.max(0.5, pp / 16)) {
+        var soma = 0;
+        for (var k = 0; k <= nn; k++) { var idx = Math.round(f + k * pp - r.ini); if (idx >= 0 && idx < r.perfil.length) soma += r.perfil[idx]; }
+        if (soma > melhorS) { melhorS = soma; melhorF = f; }
+      }
+      var desloc = melhorF > pp / 2 ? melhorF - pp : melhorF;
+      var novoC = [h.c[0] + g.ux * desloc, h.c[1] + g.uy * desloc];
+      h.c = novoC; h.d = [novoC[0] + g.ux * nn * pp, novoC[1] + g.uy * nn * pp];
+      n = nn; $("output", ov).textContent = n;
+      var l = melhor.l;
+      // a foto mostra o passo, não o ângulo: a lâmina mostra os passos das normas daquele tamanho (ex.: 19/18 fios)
+      var fios = [];
+      cand.forEach(function (x) { if (x.grupo === l.grupo) { var t = l.familia === "metrica" ? String(x.passo).replace(".", ",") : String(x.tpi).replace(".", ","); if (fios.indexOf(t) < 0) fios.push(t); } });
+      lamina = { texto: fios.join("/") + (l.familia === "metrica" ? " mm" : " fios"), rotulo: l.rotulo };
+      msg.innerHTML = "✅ Encaixou a lâmina de <b>" + lamina.texto + "</b> → <b>" + l.rotulo + "</b>";
+      desenhar(); salvarRascunho();
+      return true;
+    }
+
     function lupaEm(p) {
       var L = 240, z = Math.max(2.5, 6 / zoom), s = L / z / S(); // região da foto mostrada na lupa
       lctx.clearRect(0, 0, L, L);
@@ -216,7 +354,8 @@
       var px = -vy / len, py = vx / len, meio = Math.max(dist(h.a, h.b) * 0.55, 12 / S());
       var f = foto(s[0], s[1]), rx = f[0] - h.c[0], ry = f[1] - h.c[1];
       var ao = (rx * vx + ry * vy) / len, lado = Math.abs(rx * px + ry * py), folga = 14 / S();
-      return ao >= -folga && ao <= len + folga && lado <= meio + folga;
+      var g = geoPente();
+      return ao >= -folga - g.pp && ao <= len + folga + g.pp && lado <= Math.max(meio, g.borda + g.corpo + g.dente) + folga;
     }
     function alvoEm(s) {
       // 1) bolinhas e puxadores (área de toque grande)
@@ -291,7 +430,10 @@
       var s = dedos[e.pointerId], eraPan = pan && s && Math.hypot(s[0] - pan.x, s[1] - pan.y) < 8;
       delete dedos[e.pointerId];
       if (pinca && Object.keys(dedos).length < 2) { pinca = null; trazerSeSumiram(); }
-      if (!Object.keys(dedos).length) { if (arrastando) salvarRascunho(); arrastando = null; pan = null; lupa.hidden = true; }
+      if (!Object.keys(dedos).length) {
+        if (arrastando) { if (arrastando.k !== "m" && arrastando.k !== "ma") { lamina = null; $(".ed-auto-msg", ov).innerHTML = ""; } salvarRascunho(); desenhar(); }
+        arrastando = null; pan = null; lupa.hidden = true;
+      }
       // toque duplo na foto (fora das bolinhas): aumenta 2x ali, ou volta se já estiver bem perto
       if (e.type === "pointerup" && eraPan) {
         var agora = Date.now();
@@ -320,8 +462,9 @@
         else { zoom = 1; limitar(); desenhar(); mostraZoom(); }
       };
     });
+    $(".ed-auto", ov).onclick = function () { encaixarPente(false); };
     ov.querySelectorAll("[data-n]").forEach(function (b) {
-      b.onclick = function () { n = Math.max(1, Math.min(40, n + Number(b.dataset.n))); $("output", ov).textContent = n; desenhar(); };
+      b.onclick = function () { n = Math.max(1, Math.min(40, n + Number(b.dataset.n))); $("output", ov).textContent = n; lamina = null; $(".ed-auto-msg", ov).innerHTML = ""; desenhar(); };
     });
     sel.onchange = function () {
       if (sel.value === "outra") {
@@ -363,6 +506,7 @@
     requestAnimationFrame(function () {
       layout();
       if (opts.pontos) irRosca(); // a IA já marcou: abre aproximado na rosca
+      if (opts.pontos && opts.autoPente !== false) setTimeout(function () { encaixarPente(false); }, 60);
     });
   }
 

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel · Rosca Fácil by DayIA</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0E2238">
+<link rel="icon" href="dayia-simbolo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0E2238;--navy2:#16304F;--sky:#8EC5E8;--sun:#F2C230;--bg:#EEF2F7;--ink:#0E2238;--ink2:#4A5B75;--mute:#7B8BA3;--line:#D6DFEA;
+--ok:#1F8A5B;--okbg:#E3F4EC;--bad:#C0392B;--badbg:#FBE4E1;--blue:#2B6CB0;--bluebg:#E2EEFA;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+[hidden]{display:none!important}
+#intro{position:fixed;inset:0;z-index:99;background:var(--navy);display:flex;align-items:center;justify-content:center;transition:opacity .5s}
+#intro.fim{opacity:0;pointer-events:none}
+.quadro{width:76px;height:76px;background:#fff;border-radius:16px;padding:7px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:cresce 1.4s cubic-bezier(.2,.8,.2,1) forwards}
+.quadro img{width:100%;height:100%;display:block;border-radius:10px}
+@keyframes cresce{0%{transform:scale(.6) rotate(0);opacity:0}20%{opacity:1}55%{transform:scale(1.6) rotate(0)}100%{transform:scale(1.6) rotate(360deg)}}
+.by{position:absolute;display:flex;align-items:center;gap:10px;font-size:22px;color:#CFE2F2;opacity:0;transition:opacity .45s}
+.by img{height:40px;width:auto;display:block}
+#intro.passo2 .quadro{opacity:0;transition:opacity .3s}
+#intro.passo2 .by{opacity:1}
+header{background:var(--navy);color:#fff;padding:14px 16px}
+header h1{margin:0;font-size:20px;font-weight:800;font-stretch:112%}
+.by2{display:flex;align-items:center;gap:6px;color:#B9CCE2;font-size:13px}.by2 img{height:20px}
+main{max-width:620px;margin:0 auto;padding:16px 16px 40px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:17px;font-weight:800}
+.campo{display:flex;gap:8px}
+.campo input{flex:1;min-width:0;border:2px solid var(--line);border-radius:12px;padding:12px;font-size:16px;background:#fff}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;background:var(--navy);color:#fff;white-space:nowrap}
+.btn.sec{background:#fff;color:var(--navy);border:2px solid var(--line);padding:8px 12px;font-size:14px}
+.btn.verde{background:var(--ok)}
+.btn:active{transform:scale(.97)}
+.resumo{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.resumo div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+.resumo b{display:block;font-size:24px;font-stretch:112%}
+.resumo span{font-size:12.5px;color:var(--mute)}
+.emp{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.emp.off{opacity:.6;background:#F7F9FC}
+.emp .topo{display:flex;align-items:center;gap:10px}
+.emp .topo b{flex:1;font-size:16px}
+.tag{font-size:12px;font-weight:800;padding:3px 9px;border-radius:99px}
+.tag.on{background:var(--okbg);color:var(--ok)}.tag.off{background:var(--badbg);color:var(--bad)}
+.link{font-size:13px;color:var(--blue);word-break:break-all;margin:6px 0 10px;background:var(--bluebg);padding:7px 9px;border-radius:9px}
+.acoes{display:flex;flex-wrap:wrap;gap:8px}
+.uso{font-size:13px;color:var(--mute);margin-top:8px}
+.aviso{padding:12px 14px;border-radius:12px;font-size:14.5px;margin-top:10px}
+.aviso.erro{background:var(--badbg);color:var(--bad)}.aviso.info{background:var(--bluebg);color:var(--blue)}
+.vazio{text-align:center;color:var(--mute);padding:18px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:10px 16px;border-radius:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<div id="intro" aria-hidden="true">
+  <div class="quadro"><img src="dayia-simbolo.png" alt=""></div>
+  <div class="by">by <img src="dayia-logo.png" alt="DayIA"></div>
+</div>
+<header>
+  <h1>Painel Rosca Fácil</h1>
+  <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
+</header>
+<main>
+  <section class="card" id="telaPin">
+    <h2>Entrar no painel</h2>
+    <form id="fPin" class="campo">
+      <input id="pin" type="password" inputmode="numeric" placeholder="Sua senha" required autocomplete="current-password">
+      <button class="btn">Entrar</button>
+    </form>
+    <div id="msgPin"></div>
+  </section>
+
+  <div id="telaPainel" hidden>
+    <div class="resumo">
+      <div><b id="rEmp">0</b><span>empresas ativas</span></div>
+      <div><b id="rUso">0</b><span>medições no mês</span></div>
+      <div><b id="rIa">–</b><span>IA</span></div>
+    </div>
+    <section class="card">
+      <h2>Nova empresa</h2>
+      <form id="fNova" class="campo">
+        <input id="nome" placeholder="Nome da empresa (ex.: CHP Hidráulica)" maxlength="60" required>
+        <button class="btn">Adicionar</button>
+      </form>
+      <div id="msgNova"></div>
+    </section>
+    <section class="card">
+      <h2>Empresas</h2>
+      <div id="lista"></div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+var $ = function (s) { return document.querySelector(s); };
+function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+var Q = new URLSearchParams(location.search);
+if (Q.get("api")) ls("rf-api", Q.get("api"));
+var API = ROSCA_API || ls("rf-api") || "";
+var PIN = "";
+try { PIN = sessionStorage.getItem("rf-pin") || ""; } catch (e) {}
+var APP = location.href.replace(/painel\.html.*$/, "");
+
+(function () {
+  var intro = $("#intro");
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { intro.classList.add("fim"); return; }
+  setTimeout(function () { intro.classList.add("passo2"); }, 1500);
+  setTimeout(function () { intro.classList.add("fim"); }, 2700);
+})();
+
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]; }); }
+function aviso(alvo, tipo, t) { $(alvo).innerHTML = t ? '<div class="aviso ' + tipo + '">' + t + "</div>" : ""; }
+function toast(t) { var e = $("#toast"); e.textContent = t; e.classList.add("on"); setTimeout(function () { e.classList.remove("on"); }, 1800); }
+
+function chamar(dados) {
+  if (!API) return Promise.reject(new Error("sem-api"));
+  dados.acao = "painel"; dados.pin = PIN;
+  return fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(dados), redirect: "follow" })
+    .then(function (r) { return r.json(); });
+}
+
+function abrir(d) {
+  if (!d.ok) {
+    if (/senha/i.test(d.erro || "")) { try { sessionStorage.removeItem("rf-pin"); } catch (e) {} $("#telaPainel").hidden = true; $("#telaPin").hidden = false; }
+    aviso($("#telaPin").hidden ? "#msgNova" : "#msgPin", "erro", esc(d.erro || "Erro.")); return;
+  }
+  try { sessionStorage.setItem("rf-pin", PIN); } catch (e) {}
+  $("#telaPin").hidden = true; $("#telaPainel").hidden = false;
+  var ativas = d.empresas.filter(function (x) { return x.ativa; });
+  $("#rEmp").textContent = ativas.length;
+  $("#rUso").textContent = d.empresas.reduce(function (s, x) { return s + x.usoMes; }, d.usoDayia || 0);
+  $("#rIa").textContent = d.ia ? "Ligada" : "Desligada";
+  if (!d.empresas.length) { $("#lista").innerHTML = '<div class="vazio">Nenhuma empresa ainda. Adicione a primeira acima.</div>'; return; }
+  $("#lista").innerHTML = d.empresas.map(function (x) {
+    var link = APP + "?e=" + encodeURIComponent(x.id);
+    return '<div class="emp' + (x.ativa ? "" : " off") + '" data-id="' + esc(x.id) + '" data-nome="' + esc(x.nome) + '" data-link="' + esc(link) + '">' +
+      '<div class="topo"><b>' + esc(x.nome) + '</b><span class="tag ' + (x.ativa ? "on" : "off") + '">' + (x.ativa ? "Ativa" : "Desativada") + "</span></div>" +
+      '<div class="link">' + esc(link) + "</div>" +
+      '<div class="acoes">' +
+      '<button class="btn sec" data-a="copiar">Copiar link</button>' +
+      '<button class="btn sec" data-a="zap">Mandar no WhatsApp</button>' +
+      '<button class="btn sec" data-a="nome">Mudar nome</button>' +
+      '<button class="btn sec" data-a="ativa">' + (x.ativa ? "Desativar" : "Ativar") + "</button>" +
+      '<button class="btn sec" data-a="remover">Excluir</button></div>' +
+      '<div class="uso">' + x.usoMes + " medições pela foto este mês</div></div>";
+  }).join("");
+}
+
+function falha(e) {
+  aviso($("#telaPin").hidden ? "#msgNova" : "#msgPin", "erro",
+    e && e.message === "sem-api" ? "O servidor ainda não foi ligado. Assim que a IA estiver configurada, o painel funciona." : "Sem conexão com o servidor. Tente de novo.");
+}
+
+$("#fPin").onsubmit = function (e) { e.preventDefault(); PIN = $("#pin").value.trim(); aviso("#msgPin"); chamar({ op: "listar" }).then(abrir).catch(falha); };
+$("#fNova").onsubmit = function (e) {
+  e.preventDefault(); aviso("#msgNova");
+  chamar({ op: "nova", nome: $("#nome").value }).then(function (d) { if (d.ok) { $("#nome").value = ""; toast("Empresa adicionada"); } abrir(d); }).catch(falha);
+};
+$("#lista").onclick = function (e) {
+  var b = e.target.closest("button[data-a]"); if (!b) return;
+  var box = b.closest(".emp"), id = box.dataset.id, nome = box.dataset.nome, link = box.dataset.link, a = b.dataset.a;
+  if (a === "copiar") {
+    (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () { toast("Link copiado"); }, function () { prompt("Copie o link:", link); });
+  } else if (a === "zap") {
+    var txt = "Olá! Este é o app da " + nome + " para descobrir a medida da rosca pela foto: " + link;
+    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
+  } else if (a === "nome") {
+    var novo = prompt("Novo nome da empresa:", nome);
+    if (novo && novo.trim() && novo.trim() !== nome) chamar({ op: "editar", id: id, nome: novo.trim() }).then(abrir).catch(falha);
+  } else if (a === "ativa") {
+    chamar({ op: "editar", id: id, ativa: box.classList.contains("off") }).then(abrir).catch(falha);
+  } else if (a === "remover") {
+    if (confirm("Excluir " + nome + "? O link dela para de funcionar.")) chamar({ op: "remover", id: id }).then(abrir).catch(falha);
+  }
+};
+
+if (PIN && API) chamar({ op: "listar" }).then(abrir).catch(falha);
+else if (!API) aviso("#msgPin", "info", "O servidor ainda não foi ligado. Assim que a IA estiver configurada, este painel passa a funcionar.");
+</script>
+</body>
+</html>

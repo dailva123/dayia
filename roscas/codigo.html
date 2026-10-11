@@ -35,7 +35,7 @@ button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;fon
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = &quot;1.4&quot;;
+var VERSAO = &quot;1.5&quot;;
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
@@ -54,6 +54,8 @@ var PROMPT = [
   &quot;1) diametro_px: macho = pico a pico dos filetes, perpendicular ao eixo; fêmea = furo nos picos internos.&quot;,
   &quot;2) passo_px: num trecho nítido, distância entre o 1º e o último pico dividida pelo nº de intervalos.&quot;,
   &quot;3) Conte em DOIS trechos diferentes: razao_1 e razao_2 = diametro_px / passo_px. Um filete a mais muda a bitola: confira.&quot;,
+  &quot;   Se a peça estiver inclinada para a câmera (a boca/ponta aparece como elipse), o passo parece menor do que é:&quot;,
+  &quot;   estime a inclinação pela elipse (inclinação = arco-seno de eixo menor / eixo maior) e divida o passo_px por cos(inclinação) antes da razão.&quot;,
   &quot;4) Se houver cartão (85,60 x 53,98 mm), régua ou paquímetro: diametro_mm e passo_mm, tem_referencia=true. Senão null.&quot;,
   &quot;5) diametro_estimado_mm: estimativa pelo contexto (dedos, sextavado, proporções). Sempre preencha.&quot;,
   &quot;6) forma: reta | conica | indefinida. vedacao: cone | face | indefinida.&quot;,

@@ -139,11 +139,16 @@ form.manual label small{font-weight:500;color:var(--mute)}
 
   <!-- MODO FOTO -->
   <section class="card" id="modoFoto">
-    <h2><span class="num">2</span>Tire a foto com um cartão ao lado</h2>
+    <h2><span class="num">2</span>Foto da peça com um cartão ao lado</h2>
     <input type="file" id="arquivo" accept="image/*" capture="environment" hidden>
+    <input type="file" id="galeria" accept="image/*" hidden>
     <label for="arquivo" class="btn" role="button" tabindex="0" id="btnFoto">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="4"/></svg>
       Tirar foto da peça
+    </label>
+    <label for="galeria" class="btn sec" role="button" tabindex="0" id="btnGaleria" style="margin-top:10px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>
+      Escolher foto salva
     </label>
     <details id="dicasBox">
       <summary>Como tirar a foto certa</summary>
@@ -229,7 +234,7 @@ document.querySelectorAll("#tipo button").forEach(function (b) {
 $("#btnFoto").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#arquivo").click(); } });
 
 /* foto */
-$("#arquivo").onchange = function () {
+function receberFoto() {
   var f = this.files && this.files[0];
   this.value = "";
   if (!f) return;
@@ -256,7 +261,7 @@ $("#arquivo").onchange = function () {
         aviso("#msgFoto", "erro", "Não consegui ver a rosca direito. " + esc(m.problemas || "Tente outra foto seguindo as dicas.")); $("#dicasBox").open = true; return;
       }
       if (m.referencia === "nenhuma") {
-        aviso("#msgFoto", "erro", "Não achei o cartão ou a régua na foto. Sem ele não dá para saber o tamanho. Coloque um cartão ao lado e tire de novo."); $("#dicasBox").open = true; return;
+        aviso("#msgFoto", "erro", "Não achei o cartão ou a régua na foto. Sem ele não dá para saber o tamanho real da rosca. Fotos tiradas da internet normalmente não têm essa referência: coloque um cartão ao lado da peça e tire uma foto nova, ou use a aba <b>Já tenho a medida</b>."); $("#dicasBox").open = true; return;
       }
       if (m.tipo === "macho" || m.tipo === "femea") marcarTipo(m.tipo);
       estado.medida = m; estado.formaUsuario = ""; estado.respondeu = false; estado.origem = "foto";
@@ -267,6 +272,10 @@ $("#arquivo").onchange = function () {
     aviso("#msgFoto", "erro", "Sem conexão com a internet, ou o servidor não respondeu. Tente de novo.");
   });
 };
+
+$("#arquivo").onchange = receberFoto;
+$("#galeria").onchange = receberFoto;
+$("#btnGaleria").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#galeria").click(); } });
 
 function marcarTipo(t) {
   estado.tipo = t;

@@ -210,6 +210,14 @@ main{max-width:1280px;margin:0 auto;padding:16px}
 .barra{height:8px;background:#EEF2F7;border-radius:9px;margin-top:10px;overflow:hidden}.barra i{display:block;height:100%;background:var(--ok)}
 .passo{display:flex;align-items:center;gap:14px}.passo b{font-size:26px;min-width:70px;text-align:center}.passo .btn{width:44px;height:44px;border-radius:50%;font-size:20px;padding:0}
 .btn.espera{opacity:.5;pointer-events:none}
+.dicas .dica1{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid #EEF2F7}.dicas .dica1:first-of-type{border-top:0;padding-top:2px}
+.dicas .dica1 .ic{font-size:22px;flex:none}.dicas .dica1 p{margin:0;flex:1;min-width:200px}
+.mapa{display:grid;grid-template-columns:auto repeat(3,1fr);gap:5px;align-items:center;font-size:13px}.mapa small{text-align:center;color:var(--mute);font-weight:700}
+.mapa b{font-weight:700;font-size:12.5px;white-space:nowrap}.mapa i{font-style:normal;text-align:center;border-radius:8px;padding:6px 0;font-weight:800;font-variant-numeric:tabular-nums}
+.mapa i.bx,.lg.bx{background:#FBE4E1;color:#C0392B}.mapa i.md,.lg.md{background:#FBF0D9;color:#B7791F}.mapa i.al,.lg.al{background:#E3F4EC;color:#1F8A5B}.mapa i.fech{color:var(--mute)}
+.lg{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin:0 2px 0 8px}
+.nv{display:flex;gap:24px}.nv b{display:block;font-size:30px;line-height:1.1}.nv span{color:var(--mute);font-size:13px}
+.barra2{height:10px;border-radius:9px;background:#1F8A5B;overflow:hidden;margin-top:10px}.barra2 i{display:block;height:100%;background:#F2C230}
 .rot2{font-size:12px;font-weight:800;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px}
 </style>
 </head>
@@ -735,10 +743,50 @@ function nResultados(){
     return ks.length?'<div class="barras">'+ks.map(function(k){return '<div class="b"><small>'+esc(nomeDe(k))+'</small><i style="width:'+Math.max(3,m[k]/mx*100)+'%"></i><span>'+brl(m[k])+'</span></div>'}).join("")+'</div>':'<p class="sub">Aparece depois dos primeiros atendimentos concluídos.</p>'}
   var disp=0,ocup=0,h0=dia0(Date.now());for(var i=0;i<7;i++){var d=h0+i*864e5;if(DB.horario.dias.indexOf(new Date(d).getDay())<0)continue;var H=hDia(DB.horario,new Date(d).getDay()),mm=hm2min(H.fim)-hm2min(H.ini)-(H.almoco[0]&&H.almoco[1]?hm2min(H.almoco[1])-hm2min(H.almoco[0]):0);disp+=mm*profsAtivos().length}
   ativos().forEach(function(a){if(a.ini>=h0&&a.ini<h0+7*864e5)ocup+=(a.fim-a.ini)/6e4});
-  $("#negCorpo").innerHTML='<div class="kp"><div><b>'+brl(fat)+'</b><span>recebido em 30 dias</span></div><div><b>'+conc.length+'</b><span>atendimentos</span></div><div><b>'+brl(conc.length?fat/conc.length:0)+'</b><span>ticket médio</span></div><div><b>'+Math.round(falt.length/Math.max(1,l.length)*100)+'%</b><span>faltas ('+falt.length+')</span></div></div>'+
+  $("#negCorpo").innerHTML=(DB.v24?dicasHtml():'')+'<div class="kp"><div><b>'+brl(fat)+'</b><span>recebido em 30 dias</span></div><div><b>'+conc.length+'</b><span>atendimentos</span></div><div><b>'+brl(conc.length?fat/conc.length:0)+'</b><span>ticket médio</span></div><div><b>'+Math.round(falt.length/Math.max(1,l.length)*100)+'%</b><span>faltas ('+falt.length+')</span></div></div>'+
     '<div class="duas"><div class="card"><h3>Por serviço</h3>'+barras("serv",function(k){return serv(k).nome})+'</div><div class="card"><h3>Por '+esc(S().prof.toLowerCase())+'</h3>'+barras("prof",function(k){return prof(k).nome})+'</div></div>'+
     '<div class="duas"><div class="card"><h3>Agenda dos próximos 7 dias</h3><p style="font-size:30px;font-weight:800;margin:0">'+Math.round(ocup/Math.max(1,disp)*100)+'%</p><p class="sub">ocupada.</p></div><div class="card"><h3>Como agendaram</h3><p style="font-size:30px;font-weight:800;margin:0">'+Math.round(onl/Math.max(1,l.length)*100)+'%</p><p class="sub">pelo link, sem precisar atender o telefone. '+canc.length+' cancelamento'+(canc.length===1?"":"s")+' em 30 dias.</p></div></div>';
 }
+/* ---------- dicas: o painel diz o que fazer ---------- */
+var PERIODOS=[["manhã",0,720],["tarde",720,1080],["noite",1080,1440]];
+function ocupacao(){ /* próximos 7 dias: quanto de cada dia e período está ocupado */
+  var h0=dia0(Date.now()),out=[];
+  for(var i=0;i<7;i++){var d=dia0(h0+i*864e5+12*36e5),wd=new Date(d).getDay();if(DB.horario.dias.indexOf(wd)<0)continue;var H=hDia(DB.horario,wd),a=hm2min(H.ini),b=hm2min(H.fim),al=H.almoco&&H.almoco[0]&&H.almoco[1]?[hm2min(H.almoco[0]),hm2min(H.almoco[1])]:null,np=Math.max(1,profsAtivos().length);
+    var dia={d:d,per:[],disp:0,ocup:0};
+    PERIODOS.forEach(function(p){var x=Math.max(a,p[1]),y=Math.min(b,p[2]);if(y<=x){dia.per.push(null);return}var disp=(y-x)-(al?Math.max(0,Math.min(y,al[1])-Math.max(x,al[0])):0);disp*=np;
+      if(i===0){var agoraMin=(Date.now()-d)/6e4;if(agoraMin>=y){dia.per.push(null);return}}
+      var oc=0;ativos().forEach(function(ag){if(dia0(ag.ini)!==d)return;var s0=(ag.ini-d)/6e4,s1=(ag.fim-d)/6e4;oc+=Math.max(0,Math.min(s1,y)-Math.max(s0,x))});
+      DB.bloq.forEach(function(k){var s0=(k.ini-d)/6e4,s1=(k.fim-d)/6e4;oc+=Math.max(0,Math.min(s1,y)-Math.max(s0,x))*(k.prof==="todos"?np:1)});
+      oc=Math.min(oc,disp);dia.disp+=disp;dia.ocup+=oc;dia.per.push(disp>0?{p:Math.round(oc/disp*100),nome:p[0]}:null)});
+    if(dia.disp)out.push(dia)}
+  /* período com menos de 2 horas abertas em todos os dias (ex.: noite) não aparece */
+  var usa=PERIODOS.map(function(p,i){return out.some(function(x){var dd=x.per[i];if(!dd)return false;var H=hDia(DB.horario,new Date(x.d).getDay());return Math.min(hm2min(H.fim),p[2])-Math.max(hm2min(H.ini),p[1])>=120})});
+  out.forEach(function(x){x.per=x.per.filter(function(_,i){return usa[i]})});out.cols=PERIODOS.filter(function(_,i){return usa[i]});
+  return out}
+function dicasHtml(){
+  var agora=Date.now(),D=864e5,oc=ocupacao(),dicas=[],fc=fichas();
+  /* 1. dias vazios */
+  var vaz=oc.filter(function(x){return x.d>dia0(agora)}).map(function(x){return {d:x.d,p:Math.round(x.ocup/x.disp*100),per:x.per}}).sort(function(a,b){return a.p-b.p})[0];
+  if(vaz&&vaz.p<50){var pv=vaz.per.filter(Boolean).sort(function(a,b){return a.p-b.p})[0];
+    dicas.push({ic:"📉",t:'<b>'+cap(dataLonga(vaz.d).split(",")[0])+' ('+dataCurta(vaz.d)+')</b> está com só <b>'+vaz.p+'%</b> da agenda ocupada'+(pv&&pv.p<vaz.p?', e de '+pv.nome+' só '+pv.p+'%':'')+'. Uma promoção nesse dia ajuda a encher.',bt:'🔥 Criar promoção para esse dia',ac:"promo:"+vaz.d})}
+  /* 2. clientes que sumiram */
+  var sum=fc.filter(function(c){return c.ult&&!c.prox&&agora-c.ult>=45*D&&!c.naoQuer});
+  if(sum.length){var on=mk().auto.volta45||mk().auto.volta90;
+    dicas.push({ic:"👋",t:'<b>'+sum.length+' '+esc(sum.length===1?S().cli:S().clis)+'</b> não '+(sum.length===1?'volta':'voltam')+' há mais de 45 dias'+(on?'. A mensagem “Convide para voltar” já está ligada e chama de volta quem tem e-mail.':'. Ligue a mensagem automática “Convide para voltar”.'),bt:on?'':'Ligar a mensagem',ac:on?"":"volta"})}
+  /* 3. serviço que mais rende */
+  var m30=DB.ags.filter(function(a){return a.status==="concluido"&&a.ini>agora-30*D}),rs={},qs={};
+  m30.forEach(function(a){rs[a.serv]=(rs[a.serv]||0)+(a.preco||0);qs[a.serv]=(qs[a.serv]||0)+1});
+  var porR=Object.keys(rs).sort(function(a,b){return rs[b]-rs[a]}),porQ=Object.keys(qs).sort(function(a,b){return qs[b]-qs[a]});
+  if(porR.length>1&&porR[0]!==porQ[0])dicas.push({ic:"💰",t:'<b>'+esc(serv(porR[0]).nome)+'</b> rendeu mais ('+brl(rs[porR[0]])+') do que '+esc(serv(porQ[0]).nome)+' ('+brl(rs[porQ[0]])+'), mesmo com menos atendimentos. Vale divulgar mais esse serviço.',bt:'',ac:""});
+  else if(porR.length)dicas.push({ic:"💰",t:'<b>'+esc(serv(porR[0]).nome)+'</b> foi o serviço que mais rendeu nos últimos 30 dias: '+brl(rs[porR[0]])+'.',bt:'',ac:""});
+  /* novas x voltaram */
+  var nov=fc.filter(function(c){return c.prim>agora-30*D}).length,volt=fc.filter(function(c){return c.ult>agora-30*D&&c.prim<=agora-30*D}).length;
+  var h='<div class="card dicas"><h3>💡 O que a sua agenda está dizendo</h3>'+(dicas.length?dicas.map(function(x,i){return '<div class="dica1"><span class="ic">'+x.ic+'</span><p>'+x.t+'</p>'+(x.bt?'<button class="btn sol min" data-dica="'+esc(x.ac)+'">'+x.bt+'</button>':'')+'</div>'}).join(""):'<p class="sub" style="margin:0">As dicas aparecem quando a agenda tiver alguns atendimentos.</p>')+'</div>';
+  h+='<div class="duas"><div class="card"><h3>Próximos 7 dias: quanto está ocupado</h3><div class="mapa" style="grid-template-columns:auto repeat('+oc.cols.length+',1fr)"><span></span>'+oc.cols.map(function(p){return '<small>'+p[0]+'</small>'}).join("")+
+    oc.map(function(x){return '<b>'+DSEM[new Date(x.d).getDay()]+' '+dataCurta(x.d)+'</b>'+x.per.map(function(p){if(!p)return '<i class="fech">—</i>';var c=p.p<40?"bx":p.p<75?"md":"al";return '<i class="'+c+'">'+p.p+'%</i>'}).join("")}).join("")+'</div><p class="sub" style="margin:8px 0 0"><i class="lg bx"></i> vazio <i class="lg md"></i> médio <i class="lg al"></i> cheio</p></div>'+
+    '<div class="card"><h3>'+cap(S().clis)+' nos últimos 30 dias</h3><div class="nv"><div><b>'+nov+'</b><span>'+(nov===1?'nova':'novas')+'</span></div><div><b>'+volt+'</b><span>'+(volt===1?'voltou':'voltaram')+'</span></div></div><div class="barra2"><i style="width:'+((nov+volt)?Math.round(nov/(nov+volt)*100):0)+'%"></i></div><p class="sub" style="margin:8px 0 0">'+(nov+volt?'De cada 10 '+esc(S().clis)+' atendidas, '+Math.round(volt/(nov+volt)*10)+' já eram suas. Quem volta é o que mantém a agenda cheia.':'Aparece depois dos primeiros atendimentos.')+'</p></div></div>';
+  setTimeout(function(){$$("[data-dica]").forEach(function(b){b.onclick=function(){var a=b.dataset.dica;if(a.indexOf("promo:")===0){N.promoDia=+a.slice(6);N.aba="marketing";N.mk="promo";rNeg()}else if(a==="volta"){mk().auto.volta45=true;salvarMk("Mensagem “Convide para voltar” ligada")}}})},0);
+  return h}
 function nConfig(){
   var H=DB.horario,N2=DB.negocio,sv=DB.servicos.map(function(s){return Object.assign({},s)}),pf=DB.profs.map(function(p){return Object.assign({},p)});
   function desenha(){
@@ -887,8 +935,9 @@ function mkPromo(){
   var ativas=prom.length?'<div class="card"><h3>Promoções no ar</h3><div class="lista">'+prom.map(function(p){return '<div class="it"><div class="info"><b>'+(p.tipo==="rapida"?"🔥 Venda Rápida":"⚡ Desconto de Última Hora")+' · '+p.desconto+'%</b><br><small>'+esc(promoTxt(p))+'</small></div><button class="btn sec min" data-div="'+esc(p.id)+'">📋 Copiar texto para divulgar</button><button class="btn badb min" data-fim="'+esc(p.id)+'">Encerrar</button></div>'}).join("")+'</div><p class="sub" style="margin:8px 0 0">Na página de agendamento, o preço aparece riscado com o valor da promoção. Copie o texto e poste no Status do WhatsApp e no Instagram.</p></div>':'';
   function servChips(pfx){return '<div class="chips"><label><input type="checkbox" data-'+pfx+'="todos" checked> Todos</label>'+servAtivos().map(function(s){return '<label><input type="checkbox" data-'+pfx+'="'+s.id+'"> '+esc(s.nome)+'</label>'}).join("")+'</div>'}
   function passo(id,v){return '<div class="passo"><button type="button" class="btn sec" data-menos="'+id+'" aria-label="Menos">−</button><b id="'+id+'">'+v+'%</b><button type="button" class="btn sec" data-mais="'+id+'" aria-label="Mais">+</button></div>'}
-  el.innerHTML=ativas+'<div class="duas"><div class="card"><h3>🔥 Venda Rápida</h3><p class="sub">Para lançar um serviço, dar desconto numa data especial ou encher a agenda numa semana fraca.</p><p class="rot2">Serviços</p>'+servChips("vr")+'<p class="rot2">Desconto</p>'+passo("vrD",10)+'<div class="g2" style="margin-top:10px"><label class="f">Horários de<input type="date" id="vrDe" value="'+isoDia(agora)+'"></label><label class="f">até<input type="date" id="vrAte" value="'+isoDia(agora+6*864e5)+'"></label></div><p></p><button class="btn sol larg" id="vrOk">Começar promoção</button></div>'+
+  el.innerHTML=ativas+'<div class="duas"><div class="card"><h3>🔥 Venda Rápida</h3><p class="sub">Para lançar um serviço, dar desconto numa data especial ou encher a agenda numa semana fraca.</p><p class="rot2">Serviços</p>'+servChips("vr")+'<p class="rot2">Desconto</p>'+passo("vrD",10)+'<div class="g2" style="margin-top:10px"><label class="f">Horários de<input type="date" id="vrDe" value="'+isoDia(N.promoDia||agora)+'"></label><label class="f">até<input type="date" id="vrAte" value="'+isoDia(N.promoDia||agora+6*864e5)+'"></label></div><p></p><button class="btn sol larg" id="vrOk">Começar promoção</button></div>'+
     '<div class="card"><h3>⚡ Desconto de Última Hora</h3><p class="sub">Tem uma vaga em cima da hora ou um buraco no dia? Os horários livres que começam logo ficam com desconto na página de agendamento.</p><p class="rot2">Serviços</p>'+servChips("uh")+'<p class="rot2">Desconto</p>'+passo("uhD",10)+'<label class="f" style="margin-top:10px">Vale para horários que começam em até<select id="uhH">'+[1,2,3,4,6,12,24].map(function(x){return '<option value="'+x+'"'+(x===2?" selected":"")+'>'+x+' hora'+(x>1?'s':'')+'</option>'}).join("")+'</select></label><p></p><button class="btn sol larg" id="uhOk">'+(ult?"Trocar o desconto de última hora":"Começar promoção")+'</button></div></div>';
+  if(N.promoDia){var vc=$("#vrOk");vc.closest(".card").scrollIntoView({block:"center"});vc.closest(".card").style.outline="3px solid var(--sun)";N.promoDia=null}
   $$("#mkCorpo [data-mais],#mkCorpo [data-menos]").forEach(function(b){b.onclick=function(){var id=b.dataset.mais||b.dataset.menos,e=$("#"+id),v=parseInt(e.textContent,10)+(b.dataset.mais?5:-5);e.textContent=Math.max(5,Math.min(90,v))+"%"}});
   ["vr","uh"].forEach(function(pf){var tod=$('[data-'+pf+'="todos"]');$$('[data-'+pf+']').forEach(function(c){c.onchange=function(){if(c===tod&&c.checked)$$('[data-'+pf+']').forEach(function(x){if(x!==tod)x.checked=false});else if(c!==tod&&c.checked)tod.checked=false;if(!$$('[data-'+pf+']:checked').length)tod.checked=true}})});
   function servSel(pf){if($('[data-'+pf+'="todos"]').checked)return "todos";return $$('[data-'+pf+']:checked').map(function(c){return c.getAttribute("data-"+pf)})}

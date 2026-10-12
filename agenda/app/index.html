@@ -372,13 +372,13 @@ function convHtml(conv,lado){
 
 var WA_DAYIA="5519999389118";
 /* planos: preços e links de pagamento (Mercado Pago). Link vazio = o botão abre o WhatsApp da DayIA */
-var PLANOS={mensal:{preco:"R$ 79,90",por:"por mês",link:"https://mpago.la/2D859LL"},anual:{preco:"R$ 799",por:"por ano",obs:"Paga 10 meses e usa 12",link:"https://mpago.la/1YroaiM"}};
+var PLANOS={mensal:{preco:"R$ 19,90",depois:"R$ 29,90",nome:"Agenda Fácil",link:""},anual:{preco:"R$ 29,80",depois:"R$ 49,80",nome:"Agenda Fácil + Divulga Fácil",link:""}};
 function planosHtml(nome){
-  function bt(k,txt){var p=PLANOS[k];var href=p.link||waDayia("Olá! Quero o plano "+(k==="mensal"?"por mês":"por ano")+" da Agenda Fácil ("+nome+").");
+  function bt(k,txt){var p=PLANOS[k];var href=p.link||waDayia("Olá! Quero assinar o plano "+p.nome+" por "+p.preco+" ("+nome+").");
     return '<a class="btn '+(k==="anual"?"pri":"sec")+'" style="width:100%;box-sizing:border-box;justify-content:center" target="_blank" rel="noopener" href="'+esc(href)+'">'+txt+'</a>'}
   return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0;text-align:left">'+
-    '<div style="border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff"><b style="font-size:15px">📅 Por mês</b><div style="font-size:26px;font-weight:800;margin:6px 0">'+PLANOS.mensal.preco+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por mês</small></div><p class="sub" style="margin:0 0 10px">Sem taxa para começar.</p>'+bt("mensal","Pagar por mês")+'</div>'+
-    '<div style="border:2px solid #F2C230;border-radius:14px;padding:14px;background:#FFFBEF"><b style="font-size:15px">⭐ Por ano · mais barato</b><div style="font-size:26px;font-weight:800;margin:6px 0">'+PLANOS.anual.preco+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por ano</small></div><p class="sub" style="margin:0 0 10px">'+PLANOS.anual.obs+'. Sai por R$ 66,58 por mês.</p>'+bt("anual","Pagar por ano")+'</div></div>'+
+    '<div style="border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff"><b style="font-size:15px">📅 Só a agenda</b><div style="font-size:26px;font-weight:800;margin:6px 0">'+PLANOS.mensal.preco+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por mês</small></div><p class="sub" style="margin:0 0 10px">Preço de lançamento nos 6 primeiros meses. Depois, '+PLANOS.mensal.depois+' por mês.</p>'+bt("mensal","Assinar a agenda")+'</div>'+
+    '<div style="border:2px solid #F2C230;border-radius:14px;padding:14px;background:#FFFBEF"><b style="font-size:15px">⭐ Agenda + Divulga Fácil</b><div style="font-size:26px;font-weight:800;margin:6px 0">'+PLANOS.anual.preco+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por mês</small></div><p class="sub" style="margin:0 0 10px">A agenda e os posts prontos para as suas redes, juntos. Preço de lançamento nos 6 primeiros meses. Depois, '+PLANOS.anual.depois+' por mês.</p>'+bt("anual","Assinar o pacote")+'</div></div>'+
     '<p class="sub" style="margin:0">Pix, boleto ou cartão. Depois de pagar, <a target="_blank" rel="noopener" href="'+waDayia("Olá! Paguei o plano da Agenda Fácil ("+nome+"). Segue o comprovante:")+'">mande o comprovante no WhatsApp</a> e a DayIA libera na hora.</p>';
 }
 function waDayia(msg){return "https://wa.me/"+((P.lic&&P.lic.whatsapp)||WA_DAYIA)+"?text="+encodeURIComponent(msg)}

@@ -394,7 +394,7 @@ var WA_DAYIA="5519999389118";
 /* planos: preços e links de pagamento (Mercado Pago). Link vazio = o botão abre o WhatsApp da DayIA */
 var PLANOS={mensal:{preco:"R$ 19,90",depois:"R$ 29,90",nome:"Agenda Fácil",link:"https://mpago.la/1pexmPZ",linkDepois:"https://mpago.la/2AVawCR"},anual:{preco:"R$ 29,80",depois:"R$ 49,80",nome:"Agenda Fácil + Divulga Fácil",link:"https://mpago.la/1UcLZRF",linkDepois:"https://mpago.la/1CoF37s"}};
 /* planos anuais: pagamento único por 12 meses, preço fixo (link vazio = abre o WhatsApp da DayIA) */
-var ANUAIS={mensal:{preco:"R$\u00a0249",mes:"R$\u00a020,75",nome:"Agenda Fácil · Anual",link:"",eco1:"R$\u00a049,80",eco2:"R$\u00a0109,80"},anual:{preco:"R$\u00a0449",mes:"R$\u00a037,42",nome:"Agenda Fácil + Divulga Fácil · Anual",link:"",eco1:"R$\u00a028,60",eco2:"R$\u00a0148,60"}};
+var ANUAIS={mensal:{preco:"R$\u00a0249",mes:"R$\u00a020,75",nome:"Agenda Fácil · Anual",link:"https://mpago.la/1BgfYtr",eco1:"R$\u00a049,80",eco2:"R$\u00a0109,80"},anual:{preco:"R$\u00a0449",mes:"R$\u00a037,42",nome:"Agenda Fácil + Divulga Fácil · Anual",link:"",eco1:"R$\u00a028,60",eco2:"R$\u00a0148,60"}};
 /* depois de 6 meses (contados do fim do teste) os botões passam sozinhos para o preço normal */
 function lancAcabou(){var f=P.lic&&P.lic.lancamento_ate;return !!(f&&Date.now()>f)}
 function planosHtml(nome){

@@ -26,7 +26,7 @@ var ABAS = {
   Equipe:       ["negocio","id","nome","ativo"],
   Bloqueios:    ["negocio","id","prof","ini","fim","quando","motivo"],
   Config:       ["chave","valor","explicacao"],
-  Clientes:     ["negocio","id","nome","tel","email","aniversario","pet","origem","criado"],
+  Clientes:     ["negocio","id","nome","tel","email","aniversario","pet","origem","criado","nao_receber"],
   Promocoes:    ["negocio","id","tipo","servicos","desconto","de","ate","horas","ativo","criado"],
   Envios:       ["negocio","tel","tipo","canal","quando"]
 };
@@ -689,7 +689,7 @@ function anivTxt_(v) {
 }
 function clientesDe_(n) {
   return linhas_("Clientes").filter(function (c) { return String(c.negocio).toLowerCase() === n; }).map(function (c) {
-    return { id: String(c.id), nome: String(c.nome || ""), tel: String(c.tel || ""), email: String(c.email || ""), aniv: anivTxt_(c.aniversario), pet: String(c.pet || ""), origem: String(c.origem || "") };
+    return { id: String(c.id), nome: String(c.nome || ""), tel: String(c.tel || ""), email: String(c.email || ""), aniv: anivTxt_(c.aniversario), pet: String(c.pet || ""), origem: String(c.origem || ""), naoQuer: sim_(c.nao_receber) };
   });
 }
 function importarClientes_(n, lista) {
@@ -730,7 +730,7 @@ function atualizarCli_(n, id, campos) {
 function salvarCliente_(n, c) {
   var nome = lim_(c.nome, 80), tel = lim_(c.tel, 30);
   if (!nome) throw new Error("Coloque o nome.");
-  var campos = { nome: nome, tel: tel, email: lim_(c.email, 120), aniversario: anivTxt_(c.aniv), pet: lim_(c.pet, 40) };
+  var campos = { nome: nome, tel: tel, email: lim_(c.email, 120), aniversario: anivTxt_(c.aniv), pet: lim_(c.pet, 40), nao_receber: c.naoQuer ? "SIM" : "" };
   if (c.id && atualizarCli_(n, c.id, campos)) return;
   var k = chaveTel_(tel), ja = k ? clientesDe_(n).filter(function (x) { return chaveTel_(x.tel) === k; })[0] : null;
   if (ja) { atualizarCli_(n, ja.id, campos); return; }
@@ -803,13 +803,14 @@ function fichas_(ags, clis, agora) {
     if (a.status === "concluido") { c.vis++; c.prim = c.prim ? Math.min(c.prim, a.ini) : a.ini; c.ult = Math.max(c.ult, a.ini); }
     if ((a.status === "confirmado" || a.status === "pendente") && a.ini > agora) c.prox = c.prox ? Math.min(c.prox, a.ini) : a.ini;
   });
-  clis.forEach(function (x) { var c = ficha(x.tel, x.nome); if (x.nome) c.nome = x.nome; if (x.email && !c.email) c.email = x.email; if (x.aniv) c.aniv = x.aniv; });
+  clis.forEach(function (x) { var c = ficha(x.tel, x.nome); if (x.naoQuer) c.naoQuer = true; if (x.nome) c.nome = x.nome; if (x.email && !c.email) c.email = x.email; if (x.aniv) c.aniv = x.aniv; });
   return Object.keys(m).map(function (k) { return m[k]; });
 }
 function devidas_(fichas, envios, mk, agora) {
   var auto = (mk && mk.auto) || {}, H = 3600000, out = [];
   function enviado(c, tipo, desde) { return envios.some(function (e) { return e.tipo === tipo && e.tel === c.k && e.t >= desde; }); }
   fichas.forEach(function (c) {
+    if (c.naoQuer) return;
     var tipos = [];
     if (auto.boasvindas && c.prim && agora >= c.prim + 2 * H && agora <= c.prim + 3 * DIA && !enviado(c, "boasvindas", 0)) tipos.push("boasvindas");
     if (auto.servicos && c.prim && agora >= c.prim + 21 * DIA && agora <= c.prim + 35 * DIA && !enviado(c, "servicos", 0)) tipos.push("servicos");
@@ -845,7 +846,7 @@ function rotinaDiaria() {
       var mk = marketing_(N);
       if (!mk.auto || !Object.keys(mk.auto).some(function (k) { return mk.auto[k]; }) || !liberado_(N).ok) return;
       var a1 = ags.filter(function (a) { return String(a.negocio).toLowerCase() === N.n; }).map(function (a) { a.id = Number(a.id); a.ini = Number(a.ini); return a; });
-      var c1 = clis.filter(function (c) { return String(c.negocio).toLowerCase() === N.n; }).map(function (c) { return { nome: String(c.nome || ""), tel: String(c.tel || ""), email: String(c.email || ""), aniv: anivTxt_(c.aniversario) }; });
+      var c1 = clis.filter(function (c) { return String(c.negocio).toLowerCase() === N.n; }).map(function (c) { return { nome: String(c.nome || ""), tel: String(c.tel || ""), email: String(c.email || ""), aniv: anivTxt_(c.aniversario), naoQuer: sim_(c.nao_receber) }; });
       var e1 = env.filter(function (e) { return String(e.negocio).toLowerCase() === N.n; }).map(function (e) { return { tel: chaveEnv_(e.tel), tipo: String(e.tipo), t: Number(e.quando) || 0 }; });
       var sv = servs.filter(function (s) { return String(s.negocio).toLowerCase() === N.n && sim_(s.ativo); }).map(function (s) { return String(s.nome); });
       var feitos = [];

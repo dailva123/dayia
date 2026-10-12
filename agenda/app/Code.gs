@@ -18,7 +18,7 @@
    5. Copie o endereço que termina em /exec.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "2.5";
+var VERSAO_SISTEMA = "2.6";
 var ABAS = {
   Negocios:     ["n","nome","segmento","situacao","teste_ate","criado","dono","whatsapp_dono","email_dono","senha","telefone","endereco","instagram","email_aviso","dias","abre","fecha","intervalo_ini","intervalo_fim","passo","antecedencia","cancelar_ate","observacao","marketing","lancamento_ate"],
   Agendamentos: ["negocio","id","criado","ini","fim","quando","cliente","tel","email","pet","servico","servico_nome","prof","prof_nome","preco","status","origem","obs","conversa","recado_novo","chave","promo"],
@@ -863,6 +863,24 @@ function avisarLancamento_(N, agora) {
   P.setProperty(k, String(agora));
 }
 
+/* teste grátis: lembra a dona quando faltam 10 e 3 dias, mostrando o que a agenda já fez */
+function avisarTeste_(N, agora, ags) {
+  var L = liberado_(N);
+  if (L.situacao !== "teste" || L.dias_restantes === null || [10, 3].indexOf(L.dias_restantes) < 0) return;
+  if (!/@/.test(N.email_dono || "")) return;
+  var P = PropertiesService.getScriptProperties(), k = "TESTE_" + N.n + "_" + L.dias_restantes;
+  if (P.getProperty(k)) return;
+  var meus = ags.filter(function (a) { return String(a.negocio).toLowerCase() === N.n && String(a.status) !== "cancelado"; });
+  var online = meus.filter(function (a) { return String(a.origem) === "online"; }).length, lk = linkPainel_(N);
+  enviar_(String(N.email_dono), "Faltam " + L.dias_restantes + " dias do seu teste da Agenda Fácil",
+    "<p>Olá, " + esc_(String(N.dono || "").split(" ")[0]) + "!</p><p>Faltam <b>" + L.dias_restantes + " dias</b> para acabar o seu teste grátis da Agenda Fácil.</p>" +
+    (meus.length ? "<p>Até agora a sua agenda recebeu <b>" + meus.length + " agendamento" + (meus.length > 1 ? "s" : "") + "</b>" + (online ? ", sendo <b>" + online + "</b> feito" + (online > 1 ? "s" : "") + " pelas clientes sozinhas, pelo link" : "") + ".</p>" : "<p>Ainda não chegou nenhum agendamento pelo link. Coloque o link na bio do Instagram e no WhatsApp para as clientes começarem a marcar.</p>") +
+    "<p>Para continuar sem parar, é só assinar em <b>Ver planos e pagar</b>, no seu painel. O tempo pago só começa quando o teste acabar.</p>" +
+    (lk ? "<p><a href='" + lk + "' style='background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold'>Abrir o meu painel</a></p>" : "") +
+    "<p>Obrigada por testar!<br>Qualquer dúvida, é só chamar a DayIA no WhatsApp.</p><p style='color:#4A5B75'>Agenda Fácil by DayIA</p>", "Agenda Fácil");
+  P.setProperty(k, String(agora));
+}
+
 /* todo dia: manda por e-mail e aviso no celular para quem tem; o resto aparece no painel para mandar pelo WhatsApp */
 function rotinaDiaria() {
   garantirAbas_();
@@ -871,6 +889,7 @@ function rotinaDiaria() {
     try {
       N.n = String(N.n).toLowerCase();
       avisarLancamento_(N, agora);
+      avisarTeste_(N, agora, ags);
       var mk = marketing_(N);
       if (!mk.auto || !Object.keys(mk.auto).some(function (k) { return mk.auto[k]; }) || !liberado_(N).ok) return;
       var a1 = ags.filter(function (a) { return String(a.negocio).toLowerCase() === N.n; }).map(function (a) { a.id = Number(a.id); a.ini = Number(a.ini); return a; });

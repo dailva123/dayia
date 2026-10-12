@@ -855,7 +855,7 @@ function avisarLancamento_(N, agora) {
   if (!fim || fim - agora > 7 * DIA || agora - fim > DIA) return;
   var P = PropertiesService.getScriptProperties(), k = "LANC_" + N.n;
   if (P.getProperty(k)) return;
-  var data = legivel_(fim).slice(0, 10), adm = cfgVal_("email_admin");
+  var data = legivel_(fim).slice(0, 10), adm = cfgVal_("email_admin") || "dayaraujoia@gmail.com";
   if (/@/.test(adm)) enviar_(adm, "⏰ Fim do preço de lançamento: " + N.nome + " (" + data + ")",
     "<p>O preço de lançamento de <b>" + esc_(N.nome) + "</b> termina em <b>" + data + "</b>.</p><p>Responsável: " + esc_(N.dono) + " · WhatsApp: " + esc_(N.whatsapp_dono) + "</p><p>No painel dela, os botões de pagamento já mudam sozinhos para o valor novo nessa data. Se ela pagava por assinatura no Mercado Pago, cancele a assinatura antiga lá.</p>", "Agenda Fácil");
   if (/@/.test(N.email_dono || "")) enviar_(String(N.email_dono), "Seu preço de lançamento da Agenda Fácil termina em " + data,

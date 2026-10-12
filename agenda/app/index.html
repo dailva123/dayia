@@ -594,12 +594,12 @@ function rNeg(){
   var mes0=new Date();mes0.setDate(1);mes0.setHours(0,0,0,0);
   var fat=DB.ags.filter(function(a){return a.ini>=mes0.getTime()&&a.status==="concluido"}).reduce(function(s,a){return s+(a.preco||0)},0);
   var pend=ativos().filter(function(a){return a.status==="pendente"&&a.fim>Date.now()}).length,recs=DB.ags.filter(function(a){return a.recado_novo}).length;
-  var nMk=DB.v24?devidas().length:0;if(N.aba==="marketing"&&!DB.v24)N.aba="agenda";
+  if(N.aba==="marketing"&&!DB.v24)N.aba="agenda";
   var L=P.lic||{},faixa=L.situacao==="teste"?'<div class="faixa-teste">🎁 <b>Teste grátis:</b> '+(L.dias_restantes===0?'termina hoje':(L.dias_restantes===1?'falta 1 dia':'faltam '+L.dias_restantes+' dias'))+'. Gostou? Você já pode garantir o seu plano: o tempo pago só começa quando o teste acabar.<details style="margin-top:6px"><summary style="cursor:pointer;font-weight:800">Ver planos e pagar</summary>'+planosHtml(DB.negocio.nome)+'</details></div>':'';
   if(!String(DB.negocio.tel||"").replace(/\D/g,""))faixa+='<div class="faixa-teste">📱 <b>Cadastre o seu WhatsApp</b> em <a href="#" id="irCfg">⚙️ Serviços e horários</a>. Assim, depois de agendar, a cliente te avisa pelo WhatsApp com um toque.</div>';
   var h=faixa+'<div class="negtopo"><h2>'+S().ic+' '+esc(DB.negocio.nome)+'</h2><span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">'+(window.Notification&&Notification.permission!=="granted"?'<button class="btn sec min" id="bNotif">🔔 Ativar avisos</button>':'')+'<a class="btn sec min" href="../guia/" target="_blank" rel="noopener">❓ Como usar</a><button class="btn sec min" id="bSair">Sair</button></span></div>'+
    '<div class="kp"><div><b>'+agH.length+'</b><span>horários hoje</span></div><div><b>'+brl(agH.reduce(function(s,a){return s+(a.preco||0)},0))+'</b><span>previsto hoje</span></div><div'+(pend?' id="kpPend" role="button" tabindex="0" style="cursor:pointer;border-color:#E8A93B;background:#FFF8E6"':'')+'><b>'+pend+'</b><span>aguardando confirmar'+(pend?' · <u>toque para ver</u>':'')+'</span></div><div><b>'+recs+'</b><span>recados novos</span></div></div>'+
-   '<nav class="abas" role="tablist">'+[["agenda","🗓 Agenda"],["recados","💬 Recados"],["clientes","👥 "+cap(S().clis)]].concat(DB.v24?[["marketing","📣 Marketing"]]:[]).concat([["resultados","📊 Resultados"],["config","⚙️ Serviços e horários"],["link","🔗 Link de agendamento"]]).map(function(a){return '<button role="tab" data-aba="'+a[0]+'" aria-selected="'+(N.aba===a[0])+'">'+a[1]+(a[0]==="agenda"&&pend?' <span class="tag t-warn">'+pend+'</span>':'')+(a[0]==="recados"&&recs?' <span class="tag t-warn">'+recs+'</span>':'')+(a[0]==="marketing"&&nMk?' <span class="tag t-warn">'+nMk+'</span>':'')+'</button>'}).join("")+'</nav><div id="negCorpo"></div>';
+   '<nav class="abas" role="tablist">'+[["agenda","🗓 Agenda"],["recados","💬 Recados"],["clientes","👥 "+cap(S().clis)]].concat(DB.v24?[["marketing","📣 Marketing"]]:[]).concat([["resultados","📊 Resultados"],["config","⚙️ Serviços e horários"],["link","🔗 Link de agendamento"]]).map(function(a){return '<button role="tab" data-aba="'+a[0]+'" aria-selected="'+(N.aba===a[0])+'">'+a[1]+(a[0]==="agenda"&&pend?' <span class="tag t-warn">'+pend+'</span>':'')+(a[0]==="recados"&&recs?' <span class="tag t-warn">'+recs+'</span>':'')+'</button>'}).join("")+'</nav><div id="negCorpo"></div>';
   var foco=document.activeElement&&document.activeElement.id;
   $("#app").innerHTML='<div class="neg">'+h+'</div>';
   $("#bSair").onclick=P.sair;
@@ -836,17 +836,6 @@ function devidas(){
     if(t.length)out.push({c:c,tipo:t[0]})});
   return out;
 }
-function marcarEnvio(lista,depois){
-  var agora=Date.now();lista.forEach(function(x){DB.envios.push({tel:x.tel,tipo:x.tipo,canal:x.canal||"whatsapp",t:agora})});
-  api("acao",{token:P.tk,tipo:"enviado",lista:lista}).then(function(){P.v=0}).catch(function(e){if(!P.erro(e))toast("Não consegui registrar o envio: "+e.message)});
-  if(depois)depois();
-}
-/* travas contra bloqueio do WhatsApp: limite por dia e intervalo entre envios */
-var LIMITE_DIA=40,INTERVALO=45;
-function enviosHoje(){var h=dia0(Date.now());return (DB.envios||[]).filter(function(e){return e.t>=h&&e.canal==="whatsapp"}).length}
-function esperaSeg(){var u=ls("ag-ult-envio-"+NEG)||0;return Math.max(0,Math.ceil((u+INTERVALO*1000-Date.now())/1000))}
-function podeEnviar(){if(enviosHoje()>=LIMITE_DIA){alert("Você já mandou "+LIMITE_DIA+" mensagens hoje. Para o WhatsApp não bloquear o seu número, continue amanhã.");return false}var w=esperaSeg();if(w>0){toast("Espere "+w+" segundos para a próxima. Assim o WhatsApp não acha que é robô.");return false}ls("ag-ult-envio-"+NEG,Date.now());return true}
-function travaBotoes(sel){clearInterval(N.tTrava);function f(){var w=esperaSeg(),fim=enviosHoje()>=LIMITE_DIA;$$(sel).forEach(function(b){if(!b.dataset.txt)b.dataset.txt=b.innerHTML;b.classList.toggle("espera",w>0||fim);b.innerHTML=fim?"Limite de hoje":(w>0?"⏳ "+w+"s":b.dataset.txt)});if(!w)clearInterval(N.tTrava)}f();N.tTrava=setInterval(f,1000)}
 function copiar(t){try{navigator.clipboard.writeText(t).then(function(){toast("Texto copiado! Cole no Status do WhatsApp ou no Instagram.")},function(){prompt("Copie o texto:",t)})}catch(e){prompt("Copie o texto:",t)}}
 function salvarMk(msg){return P.acao("marketing",{marketing:mk()},msg)}
 
@@ -867,35 +856,22 @@ function proximasOcasioes(dias){var h=dia0(Date.now()),a=new Date().getFullYear(
 
 /* ---------- aba Marketing ---------- */
 function nMarketing(){
-  if(!N.mk||N.mk==="campanha")N.mk="hoje";
-  var dv=devidas(),liga=MSGS.filter(function(m){return mk().auto[m.id]}).length,prom=(DB.promos||[]).filter(function(p){return p.tipo==="ultima"||p.ate>Date.now()});
-  var h='<nav class="abas sub2">'+[["hoje","📤 Para enviar hoje"+(dv.length?' <span class="tag t-warn">'+dv.length+'</span>':'')],["auto","🤖 Mensagens automáticas"],["promo","🔥 Promoções"+(prom.length?' <span class="tag t-ok">'+prom.length+'</span>':'')]].map(function(a){return '<button data-mk="'+a[0]+'" aria-selected="'+(N.mk===a[0])+'">'+a[1]+'</button>'}).join("")+'</nav><div id="mkCorpo"></div>';
-  $("#negCorpo").innerHTML=h;
+  if(N.mk!=="promo")N.mk="auto";
+  var prom=(DB.promos||[]).filter(function(p){return p.tipo==="ultima"||p.ate>Date.now()});
+  $("#negCorpo").innerHTML='<nav class="abas sub2">'+[["auto","🤖 Mensagens automáticas"],["promo","🔥 Promoções"+(prom.length?' <span class="tag t-ok">'+prom.length+'</span>':'')]].map(function(a){return '<button data-mk="'+a[0]+'" aria-selected="'+(N.mk===a[0])+'">'+a[1]+'</button>'}).join("")+'</nav><div id="mkCorpo"></div>';
   $$("#negCorpo [data-mk]").forEach(function(b){b.onclick=function(){N.mk=b.dataset.mk;nMarketing()}});
-  ({hoje:mkHoje,auto:mkAuto,promo:mkPromo})[N.mk](dv,liga);
-}
-function mkHoje(dv,liga){
-  var el=$("#mkCorpo"),oc=proximasOcasioes(15);
-  var h=(oc.length?'<div class="faixa-teste">📅 <b>'+esc(oc[0].o.nome)+'</b> '+(dia0(oc[0].d)===dia0(Date.now())?'é hoje':'é '+dataLonga(oc[0].d).toLowerCase())+'. Divulgue no Status do WhatsApp e no Instagram: <a href="#" data-oc="'+oc[0].o.id+'">copiar texto pronto</a>.</div>':'');
-  if(!liga){el.innerHTML=h+'<div class="card"><h3>Nenhuma mensagem automática ligada</h3><p class="sub">Ligue as mensagens de boas-vindas, aniversário e “volte a agendar”. O app avisa aqui quem deve receber cada uma, com o texto pronto.</p><button class="btn sol" id="irAuto">Ver mensagens automáticas</button></div>';
-    $("#irAuto").onclick=function(){N.mk="auto";nMarketing()};ligaOc();return}
-  h+='<div class="card"><h3>'+(dv.length?dv.length+' mensage'+(dv.length>1?'ns':'m')+' para enviar hoje':'Tudo em dia ✅')+'</h3><p class="sub">Quem tem e-mail ou ativou os avisos no celular recebe sozinho, todo dia às 10h. As outras aparecem aqui: toque em <b>Enviar</b> e o WhatsApp abre com a mensagem pronta, uma de cada vez. Hoje: <b>'+enviosHoje()+' de '+LIMITE_DIA+'</b>.</p>';
-  h+=dv.length?'<div class="lista">'+dv.map(function(d,i){var c=d.c,t=montaTxt(textoDe(d.tipo),c),w=waPara(c.tel,t);
-    return '<div class="it"><div class="info"><b>'+esc(c.nome)+'</b> <span class="tag t-blue">'+esc(msgDef(d.tipo).nome)+'</span><br><small>'+esc(t.length>110?t.slice(0,110)+"…":t)+'</small></div>'+(w?'<a class="btn wa min" target="_blank" rel="noopener" href="'+esc(w)+'" data-env="'+i+'">💬 Enviar</a>':'<span class="tag t-mute">sem WhatsApp</span>')+'<button class="btn sec min" data-pula="'+i+'" title="Não mandar esta">Pular</button></div>'}).join("")+'</div>':'<p class="vazio">Ninguém para chamar hoje. Volte amanhã.</p>';
-  el.innerHTML=h+'</div>';
-  travaBotoes("#mkCorpo [data-env]");
-  $$("#mkCorpo [data-env]").forEach(function(b){b.addEventListener("click",function(e){if(!podeEnviar()){e.preventDefault();return}var d=dv[+b.dataset.env];setTimeout(function(){marcarEnvio([{tel:d.c.k,tipo:d.tipo}],function(){toast("Marcado como enviado");nMarketing()})},400)})});
-  $$("#mkCorpo [data-pula]").forEach(function(b){b.onclick=function(){var d=dv[+b.dataset.pula];marcarEnvio([{tel:d.c.k,tipo:d.tipo,canal:"pulado"}],nMarketing)}});
-  ligaOc();
-  function ligaOc(){$$("#mkCorpo [data-oc]").forEach(function(a){a.onclick=function(e){e.preventDefault();var o=OCASIOES.filter(function(x){return x.id===a.dataset.oc})[0];copiar(montaTxt(o.txt.replace(/^Olá, \{nome\}! /,""),{}))}})}
+  ({auto:mkAuto,promo:mkPromo})[N.mk]();
 }
 function mkAuto(){
-  var el=$("#mkCorpo"),g="",h='<p class="sub">Ligue as que quiser. Quem tem e-mail ou ativou os avisos no celular recebe sozinho, todo dia às 10h. As demais aparecem em <b>Para enviar hoje</b>, prontas para mandar pelo WhatsApp com um toque.</p>';
+  var el=$("#mkCorpo"),g="",oc=proximasOcasioes(15),comMail=fichas().filter(function(c){return /@/.test(c.email)&&!c.naoQuer}).length;
+  var h=(oc.length?'<div class="faixa-teste">📅 <b>'+esc(oc[0].o.nome)+'</b> '+(dia0(oc[0].d)===dia0(Date.now())?'é hoje':'é '+dataLonga(oc[0].d).toLowerCase())+'. Divulgue no Status do WhatsApp e no Instagram: <a href="#" data-oc="'+oc[0].o.id+'">copiar texto pronto</a>.</div>':'')+
+    '<div class="card"><p style="margin:0">🛡️ <b>Nada sai pelo seu WhatsApp.</b> As mensagens chegam sozinhas, todo dia às 10h, por <b>e-mail</b> (para quem deixou o e-mail) e como <b>aviso no celular</b> (para quem ativou os avisos da agenda). Assim o seu número não corre risco nenhum.</p><p class="sub" style="margin:8px 0 0">Hoje '+comMail+' '+esc(comMail===1?S().cli:S().clis)+' com e-mail. Para chegar em mais gente, cadastre o e-mail em 👥 '+esc(cap(S().clis))+'.</p></div>';
   MSGS.forEach(function(m){if(m.g!==g){g=m.g;h+='<h3 style="margin:16px 0 8px">'+esc(g)+'</h3>'}var on=!!mk().auto[m.id];
     h+='<div class="card mkc"><div style="flex:1;min-width:200px"><span class="tag '+(on?"t-ok":"t-mute")+'">'+(on?"Ativa":"Desligada")+'</span><h3 style="margin:6px 0 2px">'+esc(m.nome)+'</h3><p class="sub" style="margin:0">'+esc(m.quando)+'</p></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sec min" data-ed="'+m.id+'">✏️ Texto</button><button class="btn '+(on?"sec":"sol")+' min" data-liga="'+m.id+'">'+(on?"Desligar":"Ligar")+'</button></div></div>'});
   el.innerHTML=h;
   $$("#mkCorpo [data-liga]").forEach(function(b){b.onclick=function(){var id=b.dataset.liga;mk().auto[id]=!mk().auto[id];salvarMk(mk().auto[id]?"Mensagem ligada":"Mensagem desligada");nMarketing()}});
   $$("#mkCorpo [data-ed]").forEach(function(b){b.onclick=function(){editarTexto(b.dataset.ed)}});
+  $$("#mkCorpo [data-oc]").forEach(function(a){a.onclick=function(e){e.preventDefault();var o=OCASIOES.filter(function(x){return x.id===a.dataset.oc})[0];copiar(montaTxt(o.txt.replace(/^Olá, \{nome\}! /,""),{}))}});
 }
 function editarTexto(id){
   var m=msgDef(id),ex=fichas()[0]||{nome:"Maria"};
@@ -928,7 +904,7 @@ function formCli(c){
   c=c||{};var s=S(),p=(c.aniv||"").split("/");
   var md=modal('<h2>'+(c.id||c.nome?"Dados da "+esc(s.cli):"Nova "+esc(s.cli))+'</h2><form id="fC"><div class="g2"><label class="f full">Nome<input name="nome" required maxlength="80" value="'+esc(c.nome||"")+'"></label><label class="f">WhatsApp<input name="tel" inputmode="tel" value="'+esc(c.tel||"")+'" placeholder="(19) 99999-9999"></label><label class="f">E-mail<input name="email" type="email" value="'+esc(c.email||"")+'"></label>'+
     '<label class="f">Aniversário: dia<select name="dd"><option value="">—</option>'+Array.from({length:31},function(_,i){var v=pad(i+1);return '<option'+(v===p[0]?" selected":"")+'>'+v+'</option>'}).join("")+'</select></label><label class="f">mês<select name="mm"><option value="">—</option>'+["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"].map(function(n,i){var v=pad(i+1);return '<option value="'+v+'"'+(v===p[1]?" selected":"")+'>'+n+'</option>'}).join("")+'</select></label>'+
-    (s.pet?'<label class="f full">Nome do pet<input name="pet" value="'+esc(c.pet||"")+'"></label>':'')+'<label class="full" style="display:flex;gap:8px;align-items:center;font-weight:700;font-size:13.5px"><input type="checkbox" name="nq"'+(c.naoQuer?" checked":"")+'> 🚫 Não quer receber mensagens automáticas</label></div><p class="sub" style="margin:8px 0 0">Com o aniversário, a mensagem de parabéns aparece sozinha na semana certa.</p><div class="acoes"><button class="btn sol">Salvar</button>'+(c.id?'<button type="button" class="btn badb" id="cDel">Apagar cadastro</button>':'')+'<button type="button" class="btn sec" id="cX">Fechar</button></div></form>');
+    (s.pet?'<label class="f full">Nome do pet<input name="pet" value="'+esc(c.pet||"")+'"></label>':'')+'<label class="full" style="display:flex;gap:8px;align-items:center;font-weight:700;font-size:13.5px"><input type="checkbox" name="nq"'+(c.naoQuer?" checked":"")+'> 🚫 Não quer receber mensagens automáticas (e-mail e aviso)</label></div><p class="sub" style="margin:8px 0 0">Com o aniversário, a mensagem de parabéns aparece sozinha na semana certa.</p><div class="acoes"><button class="btn sol">Salvar</button>'+(c.id?'<button type="button" class="btn badb" id="cDel">Apagar cadastro</button>':'')+'<button type="button" class="btn sec" id="cX">Fechar</button></div></form>');
   $("#cX",md).onclick=function(){fechaModal(md)};
   if($("#cDel",md))$("#cDel",md).onclick=function(){if(!confirm("Apagar o cadastro? Os horários dela continuam na agenda."))return;fechaModal(md);P.acao("clienteApagar",{id:c.id},"Cadastro apagado")};
   $("#fC",md).onsubmit=function(e){e.preventDefault();var f=this;if((f.dd.value&&!f.mm.value)||(!f.dd.value&&f.mm.value)){alert("Escolha o dia e o mês do aniversário.");return}

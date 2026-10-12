@@ -18,9 +18,9 @@
    5. Copie o endereço que termina em /exec.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "2.4";
+var VERSAO_SISTEMA = "2.5";
 var ABAS = {
-  Negocios:     ["n","nome","segmento","situacao","teste_ate","criado","dono","whatsapp_dono","email_dono","senha","telefone","endereco","instagram","email_aviso","dias","abre","fecha","intervalo_ini","intervalo_fim","passo","antecedencia","cancelar_ate","observacao","marketing"],
+  Negocios:     ["n","nome","segmento","situacao","teste_ate","criado","dono","whatsapp_dono","email_dono","senha","telefone","endereco","instagram","email_aviso","dias","abre","fecha","intervalo_ini","intervalo_fim","passo","antecedencia","cancelar_ate","observacao","marketing","lancamento_ate"],
   Agendamentos: ["negocio","id","criado","ini","fim","quando","cliente","tel","email","pet","servico","servico_nome","prof","prof_nome","preco","status","origem","obs","conversa","recado_novo","chave","promo"],
   Servicos:     ["negocio","id","nome","minutos","preco","ativo"],
   Equipe:       ["negocio","id","nome","ativo"],
@@ -241,6 +241,7 @@ var ACOES = {
   painel: function (d) {
     var n = sessao_(d), N = negocio_(n), lib = liberado_(N);
     var v = versao_(n);
+    lib.lancamento_ate = lancAte_(N);
     if (d.v && Number(d.v) === v) return { ok: true, mudou: false, v: v, licenca: lib };
     var de = Date.now() - 400 * DIA;
     return { ok: true, mudou: true, v: v, licenca: lib, negocio: publicoNeg_(N), segmento: N.segmento, horario: horario_(N), passo: Number(N.passo) || 15,
@@ -836,6 +837,32 @@ function textoMsg_(mk, tipo, nome, N, servs) {
     .replace(/\{servicos\}/g, servs.slice(0, 4).join(", "));
 }
 
+/* ---------- preço de lançamento: 6 meses depois que o teste acaba ---------- */
+var MESES_LANCAMENTO = 6;
+function lancAte_(N) {
+  var manual = dataDe_(N.lancamento_ate);
+  if (manual) return manual;
+  var base = dataDe_(N.teste_ate) || dataDe_(N.criado);
+  if (!base) return 0;
+  var d = new Date(base); d.setMonth(d.getMonth() + MESES_LANCAMENTO);
+  return d.getTime();
+}
+/* avisa a DayIA e a dona do negócio uma semana antes do preço de lançamento acabar */
+function avisarLancamento_(N, agora) {
+  var s = String(N.situacao || "").toLowerCase().trim();
+  if (s !== "ativo") return;
+  var fim = lancAte_(N);
+  if (!fim || fim - agora > 7 * DIA || agora - fim > DIA) return;
+  var P = PropertiesService.getScriptProperties(), k = "LANC_" + N.n;
+  if (P.getProperty(k)) return;
+  var data = legivel_(fim).slice(0, 10), adm = cfgVal_("email_admin");
+  if (/@/.test(adm)) enviar_(adm, "⏰ Fim do preço de lançamento: " + N.nome + " (" + data + ")",
+    "<p>O preço de lançamento de <b>" + esc_(N.nome) + "</b> termina em <b>" + data + "</b>.</p><p>Responsável: " + esc_(N.dono) + " · WhatsApp: " + esc_(N.whatsapp_dono) + "</p><p>No painel dela, os botões de pagamento já mudam sozinhos para o valor novo nessa data. Se ela pagava por assinatura no Mercado Pago, cancele a assinatura antiga lá.</p>", "Agenda Fácil");
+  if (/@/.test(N.email_dono || "")) enviar_(String(N.email_dono), "Seu preço de lançamento da Agenda Fácil termina em " + data,
+    "<p>Olá, " + esc_(String(N.dono || "").split(" ")[0]) + "!</p><p>Obrigada por usar a Agenda Fácil. O seu preço de lançamento vai até <b>" + data + "</b>. A partir daí, o plano continua com o valor normal.</p><p>No seu painel, em <b>Ver planos e pagar</b>, já aparece o link certo. Qualquer dúvida, é só chamar a DayIA no WhatsApp.</p><p style='color:#4A5B75'>Agenda Fácil by DayIA</p>", "Agenda Fácil");
+  P.setProperty(k, String(agora));
+}
+
 /* todo dia: manda por e-mail e aviso no celular para quem tem; o resto aparece no painel para mandar pelo WhatsApp */
 function rotinaDiaria() {
   garantirAbas_();
@@ -843,6 +870,7 @@ function rotinaDiaria() {
   negs.forEach(function (N) {
     try {
       N.n = String(N.n).toLowerCase();
+      avisarLancamento_(N, agora);
       var mk = marketing_(N);
       if (!mk.auto || !Object.keys(mk.auto).some(function (k) { return mk.auto[k]; }) || !liberado_(N).ok) return;
       var a1 = ags.filter(function (a) { return String(a.negocio).toLowerCase() === N.n; }).map(function (a) { a.id = Number(a.id); a.ini = Number(a.ini); return a; });

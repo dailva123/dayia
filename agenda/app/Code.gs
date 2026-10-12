@@ -18,14 +18,17 @@
    5. Copie o endereço que termina em /exec.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "2.3";
+var VERSAO_SISTEMA = "2.4";
 var ABAS = {
-  Negocios:     ["n","nome","segmento","situacao","teste_ate","criado","dono","whatsapp_dono","email_dono","senha","telefone","endereco","instagram","email_aviso","dias","abre","fecha","intervalo_ini","intervalo_fim","passo","antecedencia","cancelar_ate","observacao"],
-  Agendamentos: ["negocio","id","criado","ini","fim","quando","cliente","tel","email","pet","servico","servico_nome","prof","prof_nome","preco","status","origem","obs","conversa","recado_novo","chave"],
+  Negocios:     ["n","nome","segmento","situacao","teste_ate","criado","dono","whatsapp_dono","email_dono","senha","telefone","endereco","instagram","email_aviso","dias","abre","fecha","intervalo_ini","intervalo_fim","passo","antecedencia","cancelar_ate","observacao","marketing"],
+  Agendamentos: ["negocio","id","criado","ini","fim","quando","cliente","tel","email","pet","servico","servico_nome","prof","prof_nome","preco","status","origem","obs","conversa","recado_novo","chave","promo"],
   Servicos:     ["negocio","id","nome","minutos","preco","ativo"],
   Equipe:       ["negocio","id","nome","ativo"],
   Bloqueios:    ["negocio","id","prof","ini","fim","quando","motivo"],
-  Config:       ["chave","valor","explicacao"]
+  Config:       ["chave","valor","explicacao"],
+  Clientes:     ["negocio","id","nome","tel","email","aniversario","pet","origem","criado"],
+  Promocoes:    ["negocio","id","tipo","servicos","desconto","de","ate","horas","ativo","criado"],
+  Envios:       ["negocio","tel","tipo","canal","quando"]
 };
 var MIN = 60000, DIA = 86400000;
 var MODELOS = {
@@ -74,6 +77,8 @@ function configurar() {
   }
   var sobra = ss.getSheetByName("Página1") || ss.getSheetByName("Sheet1");
   if (sobra && sobra.getLastRow() === 0 && ss.getSheets().length > 6) ss.deleteSheet(sobra);
+  garantirAbas_(true);
+  instalarRotina_();
   MailApp.getRemainingDailyQuota();
   return "Pronto! Agora faça a implantação como App da Web.";
 }
@@ -91,7 +96,7 @@ function doPost(e) {
 }
 function responder_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function executar_(d) {
-  try { var f = ACOES[d.acao]; if (!f) return { erro: "Ação desconhecida." }; return f(d); }
+  try { garantirAbas_(); var f = ACOES[d.acao]; if (!f) return { erro: "Ação desconhecida." }; return f(d); }
   catch (x) { return { erro: String(x && x.message || x) }; }
 }
 
@@ -148,7 +153,8 @@ var ACOES = {
       .map(function (a) { return { prof: a.prof, ini: a.ini, fim: a.fim }; });
     var bloq = bloqueios_(N.n).filter(function (b) { return b.fim > agora; }).map(function (b) { return { prof: b.prof, ini: b.ini, fim: b.fim }; });
     return { ok: true, negocio: publicoNeg_(N), segmento: N.segmento, horario: horario_(N), passo: Number(N.passo) || 15, antecedencia: Number(N.antecedencia) || 0,
-      cancelar_ate: Number(N.cancelar_ate) || 0, servicos: servicos_(N.n, true), profs: equipe_(N.n, true), ocupados: ocup, bloq: bloq };
+      cancelar_ate: Number(N.cancelar_ate) || 0, servicos: servicos_(N.n, true), profs: equipe_(N.n, true), ocupados: ocup, bloq: bloq,
+      promos: promos_(N.n).filter(function (p) { return p.tipo === "ultima" || p.ate > agora; }) };
   },
 
   agendar: function (d) {
@@ -167,7 +173,7 @@ var ACOES = {
       var candidatos = c.prof ? [String(c.prof)] : profs;
       var livres = candidatos.filter(function (p) { return profs.indexOf(p) >= 0 && livre_(N, H, ags, bl, p, ini, sv.minutos, null, false); });
       if (!livres.length) return { ok: false, ocupado: true, erro: "Esse horário acabou de ser ocupado. Escolha outro, por favor." };
-      var pid = livres[0];
+      var pid = livres[0], pr = promoPara_(promos_(N.n), sv.id, ini, Date.now());
       if (livres.length > 1) {
         var d0 = inicioDia_(ini), cont = {};
         livres.forEach(function (p) { cont[p] = 0; });
@@ -177,7 +183,7 @@ var ACOES = {
       if (d.base) setCfg_("link_base", String(d.base).split("?")[0].split("#")[0]);
       var a = {
         negocio: N.n, id: proximoId_(), criado: Date.now(), ini: ini, fim: ini + sv.minutos * MIN, quando: legivel_(ini), cliente: lim_(c.nome, 80), tel: lim_(c.tel, 30),
-        email: lim_(c.email, 120), pet: lim_(c.pet, 40), servico: sv.id, servico_nome: sv.nome, prof: pid, prof_nome: nomeProf_(N.n, pid), preco: sv.preco,
+        email: lim_(c.email, 120), pet: lim_(c.pet, 40), servico: sv.id, servico_nome: sv.nome, prof: pid, prof_nome: nomeProf_(N.n, pid), preco: pr ? precoCom_(sv.preco, pr.desconto) : sv.preco, promo: pr ? pr.nome + " -" + pr.desconto + "%" : "",
         status: "pendente", origem: "online", obs: lim_(c.obs, 500), conversa: c.obs ? JSON.stringify([{ de: "cli", x: lim_(c.obs, 500), t: Date.now() }]) : "[]",
         recado_novo: c.obs ? "SIM" : "", chave: Utilities.getUuid().replace(/-/g, "").slice(0, 10)
       };
@@ -185,7 +191,7 @@ var ACOES = {
       mudou_(N.n);
       avisarNegocio_(a, N);
       emailCliente_(a, N, "novo");
-      push_(["N_" + N.n], "📅 Novo agendamento: " + a.cliente, a.servico_nome + " · " + a.quando + (a.obs ? " · " + a.obs : ""), linkPainel_(N));
+      push_(["N_" + N.n], "📅 Novo agendamento: " + a.cliente, a.servico_nome + " · " + a.quando + (a.promo ? " · 🔥 " + a.promo : "") + (a.obs ? " · " + a.obs : ""), linkPainel_(N));
       return { ok: true, agendamento: publico_(a, true), chave: a.chave };
     });
   },
@@ -241,7 +247,9 @@ var ACOES = {
       antecedencia: Number(N.antecedencia) || 0, cancelar_ate: Number(N.cancelar_ate) || 0, email_aviso: String(N.email_aviso || ""),
       servicos: servicos_(n, false), profs: equipe_(n, false),
       ags: agendamentos_(n).filter(function (a) { return a.ini > de; }).map(function (a) { return publico_(a, false); }),
-      bloq: bloqueios_(n).filter(function (b) { return b.fim > Date.now() - 7 * DIA; }) };
+      bloq: bloqueios_(n).filter(function (b) { return b.fim > Date.now() - 7 * DIA; }),
+      versao: VERSAO_SISTEMA, clientes: clientesDe_(n), promos: promos_(n), marketing: marketing_(N),
+      envios: envios_(n).filter(function (x) { return x.t > Date.now() - 400 * DIA; }) };
   },
 
   acao: function (d) {
@@ -305,6 +313,30 @@ var ACOES = {
           break;
         case "config":
           salvarConfig_(N, d);
+          break;
+        case "clientes":
+          var res = importarClientes_(n, d.lista || []);
+          mudou_(n);
+          return { ok: true, novos: res.novos, atualizados: res.atualizados };
+        case "cliente":
+          salvarCliente_(n, d.cliente || {});
+          break;
+        case "clienteApagar":
+          apagarLinha_("Clientes", n, String(d.id));
+          break;
+        case "promo":
+          salvarPromo_(n, d.promo || {});
+          break;
+        case "promoFim":
+          apagarLinha_("Promocoes", n, String(d.id));
+          break;
+        case "marketing":
+          var mk = JSON.stringify(d.marketing || {});
+          if (mk.length > 20000) throw new Error("Textos grandes demais.");
+          atualizarNeg_(n, { marketing: mk });
+          break;
+        case "enviado":
+          registrarEnvios_(n, (d.lista || []).slice(0, 500), "whatsapp");
           break;
         default: throw new Error("Ação desconhecida.");
       }
@@ -450,7 +482,11 @@ function linhas_(n) {
   var v = aba_(n).getDataRange().getValues(), cab = v.shift();
   return v.filter(function (r) { return r.join("") !== ""; }).map(function (r) { var o = {}; cab.forEach(function (c, i) { o[c] = r[i]; }); return o; });
 }
-function inserir_(n, o) { aba_(n).appendRow(txtRow_(ABAS[n].map(function (c) { return o[c] === undefined ? "" : o[c]; }))); }
+var CAB_ = {};
+function cab_(n) { if (!CAB_[n]) { var sh = aba_(n); CAB_[n] = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String); } return CAB_[n]; }
+function linhaDe_(n, o) { return txtRow_(cab_(n).map(function (c) { return o[c] === undefined || o[c] === null ? "" : o[c]; })); }
+function inserir_(n, o) { aba_(n).appendRow(linhaDe_(n, o)); }
+function inserirVarias_(n, lista) { if (!lista.length) return; var sh = aba_(n), c = cab_(n); sh.getRange(sh.getLastRow() + 1, 1, lista.length, c.length).setValues(lista.map(function (o) { return linhaDe_(n, o); })); }
 function atualizarAg_(id, campos) { atualizarPor_("Agendamentos", 1, Number(id), campos); }
 function atualizarNeg_(n, campos) { atualizarPor_("Negocios", 0, n, campos); }
 function atualizarPor_(aba, col0, chave, campos) {
@@ -458,7 +494,8 @@ function atualizarPor_(aba, col0, chave, campos) {
   for (var i = 1; i < v.length; i++) {
     var k = v[i][col0];
     if ((typeof chave === "number" && Number(k) === chave) || (typeof chave === "string" && String(k).toLowerCase() === chave)) {
-      Object.keys(campos).forEach(function (c) { var col = ABAS[aba].indexOf(c); if (col >= 0) sh.getRange(i + 1, col + 1).setValue(txt_(campos[c])); });
+      var cab = cab_(aba);
+      Object.keys(campos).forEach(function (c) { var col = cab.indexOf(c); if (col >= 0) sh.getRange(i + 1, col + 1).setValue(txt_(campos[c])); });
       return;
     }
   }
@@ -493,7 +530,7 @@ function setCfg_(k, v) {
 function proximoId_() { var id = Number(cfgVal_("proximo_id")) || 1; setCfg_("proximo_id", id + 1); return id; }
 function publico_(a, paraCliente) {
   var o = { id: a.id, ini: a.ini, fim: a.fim, cli: String(a.cliente), tel: String(a.tel), email: String(a.email || ""), pet: String(a.pet || ""), serv: a.servico, servico_nome: String(a.servico_nome), prof: a.prof, prof_nome: String(a.prof_nome),
-    preco: a.preco, status: a.status, origem: a.origem, obs: String(a.obs || ""), conversa: conversa_(a), recado_novo: sim_(a.recado_novo), criado: a.criado };
+    preco: a.preco, promo: String(a.promo || ""), status: a.status, origem: a.origem, obs: String(a.obs || ""), conversa: conversa_(a), recado_novo: sim_(a.recado_novo), criado: a.criado };
   if (paraCliente) { o.chave = a.chave; delete o.recado_novo; }
   return o;
 }
@@ -603,4 +640,222 @@ function limparSessoes_() {
       try { if (!(JSON.parse(tudo[k]).exp > agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); }
     });
   } catch (x) {}
+}
+
+/* =====================================================================
+   MARKETING (versão 2.4): clientes importados, promoções e mensagens
+   ===================================================================== */
+
+/* cria as abas novas e as colunas que faltarem, sem mexer nos dados */
+function garantirAbas_(forcar) {
+  var P = PropertiesService.getScriptProperties();
+  if (!forcar && P.getProperty("ESQUEMA") === VERSAO_SISTEMA) return;
+  var ss = planilha_();
+  Object.keys(ABAS).forEach(function (nome) {
+    var sh = ss.getSheetByName(nome) || ss.insertSheet(nome), cols = ABAS[nome];
+    if (sh.getLastRow() === 0) {
+      sh.appendRow(cols); sh.setFrozenRows(1);
+      sh.getRange(1, 1, 1, cols.length).setFontWeight("bold").setBackground("#0E2238").setFontColor("#FFFFFF");
+      return;
+    }
+    var cab = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String);
+    cols.forEach(function (c) {
+      if (cab.indexOf(c) >= 0) return;
+      cab.push(c);
+      sh.getRange(1, cab.length).setValue(c).setFontWeight("bold").setBackground("#0E2238").setFontColor("#FFFFFF");
+    });
+  });
+  CAB_ = {};
+  P.setProperty("ESQUEMA", VERSAO_SISTEMA);
+}
+
+/* roda a rotina das mensagens automáticas todo dia por volta das 10h */
+function instalarRotina_() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === "rotinaDiaria") ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger("rotinaDiaria").timeBased().everyDays(1).atHour(10).inTimezone("America/Sao_Paulo").create();
+}
+
+/* ---------- clientes cadastrados ou importados ---------- */
+function soDig_(t) { return String(t || "").replace(/\D/g, ""); }
+function chaveTel_(t) { var d = soDig_(t); if (d.length > 11 && d.indexOf("55") === 0) d = d.slice(2); return d.slice(-11); }
+function chaveEnv_(t) { t = String(t || ""); return /^nome:/.test(t) ? t : (chaveTel_(t) || t); }
+function anivTxt_(v) {
+  if (v instanceof Date) return ("0" + v.getDate()).slice(-2) + "/" + ("0" + (v.getMonth() + 1)).slice(-2);
+  var m = String(v || "").match(/(\d{1,2})\s*[\/\-.]\s*(\d{1,2})/);
+  if (!m) return "";
+  var d = +m[1], M = +m[2];
+  if (d < 1 || d > 31 || M < 1 || M > 12) return "";
+  return ("0" + d).slice(-2) + "/" + ("0" + M).slice(-2);
+}
+function clientesDe_(n) {
+  return linhas_("Clientes").filter(function (c) { return String(c.negocio).toLowerCase() === n; }).map(function (c) {
+    return { id: String(c.id), nome: String(c.nome || ""), tel: String(c.tel || ""), email: String(c.email || ""), aniv: anivTxt_(c.aniversario), pet: String(c.pet || ""), origem: String(c.origem || "") };
+  });
+}
+function importarClientes_(n, lista) {
+  if (lista.length > 3000) throw new Error("Importe no máximo 3.000 contatos de cada vez.");
+  var atuais = clientesDe_(n), porTel = {}, porNome = {}, novos = [], atualizados = 0, agora = Date.now();
+  atuais.forEach(function (c) { var k = chaveTel_(c.tel); if (k) porTel[k] = c; porNome[c.nome.toLowerCase()] = c; });
+  lista.forEach(function (x, i) {
+    var nome = lim_(x.nome, 80), tel = lim_(x.tel, 30), k = chaveTel_(tel);
+    if (!nome && !k) return;
+    if (k.length < 8) { k = ""; tel = ""; }
+    var ja = k ? porTel[k] : porNome[nome.toLowerCase()];
+    if (ja) {
+      var m = {};
+      if (!ja.email && x.email) m.email = lim_(x.email, 120);
+      if (!ja.aniv && anivTxt_(x.aniv)) m.aniversario = anivTxt_(x.aniv);
+      if (!ja.nome && nome) m.nome = nome;
+      if (Object.keys(m).length) { atualizarCli_(n, ja.id, m); atualizados++; }
+      return;
+    }
+    var c = { negocio: n, id: "c" + agora + "-" + i, nome: nome || tel, tel: tel, email: lim_(x.email, 120), aniversario: anivTxt_(x.aniv), pet: lim_(x.pet, 40), origem: lim_(x.origem, 20) || "importado", criado: legivel_(agora) };
+    novos.push(c);
+    if (k) porTel[k] = { id: c.id, nome: c.nome, email: c.email, aniv: c.aniversario };
+    else porNome[(nome || "").toLowerCase()] = { id: c.id, nome: c.nome, email: c.email, aniv: c.aniversario };
+  });
+  inserirVarias_("Clientes", novos);
+  return { novos: novos.length, atualizados: atualizados };
+}
+function atualizarCli_(n, id, campos) {
+  var sh = aba_("Clientes"), v = sh.getDataRange().getValues(), cab = cab_("Clientes");
+  for (var i = 1; i < v.length; i++) {
+    if (String(v[i][0]).toLowerCase() === n && String(v[i][1]) === String(id)) {
+      Object.keys(campos).forEach(function (c) { var col = cab.indexOf(c); if (col >= 0) sh.getRange(i + 1, col + 1).setValue(txt_(campos[c])); });
+      return true;
+    }
+  }
+  return false;
+}
+function salvarCliente_(n, c) {
+  var nome = lim_(c.nome, 80), tel = lim_(c.tel, 30);
+  if (!nome) throw new Error("Coloque o nome.");
+  var campos = { nome: nome, tel: tel, email: lim_(c.email, 120), aniversario: anivTxt_(c.aniv), pet: lim_(c.pet, 40) };
+  if (c.id && atualizarCli_(n, c.id, campos)) return;
+  var k = chaveTel_(tel), ja = k ? clientesDe_(n).filter(function (x) { return chaveTel_(x.tel) === k; })[0] : null;
+  if (ja) { atualizarCli_(n, ja.id, campos); return; }
+  campos.negocio = n; campos.id = "c" + Date.now(); campos.origem = "manual"; campos.criado = legivel_(Date.now());
+  inserir_("Clientes", campos);
+}
+
+/* ---------- promoções ---------- */
+function promos_(n) {
+  return linhas_("Promocoes").filter(function (p) { return String(p.negocio).toLowerCase() === n && sim_(p.ativo); }).map(function (p) {
+    var sv = String(p.servicos || "todos");
+    return { id: String(p.id), tipo: String(p.tipo), servicos: sv === "todos" ? "todos" : sv.split(",").filter(String), desconto: Number(p.desconto) || 0,
+      de: Number(p.de) || 0, ate: Number(p.ate) || 0, horas: Number(p.horas) || 0 };
+  });
+}
+function salvarPromo_(n, p) {
+  var tipo = p.tipo === "ultima" ? "ultima" : "rapida", desc = Math.round(Number(p.desconto) || 0);
+  if (desc < 1 || desc > 90) throw new Error("O desconto precisa ser de 1% a 90%.");
+  var sv = p.servicos === "todos" || !p.servicos || !p.servicos.length ? "todos" : p.servicos.map(String).join(",");
+  var o = { negocio: n, id: "pr" + Date.now(), tipo: tipo, servicos: sv, desconto: desc, de: "", ate: "", horas: "", ativo: "SIM", criado: legivel_(Date.now()) };
+  if (tipo === "rapida") {
+    o.de = Number(p.de) || 0; o.ate = Number(p.ate) || 0;
+    if (!(o.ate > o.de)) throw new Error("Confira as datas da promoção.");
+  } else {
+    o.horas = Math.max(1, Math.min(48, Number(p.horas) || 2));
+    promos_(n).filter(function (x) { return x.tipo === "ultima"; }).forEach(function (x) { apagarLinha_("Promocoes", n, x.id); });
+  }
+  inserir_("Promocoes", o);
+}
+function promoPara_(lista, sid, ini, agora) {
+  var melhor = null;
+  lista.forEach(function (p) {
+    if (p.servicos !== "todos" && p.servicos.indexOf(String(sid)) < 0) return;
+    var vale = p.tipo === "rapida" ? (ini >= p.de && ini < p.ate && agora < p.ate) : (ini > agora && ini - agora <= p.horas * 3600000);
+    if (vale && (!melhor || p.desconto > melhor.desconto)) melhor = { desconto: p.desconto, nome: p.tipo === "rapida" ? "Promoção" : "Última hora" };
+  });
+  return melhor;
+}
+function precoCom_(preco, desc) { return Math.round(Number(preco || 0) * (100 - desc)) / 100; }
+
+/* ---------- configurações de marketing e envios ---------- */
+function marketing_(N) { try { var o = JSON.parse(N.marketing || "{}"); return o && typeof o === "object" ? o : {}; } catch (x) { return {}; } }
+function envios_(n) {
+  return linhas_("Envios").filter(function (e) { return String(e.negocio).toLowerCase() === n; })
+    .map(function (e) { return { tel: chaveEnv_(e.tel), tipo: String(e.tipo), canal: String(e.canal), t: Number(e.quando) || 0 }; });
+}
+function registrarEnvios_(n, lista, canal) {
+  var agora = Date.now();
+  inserirVarias_("Envios", lista.filter(function (x) { return x && x.tel && x.tipo; }).map(function (x) {
+    return { negocio: n, tel: chaveEnv_(lim_(x.tel, 80)), tipo: lim_(x.tipo, 60), canal: x.canal || canal, quando: agora };
+  }));
+}
+
+/* mesmas regras do painel: quem deve receber cada mensagem automática hoje */
+var MSG_PADRAO = {
+  boasvindas: "Olá, {nome}! Agradecemos a sua visita na {negocio} 💛 Foi um prazer te atender. Quando quiser marcar de novo, é só usar o link: {link}",
+  servicos: "Olá, {nome}! Tudo bem? Aqui é da {negocio}. Você sabia que a gente também faz {servicos}? Veja os horários livres e agende em 1 minuto: {link}",
+  volta21: "Olá, {nome}! Já faz umas semanas desde o seu último horário na {negocio}. Que tal agendar o próximo? É rapidinho: {link}",
+  volta45: "Olá, {nome}! Estamos com saudade de você aqui na {negocio} 💛 Separe um tempinho para você e agende o seu horário: {link}",
+  volta90: "Olá, {nome}! Faz tempo que você não vem na {negocio}. Que tal voltar? Veja os horários livres: {link}",
+  aniver: "Olá, {nome}! Seu aniversário está chegando 🎉 Toda a equipe da {negocio} deseja um ano lindo para você. Que tal comemorar se cuidando? Agende aqui: {link}"
+};
+function fichas_(ags, clis, agora) {
+  var m = {};
+  function ficha(tel, nome) { var k = chaveTel_(tel) || ("nome:" + String(nome).toLowerCase()); return m[k] || (m[k] = { k: k, nome: nome, tel: tel, email: "", aniv: "", vis: 0, prim: 0, ult: 0, prox: 0, ultId: 0 }); }
+  ags.forEach(function (a) {
+    var c = ficha(a.tel, a.cliente);
+    if (a.email && !c.email) c.email = String(a.email);
+    if (a.id > c.ultId) c.ultId = a.id;
+    if (a.status === "concluido") { c.vis++; c.prim = c.prim ? Math.min(c.prim, a.ini) : a.ini; c.ult = Math.max(c.ult, a.ini); }
+    if ((a.status === "confirmado" || a.status === "pendente") && a.ini > agora) c.prox = c.prox ? Math.min(c.prox, a.ini) : a.ini;
+  });
+  clis.forEach(function (x) { var c = ficha(x.tel, x.nome); if (x.nome) c.nome = x.nome; if (x.email && !c.email) c.email = x.email; if (x.aniv) c.aniv = x.aniv; });
+  return Object.keys(m).map(function (k) { return m[k]; });
+}
+function devidas_(fichas, envios, mk, agora) {
+  var auto = (mk && mk.auto) || {}, H = 3600000, out = [];
+  function enviado(c, tipo, desde) { return envios.some(function (e) { return e.tipo === tipo && e.tel === c.k && e.t >= desde; }); }
+  fichas.forEach(function (c) {
+    var tipos = [];
+    if (auto.boasvindas && c.prim && agora >= c.prim + 2 * H && agora <= c.prim + 3 * DIA && !enviado(c, "boasvindas", 0)) tipos.push("boasvindas");
+    if (auto.servicos && c.prim && agora >= c.prim + 21 * DIA && agora <= c.prim + 35 * DIA && !enviado(c, "servicos", 0)) tipos.push("servicos");
+    if (c.ult && !c.prox) {
+      var x = agora - c.ult;
+      if (auto.volta21 && x >= 21 * DIA && x < 45 * DIA && !enviado(c, "volta21", c.ult)) tipos.push("volta21");
+      if (auto.volta45 && x >= 45 * DIA && x < 90 * DIA && !enviado(c, "volta45", c.ult)) tipos.push("volta45");
+      if (auto.volta90 && x >= 90 * DIA && x < 120 * DIA && !enviado(c, "volta90", c.ult)) tipos.push("volta90");
+    }
+    if (auto.aniver && c.aniv) {
+      var p = c.aniv.split("/"), hoje = new Date(agora + fuso_() * MIN), ano = hoje.getUTCFullYear();
+      var dt = Date.UTC(ano, +p[1] - 1, +p[0]), h0 = Date.UTC(ano, hoje.getUTCMonth(), hoje.getUTCDate());
+      if (dt < h0) dt = Date.UTC(ano + 1, +p[1] - 1, +p[0]);
+      if (dt - h0 <= 7 * DIA && !enviado(c, "aniver", agora - 300 * DIA)) tipos.push("aniver");
+    }
+    if (tipos.length) out.push({ c: c, tipo: tipos[0] });
+  });
+  return out;
+}
+function textoMsg_(mk, tipo, nome, N, servs) {
+  var t = (mk && mk.textos && mk.textos[tipo]) || MSG_PADRAO[tipo] || "";
+  return t.replace(/\{nome\}/g, String(nome || "").split(" ")[0]).replace(/\{negocio\}/g, String(N.nome)).replace(/\{link\}/g, linkNeg_(N))
+    .replace(/\{servicos\}/g, servs.slice(0, 4).join(", "));
+}
+
+/* todo dia: manda por e-mail e aviso no celular para quem tem; o resto aparece no painel para mandar pelo WhatsApp */
+function rotinaDiaria() {
+  garantirAbas_();
+  var agora = Date.now(), negs = linhas_("Negocios"), ags = linhas_("Agendamentos"), clis = linhas_("Clientes"), env = linhas_("Envios"), servs = linhas_("Servicos");
+  negs.forEach(function (N) {
+    try {
+      N.n = String(N.n).toLowerCase();
+      var mk = marketing_(N);
+      if (!mk.auto || !Object.keys(mk.auto).some(function (k) { return mk.auto[k]; }) || !liberado_(N).ok) return;
+      var a1 = ags.filter(function (a) { return String(a.negocio).toLowerCase() === N.n; }).map(function (a) { a.id = Number(a.id); a.ini = Number(a.ini); return a; });
+      var c1 = clis.filter(function (c) { return String(c.negocio).toLowerCase() === N.n; }).map(function (c) { return { nome: String(c.nome || ""), tel: String(c.tel || ""), email: String(c.email || ""), aniv: anivTxt_(c.aniversario) }; });
+      var e1 = env.filter(function (e) { return String(e.negocio).toLowerCase() === N.n; }).map(function (e) { return { tel: chaveEnv_(e.tel), tipo: String(e.tipo), t: Number(e.quando) || 0 }; });
+      var sv = servs.filter(function (s) { return String(s.negocio).toLowerCase() === N.n && sim_(s.ativo); }).map(function (s) { return String(s.nome); });
+      var feitos = [];
+      devidas_(fichas_(a1, c1, agora), e1, mk, agora).forEach(function (d) {
+        var txt = textoMsg_(mk, d.tipo, d.c.nome, N, sv), foi = false;
+        if (/@/.test(d.c.email)) { enviar_(d.c.email, String(N.nome), "<p>" + esc_(txt).replace(/(https?:\/\/\S+)/g, "<a href='$1'>$1</a>") + "</p>", String(N.nome)); foi = true; }
+        if (d.c.ultId && pushDe_("A_" + N.n + "_" + d.c.ultId).length) { push_(["A_" + N.n + "_" + d.c.ultId], String(N.nome), txt, linkNeg_(N)); foi = true; }
+        if (foi) feitos.push({ tel: d.c.k, tipo: d.tipo, canal: "automático" });
+      });
+      registrarEnvios_(N.n, feitos, "automático");
+    } catch (x) { console.log("rotina " + N.n + ": " + x); }
+  });
 }

@@ -209,6 +209,7 @@ main{max-width:1280px;margin:0 auto;padding:16px}
 .abas.sub2 button{font-size:13px;padding:6px 12px}
 .barra{height:8px;background:#EEF2F7;border-radius:9px;margin-top:10px;overflow:hidden}.barra i{display:block;height:100%;background:var(--ok)}
 .passo{display:flex;align-items:center;gap:14px}.passo b{font-size:26px;min-width:70px;text-align:center}.passo .btn{width:44px;height:44px;border-radius:50%;font-size:20px;padding:0}
+.planoTroca .btn[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
 .btn.espera{opacity:.5;pointer-events:none}
 .dicas .dica1{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid #EEF2F7}.dicas .dica1:first-of-type{border-top:0;padding-top:2px}
 .dicas .dica1 .ic{font-size:22px;flex:none}.dicas .dica1 p{margin:0;flex:1;min-width:200px}
@@ -392,19 +393,29 @@ function convHtml(conv,lado){
 var WA_DAYIA="5519999389118";
 /* planos: preços e links de pagamento (Mercado Pago). Link vazio = o botão abre o WhatsApp da DayIA */
 var PLANOS={mensal:{preco:"R$ 19,90",depois:"R$ 29,90",nome:"Agenda Fácil",link:"https://mpago.la/1pexmPZ",linkDepois:"https://mpago.la/2AVawCR"},anual:{preco:"R$ 29,80",depois:"R$ 49,80",nome:"Agenda Fácil + Divulga Fácil",link:"https://mpago.la/1UcLZRF",linkDepois:"https://mpago.la/1CoF37s"}};
+/* planos anuais: pagamento único por 12 meses, preço fixo (link vazio = abre o WhatsApp da DayIA) */
+var ANUAIS={mensal:{preco:"R$\u00a0249",mes:"R$\u00a020,75",nome:"Agenda Fácil · Anual",link:"",eco1:"R$\u00a049,80",eco2:"R$\u00a0109,80"},anual:{preco:"R$\u00a0449",mes:"R$\u00a037,42",nome:"Agenda Fácil + Divulga Fácil · Anual",link:"",eco1:"R$\u00a028,60",eco2:"R$\u00a0148,60"}};
 /* depois de 6 meses (contados do fim do teste) os botões passam sozinhos para o preço normal */
 function lancAcabou(){var f=P.lic&&P.lic.lancamento_ate;return !!(f&&Date.now()>f)}
 function planosHtml(nome){
-  var fim=lancAcabou(),lf=P.lic&&P.lic.lancamento_ate;
+  var fim=lancAcabou(),lf=P.lic&&P.lic.lancamento_ate,uid="pl"+Math.random().toString(36).slice(2,7);
   function pr(k){return fim?PLANOS[k].depois:PLANOS[k].preco}
-  function bt(k,txt){var p=PLANOS[k];var href=(fim?p.linkDepois:p.link)||waDayia("Olá! Quero assinar o plano "+p.nome+" por "+pr(k)+" ("+nome+").");
-    return '<a class="btn '+(k==="anual"?"pri":"sec")+'" style="width:100%;box-sizing:border-box;justify-content:center" target="_blank" rel="noopener" href="'+esc(href)+'">'+txt+'</a>'}
-  function obs(k){return fim?'Plano mensal.':'Preço de lançamento'+(lf?' até '+dataCurta(lf)+'/'+new Date(lf).getFullYear():' nos 6 primeiros meses')+'. Depois, '+PLANOS[k].depois+' por mês.'}
-  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0;text-align:left">'+
-    '<div style="border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff"><b style="font-size:15px">📅 Só a agenda</b><div style="font-size:26px;font-weight:800;margin:6px 0">'+pr("mensal")+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por mês</small></div><p class="sub" style="margin:0 0 10px">'+obs("mensal")+'</p>'+bt("mensal","Assinar a agenda")+'</div>'+
-    '<div style="border:2px solid #F2C230;border-radius:14px;padding:14px;background:#FFFBEF"><b style="font-size:15px">⭐ Agenda + Divulga Fácil</b><div style="font-size:26px;font-weight:800;margin:6px 0">'+pr("anual")+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por mês</small></div><p class="sub" style="margin:0 0 10px">A agenda e os posts prontos para as suas redes, juntos. '+obs("anual")+'</p>'+bt("anual","Assinar o pacote")+'</div></div>'+
+  function bt(href,txt,pri){return '<a class="btn '+(pri?"pri":"sec")+'" style="width:100%;box-sizing:border-box;justify-content:center" target="_blank" rel="noopener" href="'+esc(href)+'">'+txt+'</a>'}
+  function hrefM(k){var p=PLANOS[k];return (fim?p.linkDepois:p.link)||waDayia("Olá! Quero assinar o plano "+p.nome+" (mensal) por "+pr(k)+" ("+nome+").")}
+  function hrefA(k){var a=ANUAIS[k];return a.link||waDayia("Olá! Quero assinar o plano "+a.nome+" por "+a.preco+" ("+nome+").")}
+  function obs(k){return fim?'Você paga todo mês.':'Você paga todo mês. Esse é o preço de lançamento, que vale'+(lf?' até '+dataCurta(lf)+'/'+new Date(lf).getFullYear():' nos 6 primeiros meses')+'. Depois, passa para '+PLANOS[k].depois+' por mês.'}
+  function cartao(k,anual){var dest=k==="anual",t=dest?'⭐ Agenda + Divulga Fácil':'📅 Só a agenda',extra=dest?'A agenda e os posts prontos para as suas redes, juntos. ':'';
+    var box='<div style="border:'+(dest?'2px solid #F2C230':'1.5px solid var(--line)')+';border-radius:14px;padding:14px;background:'+(dest?'#FFFBEF':'#fff')+'"><b style="font-size:15px">'+t+'</b>';
+    if(!anual)return box+'<div style="font-size:26px;font-weight:800;margin:6px 0">'+pr(k)+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por mês</small></div><p class="sub" style="margin:0 0 10px">'+extra+obs(k)+'</p>'+bt(hrefM(k),dest?"Assinar o pacote mensal":"Assinar a agenda mensal",dest)+'</div>';
+    var a=ANUAIS[k];
+    return box+' <span class="tag t-ok">economize</span><div style="font-size:26px;font-weight:800;margin:6px 0">'+a.preco+'<small style="font-size:14px;font-weight:600;color:var(--mute)"> por ano</small></div><p class="sub" style="margin:0 0 6px">'+extra+'Você paga <b>uma vez só</b> e usa por <b>12 meses</b>. É como pagar <b>'+a.mes+' por mês</b>, e o preço não muda durante o ano.</p><p class="sub" style="margin:0 0 10px">💰 Comparado ao mensal, você economiza <b>'+a.eco1+'</b> no primeiro ano e <b>'+a.eco2+'</b> nos anos seguintes. Dá para parcelar no cartão.</p>'+bt(hrefA(k),dest?"Assinar o pacote anual":"Assinar a agenda anual",dest)+'</div>'}
+  return '<div class="planoTroca" role="group" aria-label="Forma de pagamento" style="display:flex;gap:6px;margin:12px 0 0"><button type="button" class="btn sec min" aria-pressed="true" data-pl="'+uid+'" data-m="m">Pagar por mês</button><button type="button" class="btn sec min" aria-pressed="false" data-pl="'+uid+'" data-m="a">Pagar por ano · economize</button></div>'+
+    '<div id="'+uid+'m" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0;text-align:left">'+cartao("mensal",false)+cartao("anual",false)+'</div>'+
+    '<div id="'+uid+'a" hidden style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0;text-align:left">'+cartao("mensal",true)+cartao("anual",true)+'</div>'+
     '<p class="sub" style="margin:0">Pix, boleto ou cartão. Depois de pagar, <a target="_blank" rel="noopener" href="'+waDayia("Olá! Paguei o plano da Agenda Fácil ("+nome+"). Segue o comprovante:")+'">mande o comprovante no WhatsApp</a> e a DayIA libera na hora.</p>';
 }
+document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-pl]");if(!b)return;var u=b.dataset.pl,an=b.dataset.m==="a";
+  document.querySelectorAll('[data-pl="'+u+'"]').forEach(function(x){x.setAttribute("aria-pressed",x===b)});var m=document.getElementById(u+"m"),a=document.getElementById(u+"a");if(m)m.style.display=an?"none":"grid";if(a){a.hidden=!an;a.style.display=an?"grid":"none"}});
 function waDayia(msg){return "https://wa.me/"+((P.lic&&P.lic.whatsapp)||WA_DAYIA)+"?text="+encodeURIComponent(msg)}
 function telaBloqueada(L){
   var venc=L.situacao==="teste_vencido";

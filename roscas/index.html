@@ -984,5 +984,32 @@ if (ls("rf-ja-mediu") !== "1") $("#dicasBox").open = true; // primeira vez: dica
 restaurarSessao();
 if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} }
 </script>
+<!-- Botão "Instalar" no topo (DayIA) -->
+<style>
+.dy-inst{position:absolute!important;top:7px!important;right:10px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:5;border:1px solid rgba(255,255,255,.35);background:rgba(14,34,56,.35);color:#fff;border-radius:999px;padding:5px 12px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.dy-inst-d{position:fixed;inset:0;z-index:9999;background:rgba(14,34,56,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.dy-inst-d[hidden]{display:none}
+.dy-inst-c{background:#fff;color:#0E2238;border-radius:18px;padding:22px;max-width:420px;width:100%;box-shadow:0 30px 80px rgba(14,34,56,.35);font:15px/1.5 system-ui,sans-serif}
+.dy-inst-c h3{margin:0 0 8px;font-size:19px}.dy-inst-c ol{padding-left:20px;margin:8px 0 16px;color:#5A6B80}.dy-inst-c li{margin:6px 0}
+.dy-inst-c button{float:right;border:0;background:#0E2238;color:#fff;border-radius:10px;padding:10px 18px;font-weight:800;cursor:pointer}
+.dy-inst.claro{background:#0E2238;color:#fff;border-color:#0E2238}
+</style>
+<script>
+(function(){
+  var SEL="header.top",ev=null;
+  if((window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone)return;
+  addEventListener("beforeinstallprompt",function(e){e.preventDefault();ev=e});
+  function por(){var h=document.querySelector(SEL);if(!h||document.querySelector(".dy-inst"))return;
+    var b=document.createElement("button");b.type="button";b.className="dy-inst";b.textContent="📲 Instalar";if(getComputedStyle(h).position==="static")h.style.position="relative";var bg=getComputedStyle(h).backgroundColor,m=bg.match(/\d+(\.\d+)?/g)||[255,255,255,0];if(m.length>3&&+m[3]===0||(+m[0]*0.3+ +m[1]*0.59+ +m[2]*0.11)>150)b.className+=" claro";h.appendChild(b);if(h.offsetHeight<90&&parseFloat(getComputedStyle(h).paddingRight)<112)h.style.paddingRight="112px";
+    var d=document.createElement("div");d.className="dy-inst-d";d.hidden=true;
+    d.innerHTML='<div class="dy-inst-c" role="dialog" aria-modal="true"><h3>📲 Instalar no celular</h3><p style="margin:0;color:#5A6B80">Fica um ícone na tela do celular, como um aplicativo:</p><ol><li><b>Android (Chrome):</b> toque nos três pontinhos <b>⋮</b> lá em cima e depois em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</li><li><b>iPhone (Safari):</b> toque em compartilhar <b>⬆︎</b> (o quadradinho com a setinha) e depois em <b>Adicionar à Tela de Início</b>.</li></ol><button type="button">Entendi</button><div style="clear:both"></div></div>';
+    document.body.appendChild(d);
+    d.addEventListener("click",function(e){if(e.target===d||e.target.tagName==="BUTTON")d.hidden=true});
+    b.addEventListener("click",function(){if(ev){ev.prompt();ev.userChoice.then(function(r){ev=null;if(r&&r.outcome==="accepted")b.remove()})}else d.hidden=false});
+    addEventListener("appinstalled",function(){b.remove()});}
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",por);else por();
+})();
+</script>
+
 </body>
 </html>

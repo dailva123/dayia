@@ -319,6 +319,7 @@ form.manual label small{font-weight:500;color:var(--mute)}
       <li><span class="ck"></span>Comparando com as tabelas</li>
     </ul></div>
     <div id="msgFoto"></div>
+    <button type="button" id="btnDiag" hidden style="margin:8px auto 0;display:block;background:none;border:1px dashed var(--line);color:var(--ink2);border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer">📋 Copiar diagnóstico (para mandar à Claude)</button>
   </section>
 
   <!-- MODO MANUAL -->
@@ -359,10 +360,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=33"></script>
-<script src="tabelas.js?v=33"></script>
-<script src="medir.js?v=33"></script>
-<script src="local.js?v=33"></script>
+<script src="config.js?v=34"></script>
+<script src="tabelas.js?v=34"></script>
+<script src="medir.js?v=34"></script>
+<script src="local.js?v=34"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -597,11 +598,13 @@ function processarFoto(r0) {
       return pararScan(!!d.ok).then(function () { return d; });
     }).then(function (d) {
       if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
+      estado.diag = { versao: "v34", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
       var m = normalizar(d.medida || {});
       // só corrige ONDE ficam as linhas: a IA às vezes manda a posição em outra escala (0 a 1000, pixels) ou com x e y trocados
       if (m.pontos && window.RoscaLocal) {
-        try { var aj = RoscaLocal.ajustarPontos(foto.img, m.pontos, Number(m.diametro_px) || 0); m.pontos = aj ? aj.pontos : null; } catch (e) {}
+        try { var aj = RoscaLocal.ajustarPontos(foto.img, m.pontos, Number(m.diametro_px) || 0); m.pontos = aj ? aj.pontos : null; estado.diag.ajuste = aj ? { nota: aj.nota, pontos: aj.pontos } : null; } catch (e) {}
       }
+      $("#btnDiag").hidden = false;
       foto.medida = m;
       if (m.rosca_visivel !== false && !(Roscas.razaoPossivel(m.razao) || m.tem_referencia) && m.pontos) {
         // a IA achou a rosca mas a contagem não fechou: o app encaixa o pente de rosca na foto sozinho
@@ -661,6 +664,12 @@ function enviarIA(leve, dataUrl, tentativa) {
     return d;
   });
 }
+$("#btnDiag").onclick = function () {
+  var t = JSON.stringify(estado.diag || {});
+  var b = this, ok = function () { b.textContent = "✅ Copiado! Cole na conversa com a Claude"; };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, function () { prompt("Copie o texto:", t); });
+  else prompt("Copie o texto:", t);
+};
 $("#arquivo").onchange = receberFoto;
 $("#galeria").onchange = receberFoto;
 $("#btnGaleria").addEventListener("click", function (e) {

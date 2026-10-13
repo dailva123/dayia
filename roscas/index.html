@@ -319,7 +319,8 @@ form.manual label small{font-weight:500;color:var(--mute)}
           <li>Tire a foto <b>de perto</b>, com a rosca ocupando boa parte da tela.</li>
           <li>Deixe a rosca <b>de lado</b>, mostrando os filetes.</li>
           <li>Espere ficar <b>nítido</b>: os filetes precisam aparecer bem.</li>
-          <li>Lugar claro, sem tremer.</li>
+          <li><b>Fundo claro</b>: coloque um papel branco embaixo da peça. Em fundo escuro, o lado da rosca que fica na sombra some.</li>
+          <li><b>Luz de frente</b> (a lanterna do app já liga sozinha), sem tremer.</li>
           <li>Para acertar mais: tire <b>2 ou 3 fotos</b> de lados diferentes.</li>
           <li>Tem um cartão ou régua por perto? Coloque ao lado: fica ainda mais certo. Mas não é obrigatório.</li>
         </ul>
@@ -375,10 +376,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=43"></script>
-<script src="tabelas.js?v=43"></script>
-<script src="medir.js?v=43"></script>
-<script src="local.js?v=43"></script>
+<script src="config.js?v=44"></script>
+<script src="tabelas.js?v=44"></script>
+<script src="medir.js?v=44"></script>
+<script src="local.js?v=44"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -614,7 +615,7 @@ function processarFoto(r0) {
     }).then(function (d) {
       if (d.demorou) {
         // a IA passou do prazo: sem esperar mais, abre o pente na foto para escolher a lâmina
-        estado.diag = { versao: "v43", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, demorou: true };
+        estado.diag = { versao: "v44", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, demorou: true };
         foto.status = "erro"; desenharFotos();
         aviso("#msgFoto", "info", "A IA está demorando hoje. Escolha a lâmina do pente que encaixa nos filetes. 🔩");
         setTimeout(function () { editarFoto(foto); }, 200);
@@ -622,14 +623,14 @@ function processarFoto(r0) {
       }
       if (!d.ok) {
         // guarda o erro real para o botão de diagnóstico
-        estado.diag = { versao: "v43", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, erro_ia: JSON.parse(JSON.stringify(d)) };
+        estado.diag = { versao: "v44", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, erro_ia: JSON.parse(JSON.stringify(d)) };
         foto.status = "erro"; desenharFotos();
         aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">🔩 Medir com o pente na foto</button>' +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="document.getElementById(\'btnDiag\').click()">📋 Copiar diagnóstico</button>');
         return;
       }
-      estado.diag = { versao: "v43", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
+      estado.diag = { versao: "v44", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
       // peça com mais de uma rosca (ex.: niple de redução): mede cada ponta e pergunta qual mostrar
       var lista = roscasDaFoto(d.medida || {}, foto);
       foto.roscas = lista;
@@ -638,7 +639,7 @@ function processarFoto(r0) {
     });
   }).catch(function (err) {
     pararScan(false);
-    estado.diag = { versao: "v43", quando: new Date().toISOString(), tipo: estado.tipo, falha_rede: String(err && err.message || err), online: navigator.onLine };
+    estado.diag = { versao: "v44", quando: new Date().toISOString(), tipo: estado.tipo, falha_rede: String(err && err.message || err), online: navigator.onLine };
     aviso("#msgFoto", "erro", (navigator.onLine ? "O servidor não respondeu a tempo. Tente de novo." : "Sem internet no celular agora.") +
       ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">🔩 Medir com o pente na foto</button>' +
       ' <button type="button" class="btn sec" style="margin-top:8px" onclick="document.getElementById(\'btnDiag\').click()">📋 Copiar diagnóstico</button>');

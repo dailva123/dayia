@@ -35,7 +35,7 @@ button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;fon
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = &quot;2.2&quot;;
+var VERSAO = &quot;2.3&quot;;
 var TENTATIVAS = []; // diagnóstico: cada chamada à IA (modelo, jeito, tempo, resultado)
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
@@ -55,6 +55,8 @@ var LIMITE_DIA = 300;
 var PROMPT = [
   &quot;Você localiza roscas de conexões hidráulicas em fotos. Responda rápido e só com JSON.&quot;,
   &quot;box_2d: retângulo JUSTO em volta SÓ da parte com filetes (sem o sextavado, sem o corpo da peça), [ymin, xmin, ymax, xmax] de 0 a 1000.&quot;,
+  &quot;IMPORTANTE: inclua a rosca INTEIRA, inclusive o lado que está na sombra/escuro (a rosca é um cilindro: os dois lados têm a mesma largura a partir do centro),&quot;,
+  &quot;mas NÃO inclua a sombra que a peça projeta na mesa/fundo.&quot;,
   &quot;tipo: macho (filetes por fora) | femea (filetes por dentro) | indefinido. Rosca informada pelo cliente: {TIPO}.&quot;,
   &quot;diametro_estimado_mm: tamanho aproximado da rosca pelo contexto (dedos, sextavado, objetos).&quot;,
   &quot;forma: reta | conica | indefinida.&quot;,

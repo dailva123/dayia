@@ -683,7 +683,7 @@
       '<div class="ed-topo"><button type="button" class="ed-x" aria-label="Fechar">✕</button><b>Foto da rosca</b><button type="button" class="cam-ext">Câmera do celular</button></div>' +
       '<div class="cam-palco"><video playsinline muted autoplay></video>' +
       '<div class="cam-dicas"><span>📏 <b>Bem perto:</b> a rosca enchendo a moldura</span><span>↔️ <b>De lado:</b> com os filetes aparecendo</span>' +
-      '<span>💡 <b>Claro:</b> use a lanterna 🔦 se precisar</span><span>✋ <b>Parado:</b> espere ficar nítido</span></div>' +
+      '<span>⬜ <b>Fundo claro:</b> papel branco embaixo da peça</span><span>💡 <b>Luz de frente:</b> lanterna 🔦 ligada</span></div>' +
       '<div class="cam-guia"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><span>Coloque a rosca aqui</span></div>' +
       '<div class="cam-msg"><p>Abrindo a câmera…</p><button type="button" class="btn cam-plan" hidden>📷 Abrir a câmera do celular</button></div>' +
       '<div class="cam-zoom" hidden><span>1x</span><input type="range" aria-label="Zoom da câmera"><span class="cam-zv"></span></div>' +
@@ -743,10 +743,10 @@
       } else zbox.hidden = true;
       var bl = $(".cam-luz", ov);
       bl.hidden = !cap.torch;
-      bl.onclick = function () {
-        luz = !luz; bl.setAttribute("aria-pressed", luz);
-        track.applyConstraints({ advanced: [{ torch: luz }] }).catch(function () { luz = false; bl.setAttribute("aria-pressed", "false"); });
-      };
+      function aplicaLuz() { track.applyConstraints({ advanced: [{ torch: luz }] }).catch(function () { luz = false; bl.setAttribute("aria-pressed", "false"); }); }
+      bl.onclick = function () { luz = !luz; bl.setAttribute("aria-pressed", luz); lsSet("rf-lanterna", luz ? "1" : "0"); aplicaLuz(); };
+      // lanterna ligada por padrão: ilumina a rosca de frente, os dois lados ficam claros e a sombra vai para trás da peça
+      if (cap.torch && lsGet("rf-lanterna") !== "0") { luz = true; bl.setAttribute("aria-pressed", "true"); aplicaLuz(); }
       // foco contínuo, se disponível
       if (cap.focusMode && cap.focusMode.indexOf("continuous") >= 0) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(function () {});
     }

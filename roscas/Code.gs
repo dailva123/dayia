@@ -26,15 +26,15 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "1.6";
+var VERSAO = "1.7";
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
 // Com as duas chaves (CLAUDE_KEY e GEMINI_KEY), o Claude vem primeiro (mais preciso) e o Gemini fica de reserva.
 // Para mudar a ordem, crie a propriedade IA_PRIMEIRO com o valor "gemini" ou "claude".
 // Rápidos primeiro; os mais pesados só se os rápidos estiverem lotados.
-var MODELOS_GEMINI = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-pro-latest"];
-var MODELOS_CLAUDE = ["claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5"];
+var MODELOS_GEMINI = ["gemini-flash-latest", "gemini-flash-lite-latest"];   // 1.7: sem o "pro" (lento demais)
+var MODELOS_CLAUDE = ["claude-haiku-5-5", "claude-sonnet-5-5"];          // 1.7: o mais rápido primeiro
 
 // Limite de análises por dia, para ninguém gastar sua cota à toa
 var LIMITE_DIA = 300;
@@ -89,12 +89,13 @@ function doPost(e) {
     var texto = PROMPT.replace("{TIPO}", tipo);
     var mime = corpo.mime || "image/jpeg";
 
+    var t0 = Date.now();
     var bruto = analisarComIA_(texto, corpo.imagem, mime);
 
     var medida = extrairJson_(bruto);
     if (!medida) return json_({ ok: false, erro: "A IA não conseguiu ler a foto. Tente outra foto." });
     contarUso_(emp ? emp.id : "_dayia");
-    return json_({ ok: true, medida: medida });
+    return json_({ ok: true, medida: medida, ms: Date.now() - t0 });
   } catch (err) {
     var msg = String(err.message || err);
     if (/demand|overload|unavailable|503|529|429|rate|quota|exhausted/i.test(msg))
@@ -185,7 +186,7 @@ function analisarComIA_(texto, b64, mime) {
         // erro de chave/permissão: tenta o outro fornecedor, se houver, mas não insiste no mesmo
         while (i + 1 < fila.length && fila[i + 1][0] === fila[i][0]) i++;
       } else {
-        Utilities.sleep(800);
+        Utilities.sleep(200);
       }
     }
   }
@@ -242,7 +243,7 @@ function claude_(texto, b64, mime, modelo) {
     muteHttpExceptions: true,
     payload: JSON.stringify({
       model: modelo,
-      max_tokens: 700,
+      max_tokens: 550,
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
         { type: "text", text: texto }

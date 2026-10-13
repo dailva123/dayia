@@ -359,9 +359,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=30"></script>
-<script src="tabelas.js?v=30"></script>
-<script src="medir.js?v=30"></script>
+<script src="config.js?v=31"></script>
+<script src="tabelas.js?v=31"></script>
+<script src="medir.js?v=31"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -590,7 +590,9 @@ function processarFoto(r0) {
       return;
     }
     comecarScan();
+    var t0 = Date.now();
     return pedirIA(r.dataUrl, 0).then(function (d) {
+      estado.tempo = { total: (Date.now() - t0) / 1000, ia: d && d.ms ? d.ms / 1000 : 0 };
       return pararScan(!!d.ok).then(function () { return d; });
     }).then(function (d) {
       if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
@@ -899,6 +901,11 @@ function mostrar() {
     '<a class="btn zap" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(zap) + '">Enviar pelo WhatsApp</a></div>';
 
   var novo = box.hidden || !estado.respondeu;
+  if (estado.origem === "foto" && estado.tempo && estado.tempo.total) {
+    var tp = estado.tempo;
+    h += '<p style="margin:10px 0 0;font-size:12.5px;color:var(--mute);text-align:center">⏱ Resposta em ' + fmt(tp.total, 1) + " s" +
+      (tp.ia ? " (IA: " + fmt(tp.ia, 1) + " s · internet e servidor: " + fmt(Math.max(0, tp.total - tp.ia), 1) + " s)" : "") + "</p>";
+  }
   box.innerHTML = h;
   box.hidden = false;
   if (novo) { box.classList.remove("mostra"); void box.offsetWidth; box.classList.add("mostra"); contar(box); }

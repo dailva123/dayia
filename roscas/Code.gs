@@ -26,14 +26,16 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "1.8";
+var VERSAO = "1.9";
+var TENTATIVAS = []; // diagnóstico: cada chamada à IA (modelo, jeito, tempo, resultado)
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
 // Com as duas chaves (CLAUDE_KEY e GEMINI_KEY), o Claude vem primeiro (mais preciso) e o Gemini fica de reserva.
 // Para mudar a ordem, crie a propriedade IA_PRIMEIRO com o valor "gemini" ou "claude".
 // Rápidos primeiro; os mais pesados só se os rápidos estiverem lotados.
-var MODELOS_GEMINI = ["gemini-flash-latest", "gemini-flash-lite-latest"];   // 1.7: sem o "pro" (lento demais)
+// 1.9: o "lite" primeiro (achar o retângulo da rosca é tarefa simples e ele responde mais rápido)
+var MODELOS_GEMINI = ["gemini-flash-lite-latest", "gemini-flash-latest"];   // 1.7: sem o "pro" (lento demais)
 var MODELOS_CLAUDE = ["claude-haiku-5-5", "claude-sonnet-5-5"];          // 1.7: o mais rápido primeiro
 
 // Limite de análises por dia, para ninguém gastar sua cota à toa
@@ -81,12 +83,13 @@ function doPost(e) {
     var mime = corpo.mime || "image/jpeg";
 
     var t0 = Date.now();
+    TENTATIVAS = [];
     var bruto = analisarComIA_(texto, corpo.imagem, mime);
 
     var medida = extrairJson_(bruto);
     if (!medida) return json_({ ok: false, erro: "A IA não conseguiu ler a foto. Tente outra foto." });
     contarUso_(emp ? emp.id : "_dayia");
-    return json_({ ok: true, medida: medida, ms: Date.now() - t0 });
+    return json_({ ok: true, medida: medida, ms: Date.now() - t0, versao: VERSAO, tentativas: TENTATIVAS });
   } catch (err) {
     var msg = String(err.message || err);
     if (/demand|overload|unavailable|503|529|429|rate|quota|exhausted/i.test(msg))
@@ -186,22 +189,30 @@ function analisarComIA_(texto, b64, mime) {
 
 /* Jeitos de pedir resposta rápida, do mais rápido ao padrão. Cada modelo do Google aceita um;
    o servidor testa na ordem e guarda o que funcionou para aquele modelo (sem errar de novo). */
+// 1.9: imagem em resolução baixa (para achar o retângulo basta) deixa a IA bem mais rápida.
 var JEITOS_GEMINI = [
+  { thinkingConfig: { thinkingLevel: "minimal" }, mediaResolution: "MEDIA_RESOLUTION_LOW" },
+  { thinkingConfig: { thinkingBudget: 0 }, mediaResolution: "MEDIA_RESOLUTION_LOW" },
   { thinkingConfig: { thinkingLevel: "minimal" } },
   { thinkingConfig: { thinkingLevel: "low" } },
   { thinkingConfig: { thinkingBudget: 0 } },
   {}
 ];
+var JEITO_VALIDADE_MS = 6 * 3600 * 1000; // a cada 6 h volta a testar os jeitos mais rápidos
 function gemini_(texto, b64, mime, modelo) {
   var props = PropertiesService.getScriptProperties();
   var chave = props.getProperty("GEMINI_KEY");
   var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelo + ":generateContent";
-  var salvo = Number(props.getProperty("JEITO_" + modelo));
-  var inicio = salvo >= 0 && salvo < JEITOS_GEMINI.length ? salvo : 0;
+  var reg = String(props.getProperty("JEITO2_" + modelo) || "").split("|");
+  var salvo = Number(reg[0]), quando = Number(reg[1]) || 0;
+  if (!(salvo >= 0 && salvo < JEITOS_GEMINI.length) || Date.now() - quando > JEITO_VALIDADE_MS) salvo = -1;
+  var inicio = salvo >= 0 ? salvo : 0;
   var ultimoErro = null;
   for (var k = inicio; k < JEITOS_GEMINI.length; k++) {
     var cfg = { temperature: 0, responseMimeType: "application/json" };
     if (JEITOS_GEMINI[k].thinkingConfig) cfg.thinkingConfig = JEITOS_GEMINI[k].thinkingConfig;
+    if (JEITOS_GEMINI[k].mediaResolution) cfg.mediaResolution = JEITOS_GEMINI[k].mediaResolution;
+    var t1 = Date.now();
     var r = UrlFetchApp.fetch(url, {
       method: "post",
       contentType: "application/json",
@@ -214,8 +225,9 @@ function gemini_(texto, b64, mime, modelo) {
     });
     var code = r.getResponseCode(), d = {};
     try { d = JSON.parse(r.getContentText()); } catch (e) {}
+    TENTATIVAS.push({ modelo: modelo, jeito: k, ms: Date.now() - t1, codigo: code });
     if (code === 200) {
-      if (salvo !== k) props.setProperty("JEITO_" + modelo, String(k));
+      if (salvo !== k) props.setProperty("JEITO2_" + modelo, k + "|" + Date.now());
       var partes = (((d.candidates || [])[0] || {}).content || {}).parts || [];
       return partes.filter(function (p) { return !p.thought; }).map(function (p) { return p.text || ""; }).join("");
     }

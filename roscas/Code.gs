@@ -26,7 +26,7 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "2.1";
+var VERSAO = "2.2";
 var TENTATIVAS = []; // diagnóstico: cada chamada à IA (modelo, jeito, tempo, resultado)
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
@@ -50,8 +50,10 @@ var PROMPT = [
   "diametro_estimado_mm: tamanho aproximado da rosca pelo contexto (dedos, sextavado, objetos).",
   "forma: reta | conica | indefinida.",
   "marcacao: medida de ROSCA gravada ou impressa na peça (ex.: \"1/2\", \"3/4\", \"M16x1,5\"). Ignore códigos de modelo. Senão \"\".",
+  "Se a peça tiver MAIS DE UMA rosca visível (ex.: niple de redução, uma rosca em cada ponta), liste cada uma em roscas:",
+  "[{box_2d, tipo, diametro_estimado_mm}], no máximo 3. box_2d (fora da lista) = a rosca maior ou mais nítida.",
   "Se não houver rosca visível: rosca_visivel=false.",
-  "JSON: {\"rosca_visivel\":true,\"tipo\":\"macho\",\"box_2d\":[0,0,0,0],\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"marcacao\":\"\",\"problemas\":\"\"}",
+  "JSON: {\"rosca_visivel\":true,\"tipo\":\"macho\",\"box_2d\":[0,0,0,0],\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"marcacao\":\"\",\"roscas\":[],\"problemas\":\"\"}",
   "problemas: em português simples, ou vazio."
 ].join("\n");
 

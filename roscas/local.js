@@ -109,8 +109,99 @@
     var q = ac[lagM];
     // passo da IA muito diferente (ex.: o dobro) com pico fraco no nosso: não confia
     if (passoIA && Math.abs(pp - passoIA) / passoIA > 0.45 && q < 0.35) return null;
-    return { passo_px: pp / p.k, diametro_px: D / p.k, razao: D / pp, qualidade: +q.toFixed(2), filetes: Math.round(compIA / pp), passo_ia: passoIA };
+
+    /* Bordas da rosca: onde existe a "ondinha" dos filetes (no passo medido) é rosca; fora dela, é fundo.
+       Assim o diâmetro não depende de a IA ter marcado as bordas certinho. */
+    var borda = bordas(p, mx, my, ux, uy, qx, qy, cm, comp, pp, D);
+    var Dl = D, novos = null;
+    if (borda && Roscas_ok(borda.D / pp) && borda.contraste >= 8 && Math.abs(borda.D - D) / D > 0.12 && Math.abs(borda.D - D) / D < 0.45) {
+      Dl = borda.D;
+      var cx0 = mx + ux * cm, cy0 = my + uy * cm;
+      novos = { diam_a: [(cx0 + qx * borda.esq) / W, (cy0 + qy * borda.esq) / H], diam_b: [(cx0 + qx * borda.dir) / W, (cy0 + qy * borda.dir) / H] };
+    }
+    return { passo_px: pp / p.k, diametro_px: Dl / p.k, diametro_ia_px: D / p.k, razao: Dl / pp, qualidade: +q.toFixed(2),
+      filetes: Math.round(compIA / pp), passo_ia: passoIA, bordas: novos, contraste: borda ? borda.contraste : 0 };
   }
 
-  raiz.RoscaLocal = { nitidez: nitidez, passo: passo };
+  function Roscas_ok(r) { return r >= 7.5 && r <= 55; }
+  // energia da ondinha no passo pp, em cada linha paralela ao eixo (deslocamento o em relação ao centro)
+  function bordas(p, mx, my, ux, uy, qx, qy, cm, comp, pp, D) {
+    var passoO = Math.max(1, D / 160), os = [], E = [];
+    var L = Math.max(comp, pp * 4), w = 2 * Math.PI / pp;
+    var R = Math.max(1.1 * D, 13 * pp);
+    for (var o = -R; o <= R; o += passoO) {
+      var v = [], ok = true;
+      for (var t = -L / 2; t <= L / 2; t += 1) {
+        var a = amostra(p, mx + ux * (cm + t) + qx * o, my + uy * (cm + t) + qy * o);
+        if (isNaN(a)) { ok = false; break; }
+        v.push(a);
+      }
+      os.push(o);
+      if (!ok || v.length < 20) { E.push(0); continue; }
+      v = semTendencia(v, Math.max(3, Math.round(pp * 1.5)));
+      var re = 0, im = 0;
+      for (var i = 0; i < v.length; i++) { re += v[i] * Math.cos(w * i); im += v[i] * Math.sin(w * i); }
+      E.push(Math.sqrt(re * re + im * im) / v.length);
+    }
+    // suaviza (meio passo) para os reflexos não abrirem buracos
+    var jan = Math.max(1, Math.round(pp / 2 / passoO)), Es = [];
+    for (var j = 0; j < E.length; j++) { var s = 0, n = 0; for (var k = j - jan; k <= j + jan; k++) if (k >= 0 && k < E.length) { s += E[k]; n++; } Es.push(s / n); }
+    var ord = Es.slice().sort(function (x, y) { return x - y; });
+    var fundo = ord[Math.floor(ord.length * 0.15)], topo = ord[Math.floor(ord.length * 0.95)];
+    if (!(topo > fundo * 2.5)) return null;
+    var lim = fundo + 0.22 * (topo - fundo);
+    // parte do ponto mais forte perto do centro e abre para os dois lados, pulando buracos pequenos
+    var c0 = 0, best = -1;
+    for (var m = 0; m < Es.length; m++) if (Math.abs(os[m]) < 0.6 * D && Es[m] > best) { best = Es[m]; c0 = m; }
+    var buraco = Math.max(2, Math.round(Math.max(pp * 1.2, D * 0.06) / passoO));
+    function anda(dir) {
+      var ultimo = c0, falta = 0;
+      for (var i2 = c0 + dir; i2 >= 0 && i2 < Es.length; i2 += dir) {
+        if (Es[i2] >= lim) { ultimo = i2; falta = 0; } else if (++falta > buraco) break;
+      }
+      return ultimo;
+    }
+    var a = anda(-1), b = anda(1);
+    if (a <= 0 || b >= Es.length - 1) return null;          // encostou no limite: não achou a borda
+    var esq = os[a] - passoO / 2, dir = os[b] + passoO / 2;
+    return { esq: esq, dir: dir, D: dir - esq, contraste: +(topo / Math.max(1e-6, fundo)).toFixed(1) };
+  }
+
+  /* A IA às vezes devolve os pontos em outra escala (0 a 1000, ou em pixels) ou com x e y trocados.
+     Aí as bolinhas iam parar num lugar padrão, fora da rosca. Aqui o app testa as leituras possíveis
+     e fica com a que cai em cima de filetes de verdade. */
+  function ajustarPontos(img, pt, diametroPxIA) {
+    if (!pt) return null;
+    var chaves = ["diam_a", "diam_b", "fil_ini", "fil_fim"];
+    if (!chaves.every(function (k) { return pt[k] && pt[k].length === 2 && isFinite(pt[k][0]) && isFinite(pt[k][1]); })) return null;
+    var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
+    var ke = Math.min(1, 1024 / Math.max(W, H)), We = W * ke, He = H * ke;   // tamanho da foto que foi para a IA
+    var maior = Math.max.apply(null, chaves.map(function (k) { return Math.max(pt[k][0], pt[k][1]); }));
+    var escalas = [[1, 1]];
+    if (maior > 1.02) escalas = [[1000, 1000], [We, He], [W, H]];
+    var melhor = null;
+    escalas.forEach(function (e) {
+      [false, true].forEach(function (troca) {
+        var q = { n_intervalos: pt.n_intervalos }, ok = true;
+        chaves.forEach(function (k) {
+          var x = troca ? pt[k][1] : pt[k][0], y = troca ? pt[k][0] : pt[k][1];
+          var v = [x / e[0], y / e[1]];
+          if (!(v[0] >= -0.02 && v[0] <= 1.02 && v[1] >= -0.02 && v[1] <= 1.02)) ok = false;
+          q[k] = [Math.min(1, Math.max(0, v[0])), Math.min(1, Math.max(0, v[1]))];
+        });
+        if (!ok) return;
+        var r = null; try { r = passo(img, q); } catch (err) { r = null; }
+        var nota = r ? r.qualidade : 0;
+        if (r && diametroPxIA > 0) {   // diâmetro que a IA disse em pixels deve bater com os pontos
+          var dq = Math.hypot((q.diam_b[0] - q.diam_a[0]) * We, (q.diam_b[1] - q.diam_a[1]) * He);
+          nota -= Math.min(0.3, Math.abs(Math.log(dq / diametroPxIA)) * 0.3);
+        }
+        if (!troca) nota += 0.02;   // na dúvida, a ordem normal (x, y)
+        if (!melhor || nota > melhor.nota) melhor = { nota: nota, pontos: q, r: r };
+      });
+    });
+    return melhor;
+  }
+
+  raiz.RoscaLocal = { nitidez: nitidez, passo: passo, ajustarPontos: ajustarPontos };
 })(this);

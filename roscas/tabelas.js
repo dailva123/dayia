@@ -137,7 +137,7 @@
       } else {
         var eR = Math.abs(razao - l.razao) / l.razao;
         var eE = est > 0 ? Math.abs(Math.log(est / l.diametro)) : 0;
-        l.pontos = eR + 0.12 * eE;
+        l.pontos = eR + 0.25 * eE;   // tamanho estimado pela IA (dedos, sextavado) separa 1/16" de 1/4" e 3/4" de 1"
       }
     });
     // medida gravada na peça e compatível com a medição: vale muito

@@ -359,10 +359,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=23"></script>
-<script src="tabelas.js?v=23"></script>
-<script src="medir.js?v=23"></script>
-<script src="local.js?v=23"></script>
+<script src="config.js?v=24"></script>
+<script src="tabelas.js?v=24"></script>
+<script src="medir.js?v=24"></script>
+<script src="local.js?v=24"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -667,9 +667,13 @@ function usarBorrada() { var r = estado.fotoBorrada; if (!r) return; estado.foto
    no trecho que a IA apontou. Se a IA errou um filete, a conta do celular corrige. */
 function conferirNoCelular(foto, m) {
   if (!window.RoscaLocal || !m || !m.pontos) return;
-  var r = null;
-  try { r = RoscaLocal.passo(foto.img, m.pontos); } catch (e) { r = null; }
+  var aj = null;
+  try { aj = RoscaLocal.ajustarPontos(foto.img, m.pontos, Number(m.diametro_px) || 0); } catch (e) { aj = null; }
+  if (!aj) { m.pontos = null; return; }        // pontos inválidos: melhor nenhum do que bolinhas fora da rosca
+  m.pontos = aj.pontos;
+  var r = aj.r;
   if (!r || r.qualidade < 0.15 || !Roscas.razaoPossivel(r.razao)) return;
+  if (r.bordas) { m.pontos.diam_a = r.bordas.diam_a; m.pontos.diam_b = r.bordas.diam_b; }
   m.razao_ia = m.razao; m.razao = +r.razao.toFixed(2); m.passo_local = r.qualidade;
   if (m.pontos && r.filetes) m.pontos.n_intervalos = r.filetes;
   var concorda = m.razao_ia > 0 && Math.abs(m.razao_ia - m.razao) / m.razao < 0.05;

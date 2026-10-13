@@ -360,10 +360,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=37"></script>
-<script src="tabelas.js?v=37"></script>
-<script src="medir.js?v=37"></script>
-<script src="local.js?v=37"></script>
+<script src="config.js?v=38"></script>
+<script src="tabelas.js?v=38"></script>
+<script src="medir.js?v=38"></script>
+<script src="local.js?v=38"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -599,14 +599,14 @@ function processarFoto(r0) {
     }).then(function (d) {
       if (!d.ok) {
         // guarda o erro real para o botão de diagnóstico
-        estado.diag = { versao: "v37", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, erro_ia: JSON.parse(JSON.stringify(d)) };
+        estado.diag = { versao: "v38", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, erro_ia: JSON.parse(JSON.stringify(d)) };
         foto.status = "erro"; desenharFotos();
         aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">🔩 Medir com o pente na foto</button>' +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="document.getElementById(\'btnDiag\').click()">📋 Copiar diagnóstico</button>');
         return;
       }
-      estado.diag = { versao: "v37", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
+      estado.diag = { versao: "v38", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
       var m = normalizar(d.medida || {});
       // só corrige ONDE ficam as linhas: a IA às vezes manda a posição em outra escala (0 a 1000, pixels) ou com x e y trocados
       var caixa = caixaIA(d.medida || {}, foto.img);
@@ -641,9 +641,12 @@ function processarFoto(r0) {
       if (m.tipo === "macho" || m.tipo === "femea") marcarTipo(m.tipo);
       atualizarMedida();
     });
-  }).catch(function () {
+  }).catch(function (err) {
     pararScan(false);
-    aviso("#msgFoto", "erro", "Sem conexão com a internet, ou o servidor não respondeu. Tente de novo, ou marque com o dedo.");
+    estado.diag = { versao: "v38", quando: new Date().toISOString(), tipo: estado.tipo, falha_rede: String(err && err.message || err), online: navigator.onLine };
+    aviso("#msgFoto", "erro", (navigator.onLine ? "O servidor não respondeu a tempo. Tente de novo." : "Sem internet no celular agora.") +
+      ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">🔩 Medir com o pente na foto</button>' +
+      ' <button type="button" class="btn sec" style="margin-top:8px" onclick="document.getElementById(\'btnDiag\').click()">📋 Copiar diagnóstico</button>');
   });
 }
 /* Pede a medida ao servidor. Se a IA estiver lotada, espera um pouco e tenta de novo sozinho. */
@@ -672,7 +675,13 @@ function enviarIA(leve, dataUrl, tentativa) {
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({ acao: "analisar", e: EMP, tipo: estado.tipo, mime: "image/jpeg", imagem: leve.split(",")[1] }),
     redirect: "follow"
-  }).then(function (x) { return x.json(); }).then(function (d) {
+  }).then(function (x) {
+    // lê como texto: se não vier JSON (página de erro do Google, resposta cortada), guarda o que veio
+    return x.text().then(function (t) {
+      try { return JSON.parse(t); }
+      catch (e) { return { ok: false, erro: "O servidor do Google respondeu de um jeito inesperado. Tente de novo em alguns segundos.", detalhe: "HTTP " + x.status + ": " + String(t).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 300) }; }
+    });
+  }).then(function (d) {
     if (iaOcupada(d) && tentativa < 2) {
       var li = document.querySelectorAll("#etapas li")[0];
       if (li) li.lastChild.textContent = "A IA está ocupada, tentando de novo…";

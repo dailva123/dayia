@@ -360,10 +360,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=38"></script>
-<script src="tabelas.js?v=38"></script>
-<script src="medir.js?v=38"></script>
-<script src="local.js?v=38"></script>
+<script src="config.js?v=40"></script>
+<script src="tabelas.js?v=40"></script>
+<script src="medir.js?v=40"></script>
+<script src="local.js?v=40"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -599,14 +599,14 @@ function processarFoto(r0) {
     }).then(function (d) {
       if (!d.ok) {
         // guarda o erro real para o botão de diagnóstico
-        estado.diag = { versao: "v38", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, erro_ia: JSON.parse(JSON.stringify(d)) };
+        estado.diag = { versao: "v40", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, erro_ia: JSON.parse(JSON.stringify(d)) };
         foto.status = "erro"; desenharFotos();
         aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">🔩 Medir com o pente na foto</button>' +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="document.getElementById(\'btnDiag\').click()">📋 Copiar diagnóstico</button>');
         return;
       }
-      estado.diag = { versao: "v38", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
+      estado.diag = { versao: "v40", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
       var m = normalizar(d.medida || {});
       // só corrige ONDE ficam as linhas: a IA às vezes manda a posição em outra escala (0 a 1000, pixels) ou com x e y trocados
       var caixa = caixaIA(d.medida || {}, foto.img);
@@ -643,7 +643,7 @@ function processarFoto(r0) {
     });
   }).catch(function (err) {
     pararScan(false);
-    estado.diag = { versao: "v38", quando: new Date().toISOString(), tipo: estado.tipo, falha_rede: String(err && err.message || err), online: navigator.onLine };
+    estado.diag = { versao: "v40", quando: new Date().toISOString(), tipo: estado.tipo, falha_rede: String(err && err.message || err), online: navigator.onLine };
     aviso("#msgFoto", "erro", (navigator.onLine ? "O servidor não respondeu a tempo. Tente de novo." : "Sem internet no celular agora.") +
       ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">🔩 Medir com o pente na foto</button>' +
       ' <button type="button" class="btn sec" style="margin-top:8px" onclick="document.getElementById(\'btnDiag\').click()">📋 Copiar diagnóstico</button>');

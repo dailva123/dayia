@@ -35,7 +35,7 @@ button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;fon
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = &quot;1.9&quot;;
+var VERSAO = &quot;2.0&quot;;
 var TENTATIVAS = []; // diagnóstico: cada chamada à IA (modelo, jeito, tempo, resultado)
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
@@ -101,9 +101,13 @@ function doPost(e) {
     return json_({ ok: true, medida: medida, ms: Date.now() - t0, versao: VERSAO, tentativas: TENTATIVAS });
   } catch (err) {
     var msg = String(err.message || err);
-    if (/demand|overload|unavailable|503|529|429|rate|quota|exhausted/i.test(msg))
-      return json_({ ok: false, ocupado: true, erro: &quot;A IA está muito ocupada agora. Tente de novo em alguns segundos, ou marque com o dedo.&quot; });
-    return json_({ ok: false, erro: &quot;Erro no servidor: &quot; + msg });
+    var extra = { detalhe: msg.slice(0, 400), versao: VERSAO, tentativas: TENTATIVAS };
+    // limite grátis do dia (cota) é diferente de &quot;lotado&quot;: avisar certo
+    if (/quota|exhausted|per day|limit/i.test(msg) &amp;&amp; !/demand|overload/i.test(msg))
+      return json_(Object.assign({ ok: false, limite: true, erro: &quot;O limite grátis de hoje da IA acabou. Ele volta amanhã. Enquanto isso, meça com o pente na foto.&quot; }, extra));
+    if (/demand|overload|unavailable|503|529|429|rate/i.test(msg))
+      return json_(Object.assign({ ok: false, ocupado: true, erro: &quot;A IA está muito ocupada agora. Tente de novo em alguns segundos, ou meça com o pente na foto.&quot; }, extra));
+    return json_(Object.assign({ ok: false, erro: &quot;Erro no servidor: &quot; + msg }, extra));
   }
 }
 

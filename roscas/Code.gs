@@ -26,7 +26,7 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "1.7";
+var VERSAO = "1.8";
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
 // Ordem de tentativa: se um modelo estiver lotado ou fora do ar, passa para o próximo.
@@ -39,27 +39,18 @@ var MODELOS_CLAUDE = ["claude-haiku-5-5", "claude-sonnet-5-5"];          // 1.7:
 // Limite de análises por dia, para ninguém gastar sua cota à toa
 var LIMITE_DIA = 300;
 
+// 1.8: a IA NÃO mede mais (ela inventava os números). Ela só aponta onde está a rosca;
+// o celular mede o passo e a largura dentro desse retângulo. Resposta curta = mais rápida.
 var PROMPT = [
-  "Metrologista de roscas de conexões hidráulicas (BSP, NPT, JIC, ORFS, métrica). Responda rápido e só com JSON.",
-  "Meça a rosca na imagem (pixels da imagem, origem no canto superior esquerdo). Não adivinhe a norma.",
-  "1) diametro_px: macho = pico a pico dos filetes, perpendicular ao eixo; fêmea = furo nos picos internos.",
-  "2) passo_px: num trecho nítido, distância entre o 1º e o último pico dividida pelo nº de intervalos.",
-  "3) Conte em DOIS trechos diferentes: razao_1 e razao_2 = diametro_px / passo_px. Um filete a mais muda a bitola: confira.",
-  "   Se a peça estiver inclinada para a câmera (a boca/ponta aparece como elipse), o passo parece menor do que é:",
-  "   estime a inclinação pela elipse (inclinação = arco-seno de eixo menor / eixo maior) e divida o passo_px por cos(inclinação) antes da razão.",
-  "4) Se houver cartão (85,60 x 53,98 mm), régua ou paquímetro: diametro_mm e passo_mm, tem_referencia=true. Senão null.",
-  "5) diametro_estimado_mm: estimativa pelo contexto (dedos, sextavado, proporções). Sempre preencha.",
-  "6) forma: reta | conica | indefinida. vedacao: cone | face | indefinida.",
-  "7) pontos normalizados (0 a 1): diam_a, diam_b (bordas do diâmetro), fil_ini, fil_fim (1º e último pico), n_intervalos.",
-  "8) marcacao: medida gravada ou impressa na peça, se der para ler (ex.: \"1/2\", \"3/4\", \"-6\", \"M16x1,5\"). Senão \"\".",
-  "9) Se aparecer um PENTE DE ROSCA encostado na rosca: leia o número gravado na lâmina que está encostada",
-  "   (fios por polegada, ex.: 19, ou passo em mm, ex.: 1,5) e o ângulo do pente (55° / WHITWORTH ou 60°).",
-  "   pente_fios, pente_passo_mm e pente_angulo (55 ou 60); null se não houver pente.",
-  "Rosca informada pelo cliente: {TIPO}.",
-  "JSON: {\"rosca_visivel\":true,\"tipo\":\"macho|femea|indefinido\",\"diametro_px\":0,\"passo_px\":0,\"razao_1\":0,\"razao_2\":0,",
-  "\"tem_referencia\":false,\"diametro_mm\":null,\"passo_mm\":null,\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"vedacao\":\"indefinida\",\"marcacao\":\"\",\"pente_fios\":null,\"pente_passo_mm\":null,\"pente_angulo\":null,",
-  "\"pontos\":{\"diam_a\":[0,0],\"diam_b\":[0,0],\"fil_ini\":[0,0],\"fil_fim\":[0,0],\"n_intervalos\":0},\"certeza\":0,\"problemas\":\"\"}",
-  "certeza 0-100 = confiança na contagem. problemas: em português simples para leigo, ou vazio."
+  "Você localiza roscas de conexões hidráulicas em fotos. Responda rápido e só com JSON.",
+  "box_2d: retângulo JUSTO em volta SÓ da parte com filetes (sem o sextavado, sem o corpo da peça), [ymin, xmin, ymax, xmax] de 0 a 1000.",
+  "tipo: macho (filetes por fora) | femea (filetes por dentro) | indefinido. Rosca informada pelo cliente: {TIPO}.",
+  "diametro_estimado_mm: tamanho aproximado da rosca pelo contexto (dedos, sextavado, objetos).",
+  "forma: reta | conica | indefinida.",
+  "marcacao: medida de ROSCA gravada ou impressa na peça (ex.: \"1/2\", \"3/4\", \"M16x1,5\"). Ignore códigos de modelo. Senão \"\".",
+  "Se não houver rosca visível: rosca_visivel=false.",
+  "JSON: {\"rosca_visivel\":true,\"tipo\":\"macho\",\"box_2d\":[0,0,0,0],\"diametro_estimado_mm\":0,\"forma\":\"indefinida\",\"marcacao\":\"\",\"problemas\":\"\"}",
+  "problemas: em português simples, ou vazio."
 ].join("\n");
 
 /* ---------------- entrada ---------------- */
@@ -243,7 +234,7 @@ function claude_(texto, b64, mime, modelo) {
     muteHttpExceptions: true,
     payload: JSON.stringify({
       model: modelo,
-      max_tokens: 550,
+      max_tokens: 250,
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
         { type: "text", text: texto }

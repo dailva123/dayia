@@ -203,5 +203,105 @@
     return melhor;
   }
 
-  raiz.RoscaLocal = { nitidez: nitidez, passo: passo, ajustarPontos: ajustarPontos };
+  /* ===== Medida pelos dois toques =====
+     A e B (0 a 1): pontas dos filetes dos dois lados da rosca.
+     O app descobre a direção da rosca (em que direção a ondinha dos filetes é mais forte),
+     mede o passo e o diâmetro (A–B medido na direção certa). */
+  function autocorr(p, M, ux, uy, qx, qy, D, c, L, minLag, maxLag) {
+    var soma = new Float64Array(maxLag + 2), usadas = 0, faixas = 7, larg = D * 0.28;
+    for (var f = 0; f < faixas; f++) {
+      var o = -larg + 2 * larg * f / (faixas - 1), v = [];
+      for (var t = -L / 2; t <= L / 2; t += 1) {
+        var bx = M[0] + ux * (c + t) + qx * o, by = M[1] + uy * (c + t) + qy * o, s = 0, n = 0;
+        for (var e = -2; e <= 2; e++) { var a = amostra(p, bx + qx * e, by + qy * e); if (!isNaN(a)) { s += a; n++; } }
+        if (n) v.push(s / n);
+      }
+      if (v.length < L * 0.7) continue;
+      v = semTendencia(v, Math.max(3, Math.round(maxLag)));
+      var ac0 = 0; for (var i = 0; i < v.length; i++) ac0 += v[i] * v[i];
+      if (!ac0) continue;
+      for (var lag = 1; lag <= maxLag + 1; lag++) { var s2 = 0; for (var j = 0; j + lag < v.length; j++) s2 += v[j] * v[j + lag]; soma[lag] += s2 / ac0; }
+      usadas++;
+    }
+    if (usadas < 3) return null;
+    var ac = Array.prototype.map.call(soma, function (x) { return x / usadas; });
+    var best = 0;
+    for (var L2 = minLag; L2 <= maxLag; L2++) if (ac[L2] >= ac[L2 - 1] && ac[L2] >= ac[L2 + 1] && (!best || ac[L2] > ac[best])) best = L2;
+    if (!best || ac[best] <= 0.05) return { q: 0 };
+    // se a metade também tem pico forte, o passo de verdade é a metade
+    var meio = Math.round(best / 2);
+    for (var k = Math.max(minLag, meio - 1); k <= meio + 1; k++) if (k < best && ac[k] >= ac[k - 1] && ac[k] >= ac[k + 1] && ac[k] >= 0.8 * ac[best]) { best = k; break; }
+    function fino(x) { var y0 = ac[x - 1], y1 = ac[x], y2 = ac[x + 1], den = y0 - 2 * y1 + y2; return x + (den ? 0.5 * (y0 - y2) / den : 0); }
+    var pp = fino(best), vals = [pp];
+    [2, 3].forEach(function (m) { var alvo = Math.round(pp * m); if (alvo + 1 < ac.length) { var bb = alvo; for (var z = alvo - 2; z <= alvo + 2; z++) if (z > 0 && z + 1 < ac.length && ac[z] > ac[bb]) bb = z; if (ac[bb] > 0.1) vals.push(fino(bb) / m); } });
+    pp = vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+    return { q: ac[best], pp: pp };
+  }
+
+  /* ===== Medida dentro do retângulo que a IA desenhou em volta da rosca =====
+     box = [ymin, xmin, ymax, xmax] de 0 a 1000. O celular acha a direção da rosca, o passo e a largura. */
+  function medirNaCaixa(img, box) {
+    if (!box || box.length !== 4) return null;
+    var Wn = img.naturalWidth || img.width, Hn = img.naturalHeight || img.height;
+    var bw = (box[3] - box[1]) / 1000 * Wn, bh = (box[2] - box[0]) / 1000 * Hn;
+    if (!(bw > 8 && bh > 8)) return null;
+    var max = Math.max(bw, bh) > 360 ? Math.round(Math.max(Wn, Hn) * 360 / Math.max(bw, bh)) : 0;   // rapidez
+    var p = cinza(img, max); if (!p) return null;
+    var x0 = box[1] / 1000 * p.w, x1 = box[3] / 1000 * p.w, y0 = box[0] / 1000 * p.h, y1 = box[2] / 1000 * p.h;
+    var w = x1 - x0, h = y1 - y0, M = [(x0 + x1) / 2, (y0 + y1) / 2];
+    var melhor = null;
+    function testa(th) {
+      var ux = Math.cos(th), uy = Math.sin(th), qx = -uy, qy = ux;
+      var comp = w * Math.abs(ux) + h * Math.abs(uy), larg = w * Math.abs(qx) + h * Math.abs(qy);
+      if (comp < 12 || larg < 12) return;
+      var minLag = Math.max(2, Math.floor(larg / 45)), maxLag = Math.max(minLag + 2, Math.ceil(larg / 6.5));
+      maxLag = Math.min(maxLag, Math.floor(comp * 0.9 / 2.2));
+      if (maxLag <= minLag + 1) return;
+      var r = autocorr(p, M, ux, uy, qx, qy, larg * 0.9, 0, comp * 0.92, minLag, maxLag);
+      if (r && r.pp && (!melhor || r.q > melhor.q)) melhor = { q: r.q, pp: r.pp, th: th, comp: comp, larg: larg };
+    }
+    var g = Math.PI / 180;
+    for (var a = 0; a < 180; a += 7.5) testa(a * g);
+    if (!melhor) return null;
+    var a0 = melhor.th;
+    for (var d = -6; d <= 6; d += 1.5) if (d) testa(a0 + d * g);
+    var ux = Math.cos(melhor.th), uy = Math.sin(melhor.th), qx = -uy, qy = ux;
+    var pp = melhor.pp, D = melhor.larg;
+    // a caixa da IA costuma ter folga: acha as bordas de verdade pela "textura" dos filetes
+    // (ao longo de cada linha paralela ao eixo, a rosca tem listras fortes; o fundo não)
+    var Dbox = melhor.larg, compL = melhor.comp * 0.8, passoO = Math.max(0.5, Dbox / 200), V = [], os = [];
+    for (var o = -Dbox * 0.55; o <= Dbox * 0.55; o += passoO) {
+      var v = [];
+      for (var t = -compL / 2; t <= compL / 2; t += 1) { var am = amostra(p, M[0] + ux * t + qx * o, M[1] + uy * t + qy * o); if (!isNaN(am)) v.push(am); }
+      os.push(o);
+      if (v.length < 10) { V.push(0); continue; }
+      v = semTendencia(v, Math.max(3, Math.round(pp * 1.5)));
+      var s2 = 0; for (var i = 0; i < v.length; i++) s2 += v[i] * v[i];
+      V.push(Math.sqrt(s2 / v.length));
+    }
+    var jan = Math.max(1, Math.round(pp * 0.3 / passoO)), Vs = V.map(function (_, j) { var a = 0, n = 0; for (var k = j - jan; k <= j + jan; k++) if (k >= 0 && k < V.length) { a += V[k]; n++; } return a / n; });
+    var centro = Vs.filter(function (_, j) { return Math.abs(os[j]) < Dbox * 0.25; }).sort(function (a, b) { return a - b; });
+    var ref = centro.length ? centro[Math.floor(centro.length / 2)] : 0;
+    melhor.bordas = null;
+    if (ref > 0) {
+      var lim = ref * 0.2, esq = null, dir = null;
+      for (var j2 = os.length - 1; j2 >= 0; j2--) if (os[j2] <= 0 && Vs[j2] < lim && os[j2] < -Dbox * 0.2) { esq = os[j2]; break; }
+      for (var j3 = 0; j3 < os.length; j3++) if (os[j3] >= 0 && Vs[j3] < lim && os[j3] > Dbox * 0.2) { dir = os[j3]; break; }
+      if (esq === null) esq = -Dbox / 2; if (dir === null) dir = Dbox / 2;
+      var Dt = dir - esq;
+      if (Dt > Dbox * 0.6 && Dt <= Dbox * 1.08) { D = Dt; M = [M[0] + qx * (esq + dir) / 2, M[1] + qy * (esq + dir) / 2]; melhor.bordas = [esq, dir]; }
+    }
+    var meio = Math.min(melhor.comp * 0.4, pp * 4);
+    function N(x, y) { return [x / p.w, y / p.h]; }
+    return {
+      razao: D / pp, qualidade: +melhor.q.toFixed(2), passo_px: pp / p.k, diametro_px: D / p.k,
+      pontos: {
+        diam_a: N(M[0] - qx * D / 2, M[1] - qy * D / 2), diam_b: N(M[0] + qx * D / 2, M[1] + qy * D / 2),
+        fil_ini: N(M[0] - ux * meio, M[1] - uy * meio), fil_fim: N(M[0] + ux * meio, M[1] + uy * meio),
+        n_intervalos: Math.max(2, Math.round(2 * meio / pp))
+      }
+    };
+  }
+
+  raiz.RoscaLocal = { nitidez: nitidez, passo: passo, ajustarPontos: ajustarPontos, medirNaCaixa: medirNaCaixa };
 })(this);

@@ -360,10 +360,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=34"></script>
-<script src="tabelas.js?v=34"></script>
-<script src="medir.js?v=34"></script>
-<script src="local.js?v=34"></script>
+<script src="config.js?v=35"></script>
+<script src="tabelas.js?v=35"></script>
+<script src="medir.js?v=35"></script>
+<script src="local.js?v=35"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -598,10 +598,20 @@ function processarFoto(r0) {
       return pararScan(!!d.ok).then(function () { return d; });
     }).then(function (d) {
       if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
-      estado.diag = { versao: "v34", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
+      estado.diag = { versao: "v35", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
       var m = normalizar(d.medida || {});
       // só corrige ONDE ficam as linhas: a IA às vezes manda a posição em outra escala (0 a 1000, pixels) ou com x e y trocados
-      if (m.pontos && window.RoscaLocal) {
+      var caixa = caixaIA(d.medida || {}, foto.img);
+      if (caixa && window.RoscaLocal) {
+        // servidor 1.8: a IA só aponta onde está a rosca; o celular mede tudo dentro do retângulo
+        var lm = null; try { lm = RoscaLocal.medirNaCaixa(foto.img, caixa); } catch (e) { lm = null; }
+        estado.diag.local = lm ? { razao: lm.razao, qualidade: lm.qualidade, caixa: caixa } : { caixa: caixa, falhou: true };
+        if (lm && lm.qualidade >= 0.15 && Roscas.razaoPossivel(lm.razao)) {
+          m.razao = +lm.razao.toFixed(2); m.pontos = lm.pontos; m.certeza = lm.qualidade >= 0.35 ? 80 : 65; m.medida_local = true;
+        } else {
+          m.razao = 0; m.pontos = lm ? lm.pontos : null;
+        }
+      } else if (m.pontos && window.RoscaLocal) {
         try { var aj = RoscaLocal.ajustarPontos(foto.img, m.pontos, Number(m.diametro_px) || 0); m.pontos = aj ? aj.pontos : null; estado.diag.ajuste = aj ? { nota: aj.nota, pontos: aj.pontos } : null; } catch (e) {}
       }
       $("#btnDiag").hidden = false;
@@ -680,6 +690,20 @@ $("#btnGaleria").addEventListener("click", function (e) {
 });
 
 /* resposta da IA → medida do app */
+/* retângulo da rosca [ymin, xmin, ymax, xmax] de 0 a 1000 (aceita também em pixels da foto enviada) */
+function caixaIA(m, img) {
+  var b = m.box_2d || m.caixa;
+  if (!b || b.length !== 4 || !b.every(function (v) { return isFinite(Number(v)); })) return null;
+  b = b.map(Number);
+  if (Math.max.apply(null, b) > 1000) {
+    var W = img.naturalWidth, H = img.naturalHeight, k = Math.min(1, 1024 / Math.max(W, H));
+    b = [b[0] / (H * k) * 1000, b[1] / (W * k) * 1000, b[2] / (H * k) * 1000, b[3] / (W * k) * 1000];
+  }
+  if (b[2] < b[0]) b = [b[2], b[1], b[0], b[3]];
+  if (b[3] < b[1]) b = [b[0], b[3], b[2], b[1]];
+  if (b[2] - b[0] < 5 || b[3] - b[1] < 5) return null;
+  return b;
+}
 function normalizar(m) {
   var r1 = Number(m.razao_1) || 0, r2 = Number(m.razao_2) || 0;
   var razao = Number(m.razao_diametro_passo) || 0;

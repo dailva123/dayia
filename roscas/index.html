@@ -359,10 +359,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=24"></script>
-<script src="tabelas.js?v=24"></script>
-<script src="medir.js?v=24"></script>
-<script src="local.js?v=24"></script>
+<script src="config.js?v=25"></script>
+<script src="tabelas.js?v=25"></script>
+<script src="medir.js?v=25"></script>
+<script src="local.js?v=25"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -614,6 +614,15 @@ function processarFoto(r0) {
       }
       if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
       var m = normalizar(d.medida || {});
+      if (m.tipo === "femea" || (estado.tipo === "femea" && m.tipo !== "macho")) {
+        // rosca fêmea vista de frente: os filetes aparecem um atrás do outro (perspectiva) e a distância entre eles sai errada.
+        // Melhor não dar resultado do que dar um errado.
+        foto.status = "erro"; desenharFotos(); marcarTipo("femea");
+        aviso("#msgFoto", "atencao", "🔧 <b>Rosca fêmea (por dentro) não dá para medir pela foto.</b> Vista de frente, os filetes aparecem um atrás do outro e a distância entre eles fica menor do que é de verdade. Por isso o resultado sairia errado." +
+          "<br><br>Jeitos certos de medir a fêmea:<br>• <b>Aba 📏 Medida</b>: meça o furo por dentro (de um lado ao outro da boca, na ponta dos filetes) e digite o valor.<br>• Ou rosqueie nela uma <b>rosca macho</b> que você já conhece e veja qual entra certinho." +
+          ' <button type="button" class="btn sec" style="margin-top:10px" onclick="aba(\'manual\')">Ir para a aba Medida</button>');
+        return;
+      }
       conferirNoCelular(foto, m);
       foto.medida = m;
       if (m.rosca_visivel !== false && !(Roscas.razaoPossivel(m.razao) || m.tem_referencia) && m.pontos) {

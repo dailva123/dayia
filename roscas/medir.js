@@ -297,7 +297,7 @@
         var pp = D / l.razao, prior = est > 0 ? 0.12 * Math.abs(Math.log(est / l.diametro)) : 0;
         [[1, 0], [2, 0.1], [0.5, 0.1]].forEach(function (hx) {
           var e = Math.abs(r.passo * hx[0] - pp) / pp + hx[1] + prior;
-          if (!melhor || e < melhor.e) melhor = { l: l, pp: pp, e: e };
+          if (!melhor || e < melhor.e) melhor = { l: l, pp: pp, e: e, medido: r.passo * hx[0] };
         });
       });
       if (!melhor || melhor.e > 0.3) {
@@ -306,9 +306,10 @@
         return false;
       }
       // ajusta o pente: número de dentes e posição (fase) para os dentes caírem nos filetes
-      var g = geoPente(), pp = melhor.pp, nn = Math.max(3, Math.round(g.len / pp));
+      // os dentes seguem o passo MEDIDO nos filetes (não o da tabela): assim o pente cai exatamente em cima dos fios
+      var g = geoPente(), pp = melhor.medido, nn = Math.max(3, Math.round(g.len / pp));
       var melhorF = 0, melhorS = -Infinity;
-      for (var f = 0; f < pp; f += Math.max(0.5, pp / 16)) {
+      for (var f = 0; f < pp; f += Math.max(0.25, pp / 32)) {
         var soma = 0;
         for (var k = 0; k <= nn; k++) { var idx = Math.round(f + k * pp - r.ini); if (idx >= 0 && idx < r.perfil.length) soma += r.perfil[idx]; }
         if (soma > melhorS) { melhorS = soma; melhorF = f; }

@@ -208,7 +208,7 @@
      O app descobre a direção da rosca (em que direção a ondinha dos filetes é mais forte),
      mede o passo e o diâmetro (A–B medido na direção certa). */
   var cache = { img: null, p: null };
-  function cinzaCache(img) { if (cache.img !== img) { cache.img = img; cache.p = cinza(img); } return cache.p; }
+  function cinzaCache(img, max) { var ch = (max || 0); if (cache.img !== img || cache.max !== ch) { cache.img = img; cache.max = ch; cache.p = cinza(img, max); } return cache.p; }
   function autocorr(p, M, ux, uy, qx, qy, D, c, L, minLag, maxLag) {
     var soma = new Float64Array(maxLag + 2), usadas = 0, faixas = 7, larg = D * 0.28;
     for (var f = 0; f < faixas; f++) {
@@ -240,7 +240,11 @@
     return { q: ac[best], pp: pp };
   }
   function medirEntre(img, An, Bn) {
-    var p = cinzaCache(img); if (!p) return null;
+    // rapidez: trabalha numa cópia em que a rosca tem no máximo ~220 px de largura (sobra precisão e fica leve no celular)
+    var Wn = img.naturalWidth || img.width, Hn = img.naturalHeight || img.height;
+    var Dn = Math.hypot((Bn[0] - An[0]) * Wn, (Bn[1] - An[1]) * Hn);
+    var max = Dn > 220 ? Math.round(Math.max(Wn, Hn) * 220 / Dn) : 0;
+    var p = cinzaCache(img, max); if (!p) return null;
     var A = [An[0] * p.w, An[1] * p.h], B = [Bn[0] * p.w, Bn[1] * p.h];
     var D0 = Math.hypot(B[0] - A[0], B[1] - A[1]);
     if (D0 < 20) return null;

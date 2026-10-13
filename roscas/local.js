@@ -203,5 +203,210 @@
     return melhor;
   }
 
-  raiz.RoscaLocal = { nitidez: nitidez, passo: passo, ajustarPontos: ajustarPontos };
+  /* ===== Medida pelos dois toques =====
+     A e B (0 a 1): pontas dos filetes dos dois lados da rosca.
+     O app descobre a direção da rosca (em que direção a ondinha dos filetes é mais forte),
+     mede o passo e o diâmetro (A–B medido na direção certa). */
+  var cache = { img: null, p: null };
+  function cinzaCache(img) { if (cache.img !== img) { cache.img = img; cache.p = cinza(img); } return cache.p; }
+  function autocorr(p, M, ux, uy, qx, qy, D, c, L, minLag, maxLag) {
+    var soma = new Float64Array(maxLag + 2), usadas = 0, faixas = 7, larg = D * 0.28;
+    for (var f = 0; f < faixas; f++) {
+      var o = -larg + 2 * larg * f / (faixas - 1), v = [];
+      for (var t = -L / 2; t <= L / 2; t += 1) {
+        var bx = M[0] + ux * (c + t) + qx * o, by = M[1] + uy * (c + t) + qy * o, s = 0, n = 0;
+        for (var e = -2; e <= 2; e++) { var a = amostra(p, bx + qx * e, by + qy * e); if (!isNaN(a)) { s += a; n++; } }
+        if (n) v.push(s / n);
+      }
+      if (v.length < L * 0.7) continue;
+      v = semTendencia(v, Math.max(3, Math.round(maxLag)));
+      var ac0 = 0; for (var i = 0; i < v.length; i++) ac0 += v[i] * v[i];
+      if (!ac0) continue;
+      for (var lag = 1; lag <= maxLag + 1; lag++) { var s2 = 0; for (var j = 0; j + lag < v.length; j++) s2 += v[j] * v[j + lag]; soma[lag] += s2 / ac0; }
+      usadas++;
+    }
+    if (usadas < 3) return null;
+    var ac = Array.prototype.map.call(soma, function (x) { return x / usadas; });
+    var best = 0;
+    for (var L2 = minLag; L2 <= maxLag; L2++) if (ac[L2] >= ac[L2 - 1] && ac[L2] >= ac[L2 + 1] && (!best || ac[L2] > ac[best])) best = L2;
+    if (!best || ac[best] <= 0.05) return { q: 0 };
+    // se a metade também tem pico forte, o passo de verdade é a metade
+    var meio = Math.round(best / 2);
+    for (var k = Math.max(minLag, meio - 1); k <= meio + 1; k++) if (k < best && ac[k] >= ac[k - 1] && ac[k] >= ac[k + 1] && ac[k] >= 0.8 * ac[best]) { best = k; break; }
+    function fino(x) { var y0 = ac[x - 1], y1 = ac[x], y2 = ac[x + 1], den = y0 - 2 * y1 + y2; return x + (den ? 0.5 * (y0 - y2) / den : 0); }
+    var pp = fino(best), vals = [pp];
+    [2, 3].forEach(function (m) { var alvo = Math.round(pp * m); if (alvo + 1 < ac.length) { var bb = alvo; for (var z = alvo - 2; z <= alvo + 2; z++) if (z > 0 && z + 1 < ac.length && ac[z] > ac[bb]) bb = z; if (ac[bb] > 0.1) vals.push(fino(bb) / m); } });
+    pp = vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+    return { q: ac[best], pp: pp };
+  }
+  function medirEntre(img, An, Bn) {
+    var p = cinzaCache(img); if (!p) return null;
+    var A = [An[0] * p.w, An[1] * p.h], B = [Bn[0] * p.w, Bn[1] * p.h];
+    var D0 = Math.hypot(B[0] - A[0], B[1] - A[1]);
+    if (D0 < 20) return null;
+    var M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2], q0 = [(B[0] - A[0]) / D0, (B[1] - A[1]) / D0];
+    var minLag = Math.max(3, Math.floor(D0 / 45)), maxLag = Math.ceil(D0 / 6.5), L = Math.max(D0 * 1.1, maxLag * 5);
+    var melhor = null;
+    function testa(th, c) {
+      var cs = Math.cos(th), sn = Math.sin(th);
+      var ux = -q0[1] * cs - q0[0] * sn, uy = q0[0] * cs - q0[1] * sn;   // eixo = perpendicular ao toque, girado th
+      var r = autocorr(p, M, ux, uy, -uy, ux, D0, c, L, minLag, maxLag);
+      var nota = r && r.pp ? r.q - 0.25 * Math.abs(th) : -1;
+      if (r && r.pp && (!melhor || nota > melhor.nota)) melhor = { q: r.q, nota: nota, pp: r.pp, ux: ux, uy: uy, c: c, th: th };
+    }
+    var graus = Math.PI / 180;
+    [-0.45 * D0, 0, 0.45 * D0].forEach(function (c) { for (var g = -24; g <= 24; g += 3) testa(g * graus, c); });
+    if (!melhor) return null;
+    var g0 = melhor.th, c0 = melhor.c;
+    for (var g2 = -2; g2 <= 2; g2 += 1) testa(g0 + g2 * graus, c0);   // afina o ângulo
+    var qx = -melhor.uy, qy = melhor.ux;
+    var D = Math.abs((B[0] - A[0]) * qx + (B[1] - A[1]) * qy);       // largura medida na direção certa
+    return { razao: D / melhor.pp, passo_px: melhor.pp, diametro_px: D, qualidade: +melhor.q.toFixed(2),
+      eixo: [melhor.ux, melhor.uy], centro: [(M[0] + melhor.ux * c0) / p.w, (M[1] + melhor.uy * c0) / p.h], W: p.w, H: p.h };
+  }
+
+  /* ===== Tela dos dois toques ===== */
+  function marcar(opts) {
+    var img = opts.img, W = img.naturalWidth, H = img.naturalHeight;
+    var pts = [], res = null, zoom = 1, foco = [W / 2, H / 2], arrastando = -1, apertado = null;
+    var ov = document.createElement("div");
+    ov.className = "editor marcar";
+    ov.innerHTML =
+      '<div class="ed-topo"><button type="button" class="mc-x" aria-label="Fechar">✕</button><b>Marque a rosca</b><span></span></div>' +
+      '<div class="ed-palco"><canvas class="mc-foto"></canvas><canvas class="ed-lupa mc-lupa" width="240" height="240" hidden></canvas>' +
+      '<div class="mc-passo" aria-live="polite"></div>' +
+      '<div class="ed-zoom"><button type="button" data-z="in" aria-label="Aumentar a foto">+</button><button type="button" data-z="out" aria-label="Diminuir a foto">−</button></div>' +
+      '<div class="ed-zoom-tag"></div></div>' +
+      '<div class="ed-painel"><div class="ed-previa mc-res">Toque na <b>ponta dos filetes</b> de um lado da rosca e depois do outro lado. Se errar, arraste a bolinha.</div>' +
+      '<div class="ed-acoes"><button type="button" class="btn sec mc-limpar">Marcar de novo</button><button type="button" class="btn mc-ok" disabled>Usar esta medida</button></div></div>';
+    document.body.appendChild(ov);
+    var palco = ov.querySelector(".ed-palco"), cv = ov.querySelector(".mc-foto"), ctx = cv.getContext("2d");
+    var lupa = ov.querySelector(".mc-lupa"), lctx = lupa.getContext("2d"), dpr = Math.min(2, window.devicePixelRatio || 1);
+    var pw = 0, ph = 0, base = 1;
+    function S() { return base * zoom; }
+    function org() { return [pw / 2 - foco[0] * S(), ph / 2 - foco[1] * S()]; }
+    function tela(q) { var o = org(); return [q[0] * S() + o[0], q[1] * S() + o[1]]; }
+    function foto(x, y) { var o = org(); return [(x - o[0]) / S(), (y - o[1]) / S()]; }
+    function limitar() {
+      var vw = pw / S(), vh = ph / S();
+      foco[0] = vw >= W ? W / 2 : Math.min(W - vw / 2, Math.max(vw / 2, foco[0]));
+      foco[1] = vh >= H ? H / 2 : Math.min(H - vh / 2, Math.max(vh / 2, foco[1]));
+    }
+    function layout() {
+      pw = palco.clientWidth; ph = palco.clientHeight;
+      cv.style.width = pw + "px"; cv.style.height = ph + "px"; cv.width = Math.round(pw * dpr); cv.height = Math.round(ph * dpr);
+      base = Math.min(pw / W, ph / H); limitar(); desenhar();
+    }
+    function passoTxt() {
+      var t = pts.length === 0 ? "1️⃣ Toque na <b>ponta dos filetes</b> de um lado da rosca" :
+        pts.length === 1 ? "2️⃣ Agora toque na ponta dos filetes do <b>outro lado</b>" :
+        res && res.qualidade >= 0.12 ? "✅ Confira: o espaço entre os risquinhos azuis deve ser igual ao espaço entre os filetes" : "⚠️ Não achei os filetes entre os toques";
+      ov.querySelector(".mc-passo").innerHTML = t;
+    }
+    function desenhar() {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "#0B1B2C"; ctx.fillRect(0, 0, pw, ph);
+      var o = org(); ctx.drawImage(img, o[0], o[1], W * S(), H * S());
+      if (pts.length === 2) {
+        var a = tela(pts[0]), b = tela(pts[1]);
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.strokeStyle = "#F2C230"; ctx.lineWidth = 3; ctx.stroke();
+      }
+      if (res && res.qualidade >= 0.12) {
+        // pente desenhado: risquinhos a cada passo, ao longo do eixo, nas duas bordas
+        var k = W / res.W, ux = res.eixo[0], uy = res.eixo[1], qx = -uy, qy = ux;
+        var c = [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2], pp = res.passo_px * k, half = res.diametro_px * k / 2;
+        var n = 3;
+        // fase: alinha com o meio do toque
+        ctx.strokeStyle = "#3BA3FF"; ctx.lineWidth = 2.5;
+        [-1, 1].forEach(function (lado) {
+          for (var i = -n; i <= n; i++) {
+            var p0 = [c[0] + ux * i * pp + qx * lado * half * 0.86, c[1] + uy * i * pp + qy * lado * half * 0.86];
+            var p1 = [c[0] + ux * i * pp + qx * lado * half * 1.12, c[1] + uy * i * pp + qy * lado * half * 1.12];
+            var s0 = tela(p0), s1 = tela(p1);
+            ctx.beginPath(); ctx.moveTo(s0[0], s0[1]); ctx.lineTo(s1[0], s1[1]); ctx.stroke();
+          }
+        });
+      }
+      pts.forEach(function (q, i) {
+        var t = tela(q);
+        ctx.beginPath(); ctx.arc(t[0], t[1], 13, 0, 7); ctx.fillStyle = "rgba(242,194,48,.25)"; ctx.fill();
+        ctx.beginPath(); ctx.arc(t[0], t[1], 5, 0, 7); ctx.fillStyle = "#F2C230"; ctx.fill(); ctx.strokeStyle = "#0E2238"; ctx.lineWidth = 2; ctx.stroke();
+      });
+      ov.querySelector(".ed-zoom-tag").textContent = zoom > 1.05 ? zoom.toFixed(1).replace(".", ",") + "x" : "";
+      passoTxt();
+    }
+    function mostrarLupa(q, sx) {
+      lupa.hidden = false;
+      lupa.style.left = (sx < pw / 2 ? pw - 130 : 10) + "px";
+      var z = 4 / dpr * Math.max(1, S()), r = 120 / z;   // região da foto mostrada
+      lctx.setTransform(1, 0, 0, 1, 0, 0); lctx.clearRect(0, 0, 240, 240);
+      lctx.save(); lctx.beginPath(); lctx.arc(120, 120, 118, 0, 7); lctx.clip();
+      lctx.fillStyle = "#000"; lctx.fillRect(0, 0, 240, 240);
+      lctx.drawImage(img, q[0] - r, q[1] - r, 2 * r, 2 * r, 0, 0, 240, 240);
+      lctx.restore();
+      lctx.strokeStyle = "#F2C230"; lctx.lineWidth = 3; lctx.beginPath(); lctx.arc(120, 120, 117, 0, 7); lctx.stroke();
+      lctx.strokeStyle = "#ff2d55"; lctx.lineWidth = 2; lctx.beginPath(); lctx.moveTo(120, 96); lctx.lineTo(120, 144); lctx.moveTo(96, 120); lctx.lineTo(144, 120); lctx.stroke();
+    }
+    function calcular() {
+      res = null;
+      var ok = ov.querySelector(".mc-ok"), box = ov.querySelector(".mc-res");
+      if (pts.length < 2) { ok.disabled = true; desenhar(); return; }
+      res = medirEntre(img, [pts[0][0] / W, pts[0][1] / H], [pts[1][0] / W, pts[1][1] / H]);
+      if (!res || res.qualidade < 0.12 || res.razao < 7.5 || res.razao > 55) {
+        ok.disabled = true;
+        box.innerHTML = "⚠️ Não achei os filetes entre os dois toques. Toque bem <b>na ponta dos filetes</b>, um de cada lado da rosca (use o <b>+</b> para aumentar a foto).";
+        if (res && res.qualidade < 0.12) res = null;
+      } else {
+        ok.disabled = false;
+        box.innerHTML = "Proporção <b>" + String(res.razao.toFixed(1)).replace(".", ",") + "</b>" + (opts.previa ? " → " + opts.previa(res.razao) : "");
+      }
+      desenhar();
+    }
+    function ponto(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+    cv.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+      var s = ponto(e);
+      arrastando = -1;
+      pts.forEach(function (q, i) { var t = tela(q); if (Math.hypot(t[0] - s[0], t[1] - s[1]) < 30) arrastando = i; });
+      if (arrastando < 0 && pts.length < 2) { pts.push(foto(s[0], s[1])); arrastando = pts.length - 1; }
+      apertado = s;
+      if (arrastando >= 0) { mostrarLupa(pts[arrastando], s[0]); desenhar(); }
+    });
+    cv.addEventListener("pointermove", function (e) {
+      if (arrastando < 0 || !apertado) return;
+      var s = ponto(e), q = foto(s[0], s[1]);
+      pts[arrastando] = [Math.min(W, Math.max(0, q[0])), Math.min(H, Math.max(0, q[1]))];
+      res = null; mostrarLupa(pts[arrastando], s[0]); desenhar();
+    });
+    function soltar() {
+      if (!apertado) return;
+      apertado = null; lupa.hidden = true;
+      if (arrastando >= 0 && zoom > 1) { foco = pts[arrastando].slice(); limitar(); }
+      if (pts.length === 1 && zoom === 1 && base * W < 900) { zoom = 2.2; foco = pts[0].slice(); limitar(); }
+      arrastando = -1; calcular();
+    }
+    cv.addEventListener("pointerup", soltar); cv.addEventListener("pointercancel", soltar);
+    ov.querySelector('[data-z="in"]').onclick = function () { zoom = Math.min(6, zoom * 1.6); if (pts.length) foco = pts.length === 2 ? [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2] : pts[0].slice(); limitar(); desenhar(); };
+    ov.querySelector('[data-z="out"]').onclick = function () { zoom = Math.max(1, zoom / 1.6); limitar(); desenhar(); };
+    ov.querySelector(".mc-limpar").onclick = function () { pts = []; res = null; ov.querySelector(".mc-ok").disabled = true;
+      ov.querySelector(".mc-res").innerHTML = "Toque na <b>ponta dos filetes</b> de um lado da rosca e depois do outro lado."; desenhar(); };
+    function fechar() { window.removeEventListener("resize", layout); ov.remove(); }
+    ov.querySelector(".mc-x").onclick = function () { fechar(); if (opts.cancelar) opts.cancelar(); };
+    ov.querySelector(".mc-ok").onclick = function () {
+      if (!res) return;
+      var r2 = res; fechar();
+      var A = [pts[0][0] / W, pts[0][1] / H], B = [pts[1][0] / W, pts[1][1] / H];
+      var u = r2.eixo, meia = r2.passo_px * 3 / r2.W;
+      opts.pronto({ razao: +r2.razao.toFixed(2), diametro_px: r2.diametro_px, passo_px: r2.passo_px, ajustada: true, toques: true,
+        certeza: r2.qualidade >= 0.35 ? 88 : 72, tem_referencia: false,
+        pontos: { diam_a: A, diam_b: B, fil_ini: [r2.centro[0] - u[0] * meia, r2.centro[1] - u[1] * meia * r2.W / r2.H],
+          fil_fim: [r2.centro[0] + u[0] * meia, r2.centro[1] + u[1] * meia * r2.W / r2.H], n_intervalos: 6 } });
+    };
+    ov._tela = function (q) { var t = tela(q), r = cv.getBoundingClientRect(); return [t[0] + r.left, t[1] + r.top]; };   // usado nos testes
+    window.addEventListener("resize", layout);
+    requestAnimationFrame(layout);
+    return { fechar: fechar };
+  }
+
+  raiz.RoscaLocal = { nitidez: nitidez, passo: passo, ajustarPontos: ajustarPontos, medirEntre: medirEntre, marcar: marcar };
 })(this);

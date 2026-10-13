@@ -1,6 +1,6 @@
 // Rosca Fácil by DayIA · guarda as telas para abrir mais rápido (a medição sempre usa a internet)
-var CACHE = "rosca-facil-v25";
-var ARQ = ["./", "index.html", "tabelas.js?v=25", "config.js?v=25", "medir.js?v=25", "local.js?v=25", "dayia-simbolo.png", "dayia-logo.png", "exemplo.jpg", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
+var CACHE = "rosca-facil-v27";
+var ARQ = ["./", "index.html", "tabelas.js?v=27", "config.js?v=27", "medir.js?v=27", "local.js?v=27", "dayia-simbolo.png", "dayia-logo.png", "exemplo.jpg", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ARQ); })); self.skipWaiting(); });
 self.addEventListener("activate", function (e) {
   e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); }));

@@ -183,6 +183,9 @@ form.manual label small{font-weight:500;color:var(--mute)}
 .ed-n button{width:38px;height:38px;border-radius:10px;border:2px solid var(--line);background:#fff;font-size:20px;font-weight:800;cursor:pointer}
 .ed-n output{min-width:30px;text-align:center;font-size:18px;font-weight:800}
 .ed-ref-dica{font-size:13px;color:var(--ink2);margin-bottom:8px}
+.mc-passo{position:absolute;left:10px;right:10px;top:10px;z-index:2;background:rgba(14,34,56,.88);color:#fff;font-size:15px;line-height:1.35;padding:9px 12px;border-radius:12px;pointer-events:none}
+.mc-passo:empty{display:none}
+.marcar .mc-lupa{top:64px!important}
 .ed-previa{background:var(--bluebg);color:var(--blue);border-radius:10px;padding:8px 10px;font-size:14px;margin-bottom:10px}
 .ed-acoes{display:flex;gap:10px}.ed-acoes .btn{font-size:15px;padding:12px}
 .cam-palco{position:relative;flex:1;min-height:0;background:#000;overflow:hidden}
@@ -359,10 +362,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=25"></script>
-<script src="tabelas.js?v=25"></script>
-<script src="medir.js?v=25"></script>
-<script src="local.js?v=25"></script>
+<script src="config.js?v=27"></script>
+<script src="tabelas.js?v=27"></script>
+<script src="medir.js?v=27"></script>
+<script src="local.js?v=27"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -579,74 +582,65 @@ function processarFoto(r0) {
   if (estado.fotos.length >= MAX_FOTOS) estado.fotos.shift();
   Promise.resolve(r0).then(function (r) {
     var foto = { dataUrl: r.dataUrl, img: r.img, medida: null, status: "nova" };
+    // foto embaçada: avisa antes de qualquer coisa
+    if (!r.forcar && window.RoscaLocal) {
+      var nit = RoscaLocal.nitidez(r.img);
+      if (nit !== null && nit < NITIDEZ_MIN) {
+        estado.fotoBorrada = r;
+        $("#preview").hidden = false; $("#preview img").src = r.dataUrl;
+        aviso("#msgFoto", "erro", "📷 <b>A foto ficou embaçada</b> (o foco foi para o fundo ou a mão tremeu). Assim não dá para ver os filetes." +
+          "<br>Toque na tela <b>em cima da peça</b> antes de tirar, a uns 15 a 20 cm de distância." +
+          ' <button type="button" class="btn sec" style="margin-top:8px" onclick="usarBorrada()">Usar esta foto mesmo assim</button>');
+        return;
+      }
+    }
     estado.fotos.push(foto);
     salvarSessao();
     $("#preview").hidden = false;
     $("#preview img").src = r.dataUrl;
     desenharFotos();
-    if (!API) {
-      // sem IA ligada: medição feita com o dedo, direto na foto
-      aviso("#msgFoto", "info", "Marque a rosca na foto com o dedo. Leva uns segundos.");
-      editarFoto(foto);
-      return;
+    if (estado.tipo === "femea") { avisoFemea(); return; }
+    // a IA roda por trás só para estimar o tamanho da peça (desempate) e ler marcação; a medida vem dos toques
+    if (API) pedirIA(r.dataUrl, 0).then(function (d) {
+      if (!d || !d.ok || !d.medida) return;
+      var m = normalizar(d.medida);
+      foto.ia = m;
+      if (m.tipo === "femea" && !foto.medida) { if (foto.tela) foto.tela.fechar(); avisoFemea(); return; }
+      if (foto.medida) {
+        foto.medida.diametro_estimado_mm = m.diametro_estimado_mm; foto.medida.forma = m.forma; foto.medida.marcacao = m.marcacao;
+        atualizarMedida(); avisarSeDividido();
+      }
+    }).catch(function () {});
+    marcarToques(foto);
+  });
+}
+function avisoFemea() {
+  marcarTipo("femea");
+  aviso("#msgFoto", "atencao", "🔧 <b>Rosca fêmea (por dentro) não dá para medir pela foto.</b> Vista de frente, os filetes aparecem um atrás do outro e a distância entre eles fica errada." +
+    "<br><br>Jeitos certos de medir a fêmea:<br>• <b>Aba 📏 Medida</b>: meça o furo por dentro (de um lado ao outro da boca, na ponta dos filetes) e digite o valor.<br>• Ou rosqueie nela uma <b>rosca macho</b> que você já conhece e veja qual entra certinho." +
+    '<br><br>Se a rosca for <b>macho</b> (por fora), toque em "Macho" ali em cima e tire a foto de novo.' +
+    ' <button type="button" class="btn sec" style="margin-top:10px" onclick="aba(\'manual\')">Ir para a aba Medida</button>');
+}
+function rotuloPrevia(razao, est) {
+  var l = Roscas.comparar({ razao: razao, diametro_estimado_mm: est }, estado.tipo, estado.familia);
+  if (!l.length) return "";
+  var a = l[0], b = null;
+  for (var i = 1; i < l.length; i++) if (l[i].grupo !== a.grupo) { b = l[i]; break; }
+  if (b && b.pontos - a.pontos <= 0.04) return "<b>" + esc(a.rotulo) + "</b> ou <b>" + esc(b.rotulo) + "</b>";
+  return "<b>" + esc(a.rotulo) + "</b>";
+}
+function marcarToques(foto) {
+  foto.tela = RoscaLocal.marcar({
+    img: foto.img,
+    previa: function (razao) { return rotuloPrevia(razao, foto.ia && foto.ia.diametro_estimado_mm); },
+    cancelar: function () { foto.tela = null; foto.status = "erro"; desenharFotos();
+      aviso("#msgFoto", "info", 'Para medir, toque nas duas bordas da rosca. <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Marcar a rosca</button>'); },
+    pronto: function (med) {
+      foto.tela = null;
+      if (foto.ia) { med.diametro_estimado_mm = foto.ia.diametro_estimado_mm; med.forma = foto.ia.forma; med.marcacao = foto.ia.marcacao; }
+      foto.medida = med; foto.status = "aj"; $("#msgFoto").innerHTML = "";
+      desenharFotos(); atualizarMedida(); avisarSeDividido();
     }
-    if (!r.forcar && window.RoscaLocal) {
-      var nit = RoscaLocal.nitidez(r.img);
-      if (nit !== null && nit < NITIDEZ_MIN) {
-        foto.status = "erro"; desenharFotos();
-        estado.fotoBorrada = r;
-        aviso("#msgFoto", "erro", "📷 <b>A foto ficou embaçada</b> (o foco foi para o fundo ou a mão tremeu). Assim o app não consegue contar os filetes." +
-          "<br>Toque na tela <b>em cima da peça</b> antes de tirar, a uns 15 a 20 cm de distância." +
-          ' <button type="button" class="btn sec" style="margin-top:8px" onclick="usarBorrada()">Usar esta foto mesmo assim</button>');
-        estado.fotos.pop(); desenharFotos();
-        return;
-      }
-    }
-    comecarScan();
-    return pedirIA(r.dataUrl, 0).then(function (d) {
-      return pararScan(!!d.ok).then(function () { return d; });
-    }).then(function (d) {
-      if (!d.ok && d.demorou) {
-        foto.status = "erro"; desenharFotos();
-        aviso("#msgFoto", "info", "A IA demorou, então vou medir aqui no celular: coloque as bolinhas amarelas nas bordas da rosca e o app encaixa o pente sozinho.");
-        setTimeout(function () { editarFoto(foto); }, 400);
-        return;
-      }
-      if (!d.ok) { foto.status = "erro"; desenharFotos(); aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") + ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Medir com o dedo</button>'); return; }
-      var m = normalizar(d.medida || {});
-      if (m.tipo === "femea" || (estado.tipo === "femea" && m.tipo !== "macho")) {
-        // rosca fêmea vista de frente: os filetes aparecem um atrás do outro (perspectiva) e a distância entre eles sai errada.
-        // Melhor não dar resultado do que dar um errado.
-        foto.status = "erro"; desenharFotos(); marcarTipo("femea");
-        aviso("#msgFoto", "atencao", "🔧 <b>Rosca fêmea (por dentro) não dá para medir pela foto.</b> Vista de frente, os filetes aparecem um atrás do outro e a distância entre eles fica menor do que é de verdade. Por isso o resultado sairia errado." +
-          "<br><br>Jeitos certos de medir a fêmea:<br>• <b>Aba 📏 Medida</b>: meça o furo por dentro (de um lado ao outro da boca, na ponta dos filetes) e digite o valor.<br>• Ou rosqueie nela uma <b>rosca macho</b> que você já conhece e veja qual entra certinho." +
-          ' <button type="button" class="btn sec" style="margin-top:10px" onclick="aba(\'manual\')">Ir para a aba Medida</button>');
-        return;
-      }
-      conferirNoCelular(foto, m);
-      foto.medida = m;
-      if (m.rosca_visivel !== false && !(Roscas.razaoPossivel(m.razao) || m.tem_referencia) && m.pontos) {
-        // a IA achou a rosca mas a contagem não fechou: o app encaixa o pente de rosca na foto sozinho
-        foto.status = "erro"; desenharFotos();
-        aviso("#msgFoto", "info", "Vou encaixar o pente de rosca na foto para conferir os filetes…");
-        setTimeout(function () { editarFoto(foto); }, 400);
-        return;
-      }
-      if (m.rosca_visivel === false || !(Roscas.razaoPossivel(m.razao) || m.tem_referencia)) {
-        foto.status = "erro"; desenharFotos();
-        aviso("#msgFoto", "erro", "Não consegui ver os filetes direito. " + esc(m.problemas || "Tente outra foto, mais de perto e de lado.") +
-          (estado.tipo === "femea" || m.tipo === "femea" ? "<br>🔧 <b>Rosca fêmea</b> (por dentro) quase nunca dá para contar pela foto: use a aba <b>📏 Medida</b>, medindo o furo por dentro." : "") +
-          ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Marcar com o dedo</button>');
-        $("#dicasBox").open = true; return;
-      }
-      foto.status = "ok"; desenharFotos();
-      if (m.tipo === "macho" || m.tipo === "femea") marcarTipo(m.tipo);
-      atualizarMedida();
-      avisarSeDividido();
-    });
-  }).catch(function () {
-    pararScan(false);
-    aviso("#msgFoto", "erro", "Sem conexão com a internet, ou o servidor não respondeu. Tente de novo, ou marque com o dedo.");
   });
 }
 /* Pede a medida ao servidor. Se a IA estiver lotada, espera um pouco e tenta de novo sozinho. */
@@ -695,9 +689,16 @@ function avisarSeDividido() {
   if (!l.semReferencia || l.length < 2) return;
   var a = l[0], b = null;
   for (var i = 1; i < l.length; i++) if (l[i].grupo !== a.grupo) { b = l[i]; break; }
-  if (!b || b.pontos - a.pontos > 0.03) return;
-  aviso("#msgFoto", "info", "Ficou entre <b>" + esc(a.rotulo) + "</b> e <b>" + esc(b.rotulo) + "</b>. Confira as bolinhas amarelas nas bordas da rosca:" +
-    ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">Conferir na foto</button>');
+  if (!b || b.pontos - a.pontos > 0.04) return;
+  estado.opcoes = [a, b];
+  function bt(x, k) { return '<button type="button" class="btn sec" style="margin-top:8px" onclick="escolherTamanho(' + k + ')">' + esc(x.rotulo) + " · uns " + Math.round(x.diametro) + " mm de grossura</button>"; }
+  aviso("#msgFoto", "info", "Ficou entre <b>" + esc(a.rotulo) + "</b> e <b>" + esc(b.rotulo) + "</b>. Olhando a peça na mão, qual é o tamanho mais perto?" + bt(a, 0) + bt(b, 1));
+}
+function escolherTamanho(k) {
+  var x = estado.opcoes && estado.opcoes[k]; if (!x || !estado.medida) return;
+  estado.medida.diametro_estimado_mm = x.diametro;
+  estado.fotos.forEach(function (f) { if (f.medida) f.medida.diametro_estimado_mm = x.diametro; });
+  $("#msgFoto").innerHTML = ""; mostrar();
 }
 function enviarIA(leve, dataUrl, tentativa) {
   var ctl = window.AbortController ? new AbortController() : null;
@@ -755,11 +756,11 @@ function desenharFotos() {
     var t = f.status === "aj" ? "✋" : f.status === "ok" ? "✓" : f.status === "erro" ? "!" : "…";
     return '<button type="button" class="mini ' + cls + '" data-i="' + i + '" aria-label="Foto ' + (i + 1) + '" style="padding:0;cursor:pointer"><img src="' + f.dataUrl + '" alt=""><span>' + t + "</span></button>";
   }).join("");
-  box.querySelectorAll(".mini").forEach(function (b) { b.onclick = function () { editarFoto(estado.fotos[Number(b.dataset.i)]); }; });
+  box.querySelectorAll(".mini").forEach(function (b) { b.onclick = function () { marcarToques(estado.fotos[Number(b.dataset.i)]); }; });
   $("#txtFoto").textContent = estado.fotos.length ? "Tirar outra foto" : "Tirar foto da peça";
 }
 
-function editarUltima() { var f = estado.fotos[estado.fotos.length - 1]; if (f) editarFoto(f); }
+function editarUltima() { var f = estado.fotos[estado.fotos.length - 1]; if (f) marcarToques(f); }
 function editarFoto(foto) {
   var m = foto.medida || {};
   Medir.abrirEditor({

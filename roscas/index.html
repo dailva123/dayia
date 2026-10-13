@@ -167,6 +167,18 @@ form.manual label small{font-weight:500;color:var(--mute)}
 .ed-topo button{background:var(--navy2);border:0;color:#fff;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
 .ed-palco{position:relative;flex:1;min-height:0;touch-action:none;overflow:hidden}
 .ed-palco canvas{position:absolute;left:0;top:0;touch-action:none}
+.ed-lam{margin-bottom:8px}
+.ed-lam-tit{font-weight:800;font-size:14.5px;margin-bottom:6px}
+.ed-lam-tit small{font-weight:500;color:var(--mute);font-size:12px;margin-left:4px}
+.ed-lam-linha{display:flex;align-items:center;gap:6px}
+.ed-lam-seta{flex:none;width:40px;height:52px;border-radius:12px;border:2px solid var(--line);background:#fff;font-size:24px;font-weight:800;color:var(--navy);cursor:pointer}
+.ed-lam-lista{flex:1;display:flex;gap:6px;overflow-x:auto;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;padding:2px}
+.ed-lam-lista button{flex:none;min-width:74px;height:52px;border-radius:12px;border:2px solid var(--line);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--navy)}
+.ed-lam-lista button b{font-size:15px}
+.ed-lam-lista button small{font-size:11px;color:var(--mute)}
+.ed-lam-lista button[aria-selected="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.ed-lam-lista button[aria-selected="true"] small{color:#B9CCE2}
+.ed-auto{margin-bottom:4px}
 .ed-zoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;z-index:3}
 .ed-zoom button{width:46px;height:46px;border-radius:14px;border:0;background:rgba(255,255,255,.95);color:var(--navy);font-size:22px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 .ed-zoom button:active{transform:scale(.94)}
@@ -360,10 +372,10 @@ form.manual label small{font-weight:500;color:var(--mute)}
   <div class="by2">by <img src="dayia-logo.png" alt="DayIA"></div>
 </footer>
 
-<script src="config.js?v=40"></script>
-<script src="tabelas.js?v=40"></script>
-<script src="medir.js?v=40"></script>
-<script src="local.js?v=40"></script>
+<script src="config.js?v=41"></script>
+<script src="tabelas.js?v=41"></script>
+<script src="medir.js?v=41"></script>
+<script src="local.js?v=41"></script>
 <script>
 var $ = function (s) { return document.querySelector(s); };
 var Q = new URLSearchParams(location.search);
@@ -599,14 +611,14 @@ function processarFoto(r0) {
     }).then(function (d) {
       if (!d.ok) {
         // guarda o erro real para o botão de diagnóstico
-        estado.diag = { versao: "v40", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, erro_ia: JSON.parse(JSON.stringify(d)) };
+        estado.diag = { versao: "v41", quando: new Date().toISOString(), tipo: estado.tipo, tempo: estado.tempo, erro_ia: JSON.parse(JSON.stringify(d)) };
         foto.status = "erro"; desenharFotos();
         aviso("#msgFoto", "erro", esc(d.erro || "Não foi possível medir.") +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">🔩 Medir com o pente na foto</button>' +
           ' <button type="button" class="btn sec" style="margin-top:8px" onclick="document.getElementById(\'btnDiag\').click()">📋 Copiar diagnóstico</button>');
         return;
       }
-      estado.diag = { versao: "v40", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
+      estado.diag = { versao: "v41", quando: new Date().toISOString(), tipo: estado.tipo, foto_px: [foto.img.naturalWidth, foto.img.naturalHeight], tempo: estado.tempo, resposta_ia: JSON.parse(JSON.stringify(d)) };
       var m = normalizar(d.medida || {});
       // só corrige ONDE ficam as linhas: a IA às vezes manda a posição em outra escala (0 a 1000, pixels) ou com x e y trocados
       var caixa = caixaIA(d.medida || {}, foto.img);
@@ -643,7 +655,7 @@ function processarFoto(r0) {
     });
   }).catch(function (err) {
     pararScan(false);
-    estado.diag = { versao: "v40", quando: new Date().toISOString(), tipo: estado.tipo, falha_rede: String(err && err.message || err), online: navigator.onLine };
+    estado.diag = { versao: "v41", quando: new Date().toISOString(), tipo: estado.tipo, falha_rede: String(err && err.message || err), online: navigator.onLine };
     aviso("#msgFoto", "erro", (navigator.onLine ? "O servidor não respondeu a tempo. Tente de novo." : "Sem internet no celular agora.") +
       ' <button type="button" class="btn sec" style="margin-top:8px" onclick="editarUltima()">🔩 Medir com o pente na foto</button>' +
       ' <button type="button" class="btn sec" style="margin-top:8px" onclick="document.getElementById(\'btnDiag\').click()">📋 Copiar diagnóstico</button>');

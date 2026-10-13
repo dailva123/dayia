@@ -58,7 +58,11 @@
       '<button type="button" data-z="trazer" aria-label="Trazer os marcadores para cá">📍</button><button type="button" data-z="rosca" aria-label="Ir para os marcadores">🎯</button><button type="button" data-z="tudo" aria-label="Ver a foto inteira">⤢</button><button type="button" data-z="trava" class="ed-trava" aria-label="Foto travada: toque para soltar">🔒</button></div>' +
       '<div class="ed-zoom-tag" aria-live="polite"></div></div>' +
       '<div class="ed-painel">' +
-      '<button type="button" class="btn ed-auto">🔩 Encaixar o pente de rosca</button>' +
+      '<div class="ed-lam"><div class="ed-lam-tit">🔩 Lâmina do pente <small>toque até os dentes caírem nos filetes</small></div>' +
+      '<div class="ed-lam-linha"><button type="button" class="ed-lam-seta" data-l="-1" aria-label="Lâmina anterior">‹</button>' +
+      '<div class="ed-lam-lista" role="listbox" aria-label="Lâminas do pente"></div>' +
+      '<button type="button" class="ed-lam-seta" data-l="1" aria-label="Próxima lâmina">›</button></div></div>' +
+      '<button type="button" class="btn sec ed-auto">✨ Encaixar sozinho</button>' +
       '<div class="ed-auto-msg" aria-live="polite"></div>' +
       '<p class="ed-dica">O app testa as lâminas do pente nos filetes e encaixa a que serve. Se precisar: <b>dois dedos</b> aumentam a foto, ' +
       '<span class="bol am"></span><b>amarelas</b> nas bordas da rosca, e o pente se arrasta pelo botão ✥.</p>' +
@@ -283,6 +287,49 @@
       var fino = lagM + (den ? 0.5 * (y0 - y2) / den : 0);
       return { passo: fino, qualidade: melhor, perfil: v, ini: t0 };
     }
+    /* ---- Lâminas do pente: uma por bitola (ex.: 1/4" · 19/18 fios). Escolher a lâmina muda o
+       espaçamento dos dentes na foto (passo = diâmetro ÷ proporção daquela bitola). ---- */
+    var LAMINAS = (function () {
+      var lista = [], vistos = {};
+      (opts.laminas ? opts.laminas() : []).forEach(function (l) {
+        if (vistos[l.grupo]) { var g0 = vistos[l.grupo]; var t = l.familia === "metrica" ? String(l.passo).replace(".", ",") : String(l.tpi).replace(".", ","); if (g0.fios.indexOf(t) < 0) g0.fios.push(t); return; }
+        var item = { grupo: l.grupo, rotulo: l.rotulo, razao: l.razao, familia: l.familia, diametro: l.diametro,
+          fios: [l.familia === "metrica" ? String(l.passo).replace(".", ",") : String(l.tpi).replace(".", ",")] };
+        vistos[l.grupo] = item; lista.push(item);
+      });
+      lista.sort(function (a, b) { return a.diametro - b.diametro; });
+      return lista;
+    })();
+    var lamIdx = -1;
+    function textoLamina(it) { return it.fios.join("/") + (it.familia === "metrica" ? " mm" : " fios"); }
+    function desenharLaminas() {
+      var box = $(".ed-lam-lista", ov);
+      box.innerHTML = LAMINAS.map(function (it, i) {
+        return '<button type="button" role="option" data-i="' + i + '" aria-selected="' + (i === lamIdx) + '"><b>' + it.rotulo + "</b><small>" + textoLamina(it) + "</small></button>";
+      }).join("");
+      var sel = box.querySelector('[aria-selected="true"]');
+      if (sel) box.scrollLeft = sel.offsetLeft - box.clientWidth / 2 + sel.clientWidth / 2;
+    }
+    function usarLamina(i, deAuto) {
+      if (!LAMINAS.length) return;
+      lamIdx = (i + LAMINAS.length) % LAMINAS.length;
+      var it = LAMINAS[lamIdx], g = geoPente(), D = dist(h.a, h.b);
+      var pp = D / it.razao;                         // passo que essa lâmina teria nessa rosca
+      if (!deAuto) {
+        var nn = Math.max(3, Math.min(40, Math.round(g.len / pp) || n));
+        h.d = [h.c[0] + g.ux * nn * pp, h.c[1] + g.uy * nn * pp];
+        n = nn; $("output", ov).textContent = n;
+      }
+      lamina = { texto: textoLamina(it), rotulo: it.rotulo, razao: it.razao };
+      if (!deAuto) $(".ed-auto-msg", ov).innerHTML = "Lâmina <b>" + it.rotulo + "</b> (" + textoLamina(it) + "). Os dentes caíram em cima dos filetes? Então é <b>" + it.rotulo + "</b>.";
+      desenharLaminas(); desenhar(); salvarRascunho();
+    }
+    function laminaMaisPerto() {
+      var m = medida(), melhor = -1, e0 = Infinity;
+      LAMINAS.forEach(function (it, i) { var e = Math.abs(m.razao - it.razao) / it.razao; if (e < e0) { e0 = e; melhor = i; } });
+      return melhor;
+    }
+
     function encaixarPente(silencioso) {
       var msg = $(".ed-auto-msg", ov), D = dist(h.a, h.b);
       var r = medirPasso();
@@ -323,6 +370,8 @@
       var fios = [];
       cand.forEach(function (x) { if (x.grupo === l.grupo) { var t = l.familia === "metrica" ? String(x.passo).replace(".", ",") : String(x.tpi).replace(".", ","); if (fios.indexOf(t) < 0) fios.push(t); } });
       lamina = { texto: fios.join("/") + (l.familia === "metrica" ? " mm" : " fios"), rotulo: l.rotulo };
+      LAMINAS.forEach(function (it, i) { if (it.grupo === l.grupo) lamIdx = i; });
+      desenharLaminas();
       msg.innerHTML = "✅ Encaixou a lâmina de <b>" + lamina.texto + "</b> → <b>" + l.rotulo + "</b>";
       desenhar(); salvarRascunho();
       return true;
@@ -432,7 +481,11 @@
       delete dedos[e.pointerId];
       if (pinca && Object.keys(dedos).length < 2) { pinca = null; trazerSeSumiram(); }
       if (!Object.keys(dedos).length) {
-        if (arrastando) { if (arrastando.k !== "m" && arrastando.k !== "ma") { lamina = null; $(".ed-auto-msg", ov).innerHTML = ""; } salvarRascunho(); desenhar(); }
+        if (arrastando) {
+          if ((arrastando.k === "a" || arrastando.k === "b") && lamIdx >= 0) { var ki = lamIdx; usarLamina(ki); }   // mudou o diâmetro: a lâmina escolhida se reajusta
+          else if (arrastando.k !== "m" && arrastando.k !== "ma") { lamina = null; lamIdx = -1; desenharLaminas(); $(".ed-auto-msg", ov).innerHTML = ""; }
+          salvarRascunho(); desenhar();
+        }
         arrastando = null; pan = null; lupa.hidden = true;
       }
       // toque duplo na foto (fora das bolinhas): aumenta 2x ali, ou volta se já estiver bem perto
@@ -464,8 +517,17 @@
       };
     });
     $(".ed-auto", ov).onclick = function () { encaixarPente(false); };
+    $(".ed-lam-lista", ov).onclick = function (e) { var b = e.target.closest("button[data-i]"); if (b) usarLamina(Number(b.dataset.i)); };
+    ov.querySelectorAll(".ed-lam-seta").forEach(function (b) {
+      b.onclick = function () { usarLamina((lamIdx < 0 ? laminaMaisPerto() : lamIdx) + (lamIdx < 0 ? 0 : Number(b.dataset.l))); };
+    });
     ov.querySelectorAll("[data-n]").forEach(function (b) {
-      b.onclick = function () { n = Math.max(1, Math.min(40, n + Number(b.dataset.n))); $("output", ov).textContent = n; lamina = null; $(".ed-auto-msg", ov).innerHTML = ""; desenhar(); };
+      b.onclick = function () {
+        n = Math.max(1, Math.min(40, n + Number(b.dataset.n))); $("output", ov).textContent = n;
+        if (lamIdx >= 0) { var g = geoPente(), pp = dist(h.a, h.b) / LAMINAS[lamIdx].razao; h.d = [h.c[0] + g.ux * n * pp, h.c[1] + g.uy * n * pp]; }   // mais/menos dentes, mesma lâmina
+        else { lamina = null; $(".ed-auto-msg", ov).innerHTML = ""; }
+        desenhar();
+      };
     });
     sel.onchange = function () {
       if (sel.value === "outra") {
@@ -506,6 +568,7 @@
     window.addEventListener("resize", layout);
     requestAnimationFrame(function () {
       layout();
+      desenharLaminas();
       if (opts.pontos) irRosca(); // a IA já marcou: abre aproximado na rosca
       if (opts.pontos && opts.autoPente !== false) setTimeout(function () { encaixarPente(false); }, 60);
     });

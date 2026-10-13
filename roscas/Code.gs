@@ -26,7 +26,7 @@
    Cada empresa recebe um link próprio do app. Nada de planilha.
    ===================================================================== */
 
-var VERSAO = "2.0";
+var VERSAO = "2.1";
 var TENTATIVAS = []; // diagnóstico: cada chamada à IA (modelo, jeito, tempo, resultado)
 
 // Modelos usados (pode trocar aqui se o fornecedor lançar um mais novo)
@@ -34,8 +34,8 @@ var TENTATIVAS = []; // diagnóstico: cada chamada à IA (modelo, jeito, tempo, 
 // Com as duas chaves (CLAUDE_KEY e GEMINI_KEY), o Claude vem primeiro (mais preciso) e o Gemini fica de reserva.
 // Para mudar a ordem, crie a propriedade IA_PRIMEIRO com o valor "gemini" ou "claude".
 // Rápidos primeiro; os mais pesados só se os rápidos estiverem lotados.
-// 1.9: o "lite" primeiro (achar o retângulo da rosca é tarefa simples e ele responde mais rápido)
-var MODELOS_GEMINI = ["gemini-flash-lite-latest", "gemini-flash-latest"];   // 1.7: sem o "pro" (lento demais)
+// 2.1: o "flash" primeiro (era o rápido ontem); o "lite" levou 66 s no teste de 13/10, fica só de reserva
+var MODELOS_GEMINI = ["gemini-flash-latest", "gemini-flash-lite-latest"];   // 1.7: sem o "pro" (lento demais)
 var MODELOS_CLAUDE = ["claude-haiku-5-5", "claude-sonnet-5-5"];          // 1.7: o mais rápido primeiro
 
 // Limite de análises por dia, para ninguém gastar sua cota à toa

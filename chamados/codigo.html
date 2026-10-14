@@ -1,0 +1,665 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Código do servidor · Atende Fácil</title>
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#EEF2F7;color:#0E2238}main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:6px 0}p{margin:6px 0 12px;color:#4A5B75}
+button{background:#0E2238;color:#fff;border:0;border-radius:12px;padding:14px 22px;font-size:17px;font-weight:800;cursor:pointer}
+button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;font:12px/1.4 ui-monospace,Consolas,monospace;border:1px solid #D6DFEA;border-radius:12px;padding:10px;box-sizing:border-box;background:#fff}</style></head>
+<body><main><h1>Código do servidor · Atende Fácil by DayIA</h1>
+<p>Clique em Copiar. Na planilha do Atende Fácil: Extensões › Apps Script › apague tudo do Código.gs e cole (Ctrl+V) › Salvar. Depois escolha a função <b>configurar</b> › Executar. Por fim: Implantar › Gerenciar implantações › lápis › Versão: Nova versão › Implantar.</p>
+<button id="b">📋 Copiar código</button>
+<textarea id="t" readonly>/* =====================================================================
+   ATENDE FÁCIL by DayIA  ·  servidor (Google Apps Script)
+   ---------------------------------------------------------------------
+   Guarda chamados, conversas, histórico e técnicos numa planilha Google.
+   As telas (cliente, técnico e gestor) ficam no site e conversam com
+   este script pela internet.
+
+   Instalação resumida (passo a passo completo no arquivo de instruções):
+   1. Crie uma planilha Google em branco.
+   2. Extensões &gt; Apps Script. Apague o que estiver lá e cole este arquivo.
+   3. Selecione a função &quot;configurar&quot; e clique em Executar (autorize).
+   4. Implantar &gt; Nova implantação &gt; App da Web
+        Executar como: Eu  ·  Quem pode acessar: Qualquer pessoa
+   5. Copie o código da implantação e coloque no link do sistema.
+   ===================================================================== */
+
+var VERSAO_SISTEMA = &quot;1.4&quot;;
+var ABAS = {
+  Chamados:  [&quot;id&quot;,&quot;criado&quot;,&quot;atualizado&quot;,&quot;nome&quot;,&quot;empresa&quot;,&quot;email&quot;,&quot;tel&quot;,&quot;setor&quot;,&quot;categoria&quot;,&quot;prioridade&quot;,&quot;assunto&quot;,&quot;descricao&quot;,&quot;patrimonio&quot;,&quot;app&quot;,&quot;rid&quot;,&quot;permite&quot;,&quot;anexo&quot;,&quot;status&quot;,&quot;tecnico&quot;,&quot;prazo&quot;,&quot;acesso&quot;,&quot;nota&quot;,&quot;minutos&quot;,&quot;resolvido&quot;,&quot;chave&quot;],
+  Mensagens: [&quot;chamado&quot;,&quot;quando&quot;,&quot;de&quot;,&quot;autor&quot;,&quot;texto&quot;],
+  Historico: [&quot;quando&quot;,&quot;chamado&quot;,&quot;quem&quot;,&quot;acao&quot;,&quot;detalhe&quot;],
+  Tecnicos:  [&quot;nome&quot;,&quot;email&quot;,&quot;pin&quot;,&quot;gestor&quot;,&quot;ativo&quot;],
+  Config:    [&quot;chave&quot;,&quot;valor&quot;,&quot;explicacao&quot;]
+};
+var PRIO = {&quot;Urgente&quot;:4,&quot;Alta&quot;:8,&quot;Média&quot;:24,&quot;Baixa&quot;:72};
+var STATUS = [&quot;Aberto&quot;,&quot;Em atendimento&quot;,&quot;Aguardando cliente&quot;,&quot;Resolvido&quot;];
+var H = 3600000;
+
+/* ---------------- instalação ---------------- */
+function configurar() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error(&quot;Abra este script a partir da planilha (Extensões &gt; Apps Script).&quot;);
+  PropertiesService.getScriptProperties().setProperty(&quot;PLANILHA&quot;, ss.getId());
+  Object.keys(ABAS).forEach(function (nome) {
+    var sh = ss.getSheetByName(nome) || ss.insertSheet(nome);
+    if (sh.getLastRow() === 0) {
+      sh.appendRow(ABAS[nome]);
+      sh.setFrozenRows(1);
+      sh.getRange(1, 1, 1, ABAS[nome].length).setFontWeight(&quot;bold&quot;).setBackground(&quot;#0E2238&quot;).setFontColor(&quot;#FFFFFF&quot;);
+    }
+  });
+  var tec = ss.getSheetByName(&quot;Tecnicos&quot;);
+  if (tec.getLastRow() === 1) {
+    tec.getRange(2, 1, 4, 5).setValues([
+      [&quot;Dono da empresa&quot;, &quot;dono@suaempresa.com.br&quot;, &quot;1234&quot;, &quot;SIM&quot;, &quot;SIM&quot;],
+      [&quot;Técnico 1&quot;, &quot;tecnico1@suaempresa.com.br&quot;, &quot;1111&quot;, &quot;NÃO&quot;, &quot;SIM&quot;],
+      [&quot;Técnico 2&quot;, &quot;tecnico2@suaempresa.com.br&quot;, &quot;2222&quot;, &quot;NÃO&quot;, &quot;SIM&quot;],
+      [&quot;Técnico 3&quot;, &quot;tecnico3@suaempresa.com.br&quot;, &quot;3333&quot;, &quot;NÃO&quot;, &quot;SIM&quot;]
+    ]);
+    tec.getRange(&quot;C:C&quot;).setNumberFormat(&quot;@&quot;);
+  }
+  var cfg = ss.getSheetByName(&quot;Config&quot;);
+  var padrao = [
+    [&quot;empresa&quot;, &quot;Minha Empresa de Suporte&quot;, &quot;Nome que aparece para os clientes&quot;],
+    [&quot;distribuicao&quot;, &quot;fila&quot;, &quot;fila = todos recebem e quem assumir fica com o chamado · rodizio = o sistema distribui entre os técnicos&quot;],
+    [&quot;avisar_tecnicos_email&quot;, &quot;SIM&quot;, &quot;Mandar e-mail aos técnicos quando chegar chamado novo&quot;],
+    [&quot;avisar_cliente_email&quot;, &quot;SIM&quot;, &quot;Mandar e-mail ao cliente quando o técnico responder&quot;],
+    [&quot;proximo_id&quot;, &quot;1001&quot;, &quot;Número do próximo chamado (não mexa)&quot;],
+    [&quot;rodizio_pos&quot;, &quot;0&quot;, &quot;Uso interno do rodízio (não mexa)&quot;],
+    [&quot;link_sistema&quot;, &quot;&quot;, &quot;Preenchido sozinho quando o primeiro chamado for aberto&quot;],
+    [&quot;push_chave&quot;, &quot;&quot;, &quot;Chave do OneSignal: avisos no celular mesmo com o app fechado (cole aqui a chave)&quot;]
+  ];
+  var tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
+  padrao.forEach(function (p) { if (tem.indexOf(p[0]) &lt; 0) cfg.appendRow(p); });
+  cfg.autoResizeColumns(1, 3);
+  ss.getSheetByName(&quot;Chamados&quot;).getRange(&quot;A:A&quot;).setNumberFormat(&quot;0&quot;);
+  var sobra = ss.getSheetByName(&quot;Página1&quot;) || ss.getSheetByName(&quot;Sheet1&quot;);
+  if (sobra &amp;&amp; ss.getSheets().length &gt; 5 &amp;&amp; sobra.getLastRow() === 0) ss.deleteSheet(sobra);
+  // pede as permissões de e-mail e Drive já na instalação
+  MailApp.getRemainingDailyQuota();
+  pastaAnexos_();
+  return &quot;Pronto! Agora faça a implantação como App da Web.&quot;;
+}
+
+/* ---------------- entrada ---------------- */
+function doGet(e) {
+  var p = (e &amp;&amp; e.parameter) || {};
+  if (p.acao) return responder_(executar_(p));
+  return ContentService.createTextOutput(&quot;Atende Fácil by DayIA · servidor funcionando (versão &quot; + VERSAO_SISTEMA + &quot;).&quot;);
+}
+function doPost(e) {
+  var d = {};
+  try { d = JSON.parse(e.postData.contents || &quot;{}&quot;); } catch (x) { return responder_({ erro: &quot;Pedido inválido.&quot; }); }
+  return responder_(executar_(d));
+}
+function responder_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+function executar_(d) {
+  try {
+    var f = ACOES[d.acao];
+    if (!f) return { erro: &quot;Ação desconhecida.&quot; };
+    return f(d);
+  } catch (x) {
+    return { erro: String(x &amp;&amp; x.message || x) };
+  }
+}
+
+var ACOES = {
+  ping: function () { return { ok: true, empresa: cfg_(&quot;empresa&quot;), versao: VERSAO_SISTEMA, primeiro: !!linhaExemploGestor_() }; },
+  sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
+
+  /* primeiro acesso: o dono cria o próprio login, sem ninguém mexer na planilha */
+  primeiroAcesso: function (d) {
+    var nome = lim_(d.nome, 60), email = lim_(d.email, 120).toLowerCase(), senha = lim_(d.senha, 20), emp = lim_(d.empresa, 80);
+    if (!nome) throw new Error(&quot;Coloque o seu nome.&quot;);
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error(&quot;Coloque um e-mail válido.&quot;);
+    if (senha.length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;);
+    return comTrava_(function () {
+      var linha = linhaExemploGestor_();
+      if (!linha) throw new Error(&quot;O acesso de gestor já foi criado. Entre com o seu e-mail e senha.&quot;);
+      var sh = aba_(&quot;Tecnicos&quot;), v = sh.getDataRange().getValues();
+      sh.getRange(linha, 1, 1, 5).setValues([[nome, email, &quot;&#x27;&quot; + senha, &quot;SIM&quot;, &quot;SIM&quot;]]);
+      for (var i = 1; i &lt; v.length; i++) if (i + 1 !== linha &amp;&amp; /@suaempresa\.com\.br$/i.test(String(v[i][1]).trim())) sh.getRange(i + 1, 5).setValue(&quot;NÃO&quot;);
+      if (emp) setCfg_(&quot;empresa&quot;, emp);
+      mudou_();
+      var token = Utilities.getUuid();
+      guardarSessao_(token, JSON.stringify({ nome: nome, email: email, gestor: true }));
+      return { ok: true, token: token, nome: nome, gestor: true, empresa: cfg_(&quot;empresa&quot;), distribuicao: cfg_(&quot;distribuicao&quot;) };
+    });
+  },
+
+  /* guarda o aparelho para receber avisos com o app fechado */
+  pushReg: function (d) {
+    if (d.token) { var eu = sessao_(d); pushGuardar_(&quot;T_&quot; + String(eu.email).trim().toLowerCase(), d.sub); }
+    else { var t = chamadoCliente_(d); pushGuardar_(&quot;C_&quot; + t.id, d.sub); }
+    return { ok: true, ativo: !!pushChave_() };
+  },
+
+  /* ======== CLIENTE (sem login: usa o número do chamado + código secreto) ======== */
+  abrir: function (d) {
+    var c = d.dados || {};
+    [&quot;nome&quot;, &quot;email&quot;, &quot;assunto&quot;].forEach(function (k) { if (!String(c[k] || &quot;&quot;).trim()) throw new Error(&quot;Preencha o campo &quot; + k + &quot;.&quot;); });
+    var prio = PRIO[c.prioridade] ? c.prioridade : &quot;Média&quot;;
+    var anexo = &quot;&quot;;
+    if (c.anexo &amp;&amp; c.anexo.base64) anexo = salvarAnexo_(c.anexo);
+    return comTrava_(function () {
+      var id = Number(cfg_(&quot;proximo_id&quot;)) || 1001;
+      setCfg_(&quot;proximo_id&quot;, id + 1);
+      if (d.base) setCfg_(&quot;link_sistema&quot;, String(d.base).split(&quot;#&quot;)[0]);
+      var agora = new Date(), chave = Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 10);
+      var tecnico = &quot;&quot;;
+      if (cfg_(&quot;distribuicao&quot;) === &quot;rodizio&quot;) tecnico = proximoRodizio_();
+      var t = {
+        id: id, criado: agora, atualizado: agora, nome: lim_(c.nome, 80), empresa: lim_(c.empresa, 80), email: lim_(c.email, 120),
+        tel: lim_(c.tel, 40), setor: lim_(c.setor, 60), categoria: lim_(c.categoria, 60), prioridade: prio, assunto: lim_(c.assunto, 150),
+        descricao: lim_(c.descricao, 3000), patrimonio: lim_(c.patrimonio, 40), app: lim_(c.app, 30), rid: lim_(c.rid, 40),
+        permite: c.permite ? &quot;SIM&quot; : &quot;NÃO&quot;, anexo: anexo, status: &quot;Aberto&quot;, tecnico: tecnico,
+        prazo: new Date(agora.getTime() + PRIO[prio] * H), acesso: &quot;&quot;, nota: &quot;&quot;, minutos: &quot;&quot;, resolvido: &quot;&quot;, chave: chave
+      };
+      inserir_(&quot;Chamados&quot;, t);
+      msg_(id, &quot;sis&quot;, &quot;&quot;, &quot;Chamado aberto.&quot;);
+      hist_(id, t.nome + &quot; (cliente)&quot;, &quot;abriu o chamado&quot;, t.assunto);
+      if (tecnico) { msg_(id, &quot;sis&quot;, &quot;&quot;, &quot;Chamado encaminhado para &quot; + tecnico + &quot;.&quot;); hist_(id, &quot;Sistema&quot;, &quot;encaminhou (rodízio)&quot;, &quot;para &quot; + tecnico); }
+      mudou_();
+      avisarNovo_(t);
+      confirmarCliente_(t);
+      push_(tecsPush_(tecnico ? function (r) { return r.nome === tecnico || sim_(r.gestor); } : null), &quot;🔔 Novo chamado #&quot; + id, (t.empresa ? t.empresa + &quot; · &quot; : &quot;&quot;) + t.assunto + &quot; (&quot; + prio + &quot;)&quot;, linkTec_());
+      return { ok: true, id: id, chave: chave, empresa: cfg_(&quot;empresa&quot;) };
+    });
+  },
+
+  ver: function (d) {
+    var t = chamadoCliente_(d);
+    var msgs = mensagens_(t.id).filter(function (m) { return m.de !== &quot;int&quot;; });
+    return { ok: true, chamado: publico_(t, false), mensagens: msgs, empresa: cfg_(&quot;empresa&quot;), v: versao_() };
+  },
+
+  clienteMsg: function (d) {
+    var t = chamadoCliente_(d), x = lim_(d.texto, 2000);
+    if (!x) throw new Error(&quot;Escreva a mensagem.&quot;);
+    return comTrava_(function () {
+      msg_(t.id, &quot;cli&quot;, t.nome, x);
+      var st = t.status === &quot;Aguardando cliente&quot; ? &quot;Em atendimento&quot; : (t.status === &quot;Resolvido&quot; ? &quot;Em atendimento&quot; : t.status);
+      if (t.status === &quot;Resolvido&quot;) hist_(t.id, t.nome + &quot; (cliente)&quot;, &quot;reabriu o chamado&quot;, &quot;&quot;);
+      atualizar_(t.id, { status: st, atualizado: new Date() });
+      hist_(t.id, t.nome + &quot; (cliente)&quot;, &quot;respondeu&quot;, resumo_(x));
+      mudou_();
+      push_(tecsPush_(t.tecnico ? function (r) { return r.nome === t.tecnico; } : null), &quot;💬 &quot; + primeiro_(t.nome) + &quot; respondeu o chamado #&quot; + t.id, resumo_(x), linkTec_());
+      return { ok: true };
+    });
+  },
+
+  clienteAcesso: function (d) {
+    var t = chamadoCliente_(d);
+    if (t.acesso !== &quot;pendente&quot;) throw new Error(&quot;Não há pedido de acesso em aberto.&quot;);
+    return comTrava_(function () {
+      var ok = !!d.permitir;
+      atualizar_(t.id, { acesso: ok ? &quot;aprovado&quot; : &quot;recusado&quot;, atualizado: new Date() });
+      msg_(t.id, &quot;sis&quot;, &quot;&quot;, primeiro_(t.nome) + (ok ? &quot; autorizou o acesso remoto ao computador.&quot; : &quot; recusou o acesso remoto.&quot;));
+      hist_(t.id, t.nome + &quot; (cliente)&quot;, ok ? &quot;autorizou o acesso remoto&quot; : &quot;recusou o acesso remoto&quot;, &quot;&quot;);
+      mudou_();
+      return { ok: true };
+    });
+  },
+
+  avaliar: function (d) {
+    var t = chamadoCliente_(d), n = Math.round(Number(d.nota));
+    if (!(n &gt;= 1 &amp;&amp; n &lt;= 5)) throw new Error(&quot;Nota inválida.&quot;);
+    return comTrava_(function () {
+      atualizar_(t.id, { nota: n });
+      msg_(t.id, &quot;sis&quot;, &quot;&quot;, primeiro_(t.nome) + &quot; avaliou o atendimento com &quot; + n + &quot; estrela&quot; + (n &gt; 1 ? &quot;s&quot; : &quot;&quot;) + &quot;.&quot;);
+      hist_(t.id, t.nome + &quot; (cliente)&quot;, &quot;avaliou&quot;, n + &quot; estrela&quot; + (n &gt; 1 ? &quot;s&quot; : &quot;&quot;) + (d.comentario ? &quot; · &quot; + lim_(d.comentario, 300) : &quot;&quot;));
+      if (d.comentario) msg_(t.id, &quot;cli&quot;, t.nome, lim_(d.comentario, 300));
+      mudou_();
+      return { ok: true };
+    });
+  },
+
+  /* ======== TÉCNICOS ======== */
+  login: function (d) {
+    var email = String(d.email || &quot;&quot;).trim().toLowerCase(), pin = String(d.pin || &quot;&quot;).trim();
+    var tec = linhas_(&quot;Tecnicos&quot;).filter(function (r) {
+      return String(r.email).trim().toLowerCase() === email &amp;&amp; String(r.pin).trim() === pin &amp;&amp; sim_(r.ativo);
+    })[0];
+    if (!tec) throw new Error(&quot;E-mail ou senha incorretos.&quot;);
+    var token = Utilities.getUuid();
+    guardarSessao_(token, JSON.stringify({ nome: tec.nome, email: email, gestor: sim_(tec.gestor) }));
+    return { ok: true, token: token, nome: tec.nome, gestor: sim_(tec.gestor), empresa: cfg_(&quot;empresa&quot;), distribuicao: cfg_(&quot;distribuicao&quot;) };
+  },
+
+  painel: function (d) {
+    var eu = sessao_(d);
+    var v = versao_();
+    if (d.v &amp;&amp; Number(d.v) === v) return { ok: true, mudou: false, v: v };
+    var limite = Date.now() - 45 * 24 * H;
+    var lista = linhas_(&quot;Chamados&quot;).filter(function (t) {
+      return t.status !== &quot;Resolvido&quot; || ms_(t.resolvido || t.atualizado) &gt; limite;
+    }).map(function (t) { return publico_(t, true); });
+    var tecs = linhas_(&quot;Tecnicos&quot;).filter(function (r) { return sim_(r.ativo); }).map(function (r) { return { nome: r.nome, gestor: sim_(r.gestor) }; });
+    return { ok: true, mudou: true, v: v, eu: eu, chamados: lista, tecnicos: tecs, empresa: cfg_(&quot;empresa&quot;), distribuicao: cfg_(&quot;distribuicao&quot;) };
+  },
+
+  detalhe: function (d) {
+    var eu = sessao_(d), t = achar_(d.id);
+    var hs = linhas_(&quot;Historico&quot;).filter(function (h) { return Number(h.chamado) === t.id; });
+    var jaViu = hs.some(function (h) { return h.quem === eu.nome &amp;&amp; h.acao === &quot;visualizou&quot;; });
+    if (!jaViu) { hist_(t.id, eu.nome, &quot;visualizou&quot;, &quot;&quot;); hs.push({ quando: new Date(), chamado: t.id, quem: eu.nome, acao: &quot;visualizou&quot;, detalhe: &quot;&quot; }); }
+    return {
+      ok: true, chamado: publico_(t, true), mensagens: mensagens_(t.id),
+      historico: hs.map(function (h) { return { quando: ms_(h.quando), quem: h.quem, acao: h.acao, detalhe: h.detalhe }; })
+    };
+  },
+
+  acao: function (d) {
+    var eu = sessao_(d);
+    if (d.tipo === &quot;verConfig&quot; || d.tipo === &quot;salvarConfig&quot; || d.tipo === &quot;salvarTecnico&quot;) return configGestor_(eu, d);
+    return comTrava_(function () {
+      var t = achar_(d.id), agora = new Date(), x;
+      switch (d.tipo) {
+        case &quot;assumir&quot;:
+          if (t.tecnico &amp;&amp; t.tecnico !== eu.nome &amp;&amp; !d.forcar) throw new Error(&quot;Este chamado já está com &quot; + t.tecnico + &quot;.&quot;);
+          atualizar_(t.id, { tecnico: eu.nome, status: t.status === &quot;Aberto&quot; ? &quot;Em atendimento&quot; : t.status, atualizado: agora });
+          msg_(t.id, &quot;sis&quot;, &quot;&quot;, eu.nome + &quot; assumiu o chamado.&quot;);
+          hist_(t.id, eu.nome, &quot;assumiu o chamado&quot;, t.tecnico ? &quot;estava com &quot; + t.tecnico : &quot;&quot;);
+          push_([&quot;C_&quot; + t.id], cfg_(&quot;empresa&quot;), &quot;👨‍🔧 &quot; + eu.nome + &quot; está cuidando do seu chamado #&quot; + t.id + &quot;.&quot;, linkCli_(t));
+          break;
+        case &quot;transferir&quot;:
+          var para = String(d.para || &quot;&quot;);
+          if (!linhas_(&quot;Tecnicos&quot;).some(function (r) { return r.nome === para &amp;&amp; sim_(r.ativo); })) throw new Error(&quot;Técnico não encontrado.&quot;);
+          atualizar_(t.id, { tecnico: para, atualizado: agora });
+          msg_(t.id, &quot;sis&quot;, &quot;&quot;, &quot;Chamado transferido para &quot; + para + &quot;.&quot;);
+          hist_(t.id, eu.nome, &quot;transferiu&quot;, &quot;de &quot; + (t.tecnico || &quot;ninguém&quot;) + &quot; para &quot; + para + (d.motivo ? &quot; · &quot; + lim_(d.motivo, 200) : &quot;&quot;));
+          avisarTransferencia_(t, para, eu.nome);
+          push_(tecsPush_(function (r) { return r.nome === para; }), &quot;Chamado #&quot; + t.id + &quot; transferido para você&quot;, eu.nome + &quot; · &quot; + t.assunto, linkTec_());
+          break;
+        case &quot;responder&quot;:
+          x = lim_(d.texto, 3000);
+          if (!x) throw new Error(&quot;Escreva a mensagem.&quot;);
+          if (d.interno) {
+            msg_(t.id, &quot;int&quot;, eu.nome, x);
+            hist_(t.id, eu.nome, &quot;anotação interna&quot;, resumo_(x));
+          } else {
+            var mud = { atualizado: agora };
+            if (!t.tecnico) { mud.tecnico = eu.nome; hist_(t.id, eu.nome, &quot;assumiu o chamado&quot;, &quot;ao responder&quot;); }
+            if (t.status === &quot;Aberto&quot;) mud.status = &quot;Em atendimento&quot;;
+            atualizar_(t.id, mud);
+            msg_(t.id, &quot;tec&quot;, eu.nome, x);
+            hist_(t.id, eu.nome, &quot;respondeu ao cliente&quot;, resumo_(x));
+            avisarCliente_(t, eu.nome, x);
+            push_([&quot;C_&quot; + t.id], cfg_(&quot;empresa&quot;), &quot;💬 &quot; + eu.nome + &quot;: &quot; + resumo_(x), linkCli_(t));
+          }
+          break;
+        case &quot;status&quot;:
+          if (STATUS.indexOf(d.valor) &lt; 0) throw new Error(&quot;Status inválido.&quot;);
+          if (d.valor === &quot;Resolvido&quot;) throw new Error(&quot;Use o botão Resolver.&quot;);
+          atualizar_(t.id, { status: d.valor, atualizado: agora, resolvido: &quot;&quot; });
+          msg_(t.id, &quot;sis&quot;, &quot;&quot;, &quot;Status alterado para &quot; + d.valor + &quot;.&quot;);
+          hist_(t.id, eu.nome, &quot;mudou o status&quot;, t.status + &quot; → &quot; + d.valor);
+          break;
+        case &quot;pedirAcesso&quot;:
+          atualizar_(t.id, { acesso: &quot;pendente&quot;, atualizado: agora });
+          msg_(t.id, &quot;sis&quot;, &quot;&quot;, eu.nome + &quot; pediu acesso remoto ao computador.&quot;);
+          hist_(t.id, eu.nome, &quot;pediu acesso remoto&quot;, (t.app || &quot;&quot;) + &quot; &quot; + (t.rid || &quot;&quot;));
+          push_([&quot;C_&quot; + t.id], cfg_(&quot;empresa&quot;), &quot;🖥 &quot; + eu.nome + &quot; pediu para acessar o seu computador. Toque para permitir.&quot;, linkCli_(t));
+          break;
+        case &quot;conectou&quot;:
+          msg_(t.id, &quot;sis&quot;, &quot;&quot;, eu.nome + &quot; conectou ao computador&quot; + (t.rid ? &quot; (&quot; + (t.app || &quot;acesso remoto&quot;) + &quot; &quot; + t.rid + &quot;)&quot; : &quot;&quot;) + &quot;.&quot;);
+          hist_(t.id, eu.nome, &quot;acessou o computador&quot;, (t.app || &quot;&quot;) + &quot; &quot; + (t.rid || &quot;&quot;));
+          break;
+        case &quot;encerrouAcesso&quot;:
+          msg_(t.id, &quot;sis&quot;, &quot;&quot;, &quot;Acesso remoto encerrado&quot; + (d.texto ? &quot;: &quot; + lim_(d.texto, 300) : &quot;.&quot;));
+          hist_(t.id, eu.nome, &quot;encerrou o acesso remoto&quot;, lim_(d.texto, 300));
+          atualizar_(t.id, { acesso: &quot;&quot;, atualizado: agora });
+          break;
+        case &quot;resolver&quot;:
+          var min = Math.max(0, Math.round(Number(d.minutos) || 0));
+          atualizar_(t.id, { status: &quot;Resolvido&quot;, resolvido: agora, minutos: min, tecnico: t.tecnico || eu.nome, acesso: &quot;&quot;, atualizado: agora });
+          if (d.texto) { msg_(t.id, &quot;tec&quot;, eu.nome, lim_(d.texto, 3000)); avisarCliente_(t, eu.nome, lim_(d.texto, 3000), true); }
+          msg_(t.id, &quot;sis&quot;, &quot;&quot;, &quot;Chamado resolvido por &quot; + eu.nome + &quot;. Tempo de atendimento: &quot; + fmtMin_(min) + &quot;.&quot;);
+          hist_(t.id, eu.nome, &quot;resolveu o chamado&quot;, fmtMin_(min));
+          push_([&quot;C_&quot; + t.id], cfg_(&quot;empresa&quot;), &quot;✅ Seu chamado #&quot; + t.id + &quot; foi resolvido. Conte como foi o atendimento.&quot;, linkCli_(t));
+          break;
+        case &quot;reabrir&quot;:
+          atualizar_(t.id, { status: &quot;Em atendimento&quot;, resolvido: &quot;&quot;, atualizado: agora });
+          msg_(t.id, &quot;sis&quot;, &quot;&quot;, eu.nome + &quot; reabriu o chamado.&quot;);
+          hist_(t.id, eu.nome, &quot;reabriu o chamado&quot;, &quot;&quot;);
+          break;
+        default: throw new Error(&quot;Ação desconhecida.&quot;);
+      }
+      mudou_();
+      return { ok: true };
+    });
+  },
+
+  historico: function (d) {
+    var eu = sessao_(d);
+    if (!eu.gestor) throw new Error(&quot;Só o gestor vê o histórico geral.&quot;);
+    var hs = linhas_(&quot;Historico&quot;);
+    var n = Math.min(Number(d.limite) || 300, 2000);
+    return { ok: true, historico: hs.slice(-n).reverse().map(function (h) { return { quando: ms_(h.quando), chamado: h.chamado, quem: h.quem, acao: h.acao, detalhe: h.detalhe }; }) };
+  }
+};
+
+/* ---------------- e-mails ---------------- */
+function linkCli_(t) { var l = cfg_(&quot;link_sistema&quot;); return l ? l + (l.indexOf(&quot;?&quot;) &lt; 0 ? &quot;?&quot; : &quot;&amp;&quot;) + &quot;c=&quot; + t.id + &quot;&amp;k=&quot; + t.chave : &quot;&quot;; }
+function linkTec_() { var l = cfg_(&quot;link_sistema&quot;); return l ? l + &quot;#tecnico&quot; : &quot;&quot;; }
+function tecsPush_(filtro) {
+  return linhas_(&quot;Tecnicos&quot;).filter(function (r) { return sim_(r.ativo) &amp;&amp; (!filtro || filtro(r)); })
+    .map(function (r) { return &quot;T_&quot; + String(r.email).trim().toLowerCase(); });
+}
+function avisarNovo_(t) {
+  if (!sim_(cfg_(&quot;avisar_tecnicos_email&quot;))) return;
+  var tecs = linhas_(&quot;Tecnicos&quot;).filter(function (r) { return sim_(r.ativo) &amp;&amp; /@/.test(r.email); });
+  if (t.tecnico) tecs = tecs.filter(function (r) { return r.nome === t.tecnico || sim_(r.gestor); });
+  var para = tecs.map(function (r) { return r.email; }).join(&quot;,&quot;);
+  if (!para) return;
+  var link = cfg_(&quot;link_sistema&quot;);
+  enviar_(para, &quot;🔔 Novo chamado #&quot; + t.id + &quot; · &quot; + t.empresa + &quot; · &quot; + t.assunto,
+    &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Novo chamado #&quot; + t.id + &quot;&lt;/h2&gt;&quot; +
+    tabela_([[&quot;Prioridade&quot;, t.prioridade], [&quot;Cliente&quot;, t.nome], [&quot;Empresa&quot;, t.empresa], [&quot;Telefone&quot;, t.tel], [&quot;E-mail&quot;, t.email], [&quot;Setor&quot;, t.setor],
+             [&quot;Tipo&quot;, t.categoria], [&quot;Assunto&quot;, t.assunto], [&quot;Descrição&quot;, t.descricao], [&quot;Patrimônio&quot;, t.patrimonio],
+             [&quot;Acesso remoto&quot;, (t.app || &quot;&quot;) + &quot; &quot; + (t.rid || &quot;&quot;)], [&quot;Encaminhado para&quot;, t.tecnico || &quot;Fila (todos)&quot;]]) +
+    (link ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + link + &quot;#tecnico&#x27; style=&#x27;background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Abrir a Atende Fácil&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;));
+}
+function confirmarCliente_(t) {
+  if (!sim_(cfg_(&quot;avisar_cliente_email&quot;)) || !/@/.test(t.email)) return;
+  var link = cfg_(&quot;link_sistema&quot;), emp = cfg_(&quot;empresa&quot;);
+  var url = link ? link + (link.indexOf(&quot;?&quot;) &lt; 0 ? &quot;?&quot; : &quot;&amp;&quot;) + &quot;c=&quot; + t.id + &quot;&amp;k=&quot; + t.chave : &quot;&quot;;
+  enviar_(t.email, &quot;Recebemos seu chamado #&quot; + t.id + &quot; · &quot; + emp,
+    &quot;&lt;p&gt;Olá, &quot; + esc_(primeiro_(t.nome)) + &quot;!&lt;/p&gt;&lt;p&gt;Recebemos seu chamado &lt;b&gt;#&quot; + t.id + &quot; · &quot; + esc_(t.assunto) + &quot;&lt;/b&gt;. Nossa equipe já foi avisada.&lt;/p&gt;&quot; +
+    (url ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + url + &quot;&#x27; style=&#x27;background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Acompanhar o chamado&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;) +
+    &quot;&lt;p style=&#x27;color:#4A5B75&#x27;&gt;&quot; + esc_(emp) + &quot;&lt;/p&gt;&quot;, emp);
+}
+function avisarTransferencia_(t, para, por) {
+  if (!sim_(cfg_(&quot;avisar_tecnicos_email&quot;))) return;
+  var r = linhas_(&quot;Tecnicos&quot;).filter(function (x) { return x.nome === para; })[0];
+  if (!r || !/@/.test(r.email)) return;
+  var link = cfg_(&quot;link_sistema&quot;);
+  enviar_(r.email, &quot;Chamado #&quot; + t.id + &quot; transferido para você&quot;, &quot;&lt;p&gt;&quot; + esc_(por) + &quot; transferiu para você o chamado &lt;b&gt;#&quot; + t.id + &quot; · &quot; + esc_(t.assunto) + &quot;&lt;/b&gt; (&quot; + esc_(t.empresa) + &quot;).&lt;/p&gt;&quot; +
+    (link ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + link + &quot;#tecnico&#x27;&gt;Abrir a Atende Fácil&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;));
+}
+function avisarCliente_(t, tecnico, texto, resolvido) {
+  if (!sim_(cfg_(&quot;avisar_cliente_email&quot;)) || !/@/.test(t.email)) return;
+  var link = cfg_(&quot;link_sistema&quot;), emp = cfg_(&quot;empresa&quot;);
+  var url = link ? link + (link.indexOf(&quot;?&quot;) &lt; 0 ? &quot;?&quot; : &quot;&amp;&quot;) + &quot;c=&quot; + t.id + &quot;&amp;k=&quot; + t.chave : &quot;&quot;;
+  enviar_(t.email, (resolvido ? &quot;Chamado #&quot; + t.id + &quot; resolvido&quot; : &quot;Resposta no seu chamado #&quot; + t.id) + &quot; · &quot; + emp,
+    &quot;&lt;p&gt;Olá, &quot; + esc_(primeiro_(t.nome)) + &quot;!&lt;/p&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(tecnico) + &quot;&lt;/b&gt; respondeu seu chamado &lt;b&gt;#&quot; + t.id + &quot; · &quot; + esc_(t.assunto) + &quot;&lt;/b&gt;:&lt;/p&gt;&quot; +
+    &quot;&lt;blockquote style=&#x27;border-left:4px solid #8EC5E8;margin:0;padding:8px 12px;background:#F2F6FA&#x27;&gt;&quot; + esc_(texto).replace(/\n/g, &quot;&lt;br&gt;&quot;) + &quot;&lt;/blockquote&gt;&quot; +
+    (url ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + url + &quot;&#x27; style=&#x27;background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Ver e responder o chamado&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;) +
+    &quot;&lt;p style=&#x27;color:#4A5B75&#x27;&gt;&quot; + esc_(emp) + &quot;&lt;/p&gt;&quot;, emp);
+}
+function enviar_(para, assunto, html, nome) {
+  try {
+    if (MailApp.getRemainingDailyQuota() &lt; 1) return;
+    MailApp.sendEmail({ to: para, subject: assunto, htmlBody: &quot;&lt;div style=&#x27;font-family:Arial,sans-serif;color:#0E2238;font-size:14px&#x27;&gt;&quot; + html + &quot;&lt;/div&gt;&quot;, name: nome || &quot;Atende Fácil&quot; });
+  } catch (x) { console.log(&quot;e-mail não enviado: &quot; + x); }
+}
+function tabela_(linhas) {
+  return &quot;&lt;table style=&#x27;border-collapse:collapse&#x27;&gt;&quot; + linhas.filter(function (l) { return String(l[1] || &quot;&quot;).trim(); }).map(function (l) {
+    return &quot;&lt;tr&gt;&lt;td style=&#x27;padding:4px 12px 4px 0;color:#4A5B75;vertical-align:top&#x27;&gt;&quot; + l[0] + &quot;&lt;/td&gt;&lt;td style=&#x27;padding:4px 0&#x27;&gt;&lt;b&gt;&quot; + esc_(l[1]).replace(/\n/g, &quot;&lt;br&gt;&quot;) + &quot;&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&quot;;
+  }).join(&quot;&quot;) + &quot;&lt;/table&gt;&quot;;
+}
+
+/* ---------------- anexos ---------------- */
+function pastaAnexos_() {
+  var p = PropertiesService.getScriptProperties(), id = p.getProperty(&quot;PASTA&quot;);
+  if (id) { try { return DriveApp.getFolderById(id); } catch (x) {} }
+  var f = DriveApp.createFolder(&quot;Atende Fácil · anexos&quot;);
+  p.setProperty(&quot;PASTA&quot;, f.getId());
+  return f;
+}
+function salvarAnexo_(a) {
+  var bytes = Utilities.base64Decode(String(a.base64));
+  if (bytes.length &gt; 8 * 1024 * 1024) throw new Error(&quot;O anexo passa de 8 MB.&quot;);
+  var blob = Utilities.newBlob(bytes, a.tipo || &quot;application/octet-stream&quot;, lim_(a.nome, 100) || &quot;anexo&quot;);
+  var arq = pastaAnexos_().createFile(blob);
+  try { arq.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {}
+  return arq.getUrl();
+}
+
+/* ---------------- planilha ---------------- */
+function planilha_() {
+  var id = PropertiesService.getScriptProperties().getProperty(&quot;PLANILHA&quot;);
+  return id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+}
+function aba_(n) {
+  var sh = planilha_().getSheetByName(n);
+  if (!sh) throw new Error(&quot;A aba &quot; + n + &quot; não existe. Rode a função configurar.&quot;);
+  return sh;
+}
+function linhas_(n) {
+  var v = aba_(n).getDataRange().getValues(), cab = v.shift();
+  return v.filter(function (r) { return r.join(&quot;&quot;) !== &quot;&quot;; }).map(function (r) {
+    var o = {}; cab.forEach(function (c, i) { o[c] = r[i]; }); return o;
+  });
+}
+function inserir_(n, o) {
+  aba_(n).appendRow(ABAS[n].map(function (c) { return txt_(o[c] === undefined ? &quot;&quot; : o[c]); }));
+}
+function achar_(id) {
+  id = Number(id);
+  var t = linhas_(&quot;Chamados&quot;).filter(function (r) { return Number(r.id) === id; })[0];
+  if (!t) throw new Error(&quot;Chamado não encontrado.&quot;);
+  t.id = Number(t.id);
+  return t;
+}
+function atualizar_(id, campos) {
+  var sh = aba_(&quot;Chamados&quot;), ids = sh.getRange(2, 1, Math.max(sh.getLastRow() - 1, 1), 1).getValues();
+  for (var i = 0; i &lt; ids.length; i++) {
+    if (Number(ids[i][0]) === Number(id)) {
+      Object.keys(campos).forEach(function (c) {
+        var col = ABAS.Chamados.indexOf(c);
+        if (col &gt;= 0) sh.getRange(i + 2, col + 1).setValue(txt_(campos[c]));
+      });
+      return;
+    }
+  }
+}
+function msg_(id, de, autor, texto) { inserir_(&quot;Mensagens&quot;, { chamado: id, quando: new Date(), de: de, autor: autor, texto: texto }); }
+function hist_(id, quem, acao, det) { inserir_(&quot;Historico&quot;, { quando: new Date(), chamado: id, quem: quem, acao: acao, detalhe: det || &quot;&quot; }); }
+function mensagens_(id) {
+  return linhas_(&quot;Mensagens&quot;).filter(function (m) { return Number(m.chamado) === Number(id); })
+    .map(function (m) { return { quando: ms_(m.quando), de: m.de, autor: m.autor, texto: String(m.texto) }; });
+}
+function cfg_(k) {
+  var r = linhas_(&quot;Config&quot;).filter(function (x) { return x.chave === k; })[0];
+  return r ? String(r.valor) : &quot;&quot;;
+}
+function setCfg_(k, v) {
+  var sh = aba_(&quot;Config&quot;), v0 = sh.getDataRange().getValues();
+  for (var i = 1; i &lt; v0.length; i++) if (v0[i][0] === k) { sh.getRange(i + 1, 2).setValue(v); return; }
+  sh.appendRow([k, v, &quot;&quot;]);
+}
+function proximoRodizio_() {
+  var tecs = linhas_(&quot;Tecnicos&quot;).filter(function (r) { return sim_(r.ativo) &amp;&amp; !sim_(r.gestor); });
+  if (!tecs.length) tecs = linhas_(&quot;Tecnicos&quot;).filter(function (r) { return sim_(r.ativo); });
+  if (!tecs.length) return &quot;&quot;;
+  var pos = (Number(cfg_(&quot;rodizio_pos&quot;)) || 0) % tecs.length;
+  setCfg_(&quot;rodizio_pos&quot;, pos + 1);
+  return tecs[pos].nome;
+}
+
+/* ---------------- sessão, versão e trava ---------------- */
+function sessao_(d) {
+  var s = lerSessao_(d.token, function (v) {
+    var em = String(JSON.parse(v).email || &quot;&quot;).toLowerCase();
+    return linhas_(&quot;Tecnicos&quot;).some(function (r) { return String(r.email).trim().toLowerCase() === em &amp;&amp; sim_(r.ativo); });
+  });
+  if (!s) throw new Error(&quot;SESSAO&quot;);
+  return JSON.parse(s);
+}
+function chamadoCliente_(d) {
+  var t = achar_(d.id);
+  if (!d.chave || String(t.chave) !== String(d.chave)) throw new Error(&quot;Chamado não encontrado.&quot;);
+  return t;
+}
+function versao_() { return Number(PropertiesService.getScriptProperties().getProperty(&quot;VERSAO&quot;) || 1); }
+function mudou_() { PropertiesService.getScriptProperties().setProperty(&quot;VERSAO&quot;, String(Date.now())); }
+function comTrava_(fn) {
+  var l = LockService.getScriptLock();
+  if (!l.tryLock(20000)) throw new Error(&quot;Sistema ocupado, tente de novo em alguns segundos.&quot;);
+  try { return fn(); } finally { SpreadsheetApp.flush(); l.releaseLock(); }
+}
+
+/* ---------------- utilidades ---------------- */
+function publico_(t, interno) {
+  var o = {};
+  ABAS.Chamados.forEach(function (c) { if (c !== &quot;chave&quot;) o[c] = t[c]; });
+  [&quot;criado&quot;, &quot;atualizado&quot;, &quot;prazo&quot;, &quot;resolvido&quot;].forEach(function (c) { o[c] = ms_(t[c]); });
+  o.id = Number(t.id);
+  o.permite = sim_(t.permite);
+  o.nota = t.nota === &quot;&quot; ? null : Number(t.nota);
+  o.minutos = t.minutos === &quot;&quot; ? null : Number(t.minutos);
+  return o;
+}
+// o apóstrofo faz a planilha guardar como texto: telefone e código do AnyDesk não viram número
+// e nada que o cliente digitar vira fórmula
+function txt_(v) { return (typeof v === &quot;string&quot; &amp;&amp; v !== &quot;&quot;) ? &quot;&#x27;&quot; + v : v; }
+function ms_(v) { if (!v) return null; if (v instanceof Date) return v.getTime(); var n = Number(v); if (!isNaN(n) &amp;&amp; n &gt; 0) return n; var d = new Date(v); return isNaN(d) ? null : d.getTime(); }
+function sim_(v) { return /^s/i.test(String(v).trim()); }
+function lim_(v, n) { return String(v === undefined || v === null ? &quot;&quot; : v).trim().slice(0, n); }
+function resumo_(x) { x = String(x).replace(/\s+/g, &quot; &quot;); return x.length &gt; 120 ? x.slice(0, 117) + &quot;…&quot; : x; }
+function primeiro_(n) { return String(n || &quot;&quot;).trim().split(&quot; &quot;)[0]; }
+function esc_(s) { return String(s === undefined || s === null ? &quot;&quot; : s).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g, function (c) { return { &quot;&amp;&quot;: &quot;&amp;amp;&quot;, &quot;&lt;&quot;: &quot;&amp;lt;&quot;, &quot;&gt;&quot;: &quot;&amp;gt;&quot;, &#x27;&quot;&#x27;: &quot;&amp;quot;&quot;, &quot;&#x27;&quot;: &quot;&amp;#39;&quot; }[c]; }); }
+function fmtMin_(m) { m = Number(m) || 0; var h = Math.floor(m / 60), r = m % 60; return h ? h + &quot; h&quot; + (r ? &quot; &quot; + r + &quot; min&quot; : &quot;&quot;) : r + &quot; min&quot;; }
+
+/* ---------------- avisos no celular, mesmo com o app fechado (OneSignal) ---------------- */
+var ONESIGNAL_APP = &quot;7a1178de-2e8b-4205-aeb9-8171f97fb614&quot;;
+function pushGuardar_(chave, sub) {
+  sub = String(sub || &quot;&quot;).trim();
+  if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error(&quot;Aparelho inválido.&quot;);
+  var P = PropertiesService.getScriptProperties(), k = &quot;PS_&quot; + chave, o = { s: [], t: 0 };
+  try { o = JSON.parse(P.getProperty(k) || &#x27;{&quot;s&quot;:[]}&#x27;); } catch (x) {}
+  var l = (o.s || []).filter(function (s) { return s !== sub; }); l.push(sub);
+  P.setProperty(k, JSON.stringify({ s: l.slice(-5), t: Date.now() }));
+  if (Math.random() &lt; 0.03) pushLimpar_();
+}
+function pushLimpar_() {
+  try {
+    var P = PropertiesService.getScriptProperties(), tudo = P.getProperties(), velho = Date.now() - 120 * 86400000;
+    Object.keys(tudo).forEach(function (k) {
+      if (k.indexOf(&quot;PS_&quot;) !== 0) return;
+      try { if ((JSON.parse(tudo[k]).t || 0) &lt; velho) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); }
+    });
+  } catch (x) {}
+}
+function pushDe_(chave) { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;PS_&quot; + chave) || &#x27;{&quot;s&quot;:[]}&#x27;).s || []; } catch (x) { return []; } }
+function pushChave_() { return String(cfg_(&quot;push_chave&quot;) || &quot;&quot;).trim(); }
+function push_(chaves, titulo, texto, url) {
+  try {
+    var key = pushChave_();
+    if (!key) return;
+    var subs = [];
+    chaves.forEach(function (c) { pushDe_(c).forEach(function (s) { if (subs.indexOf(s) &lt; 0) subs.push(s); }); });
+    if (!subs.length) return;
+    var corpo = { app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
+      chrome_web_icon: &quot;https://dailva123.github.io/dayia/chamados/icon-192.png&quot;, chrome_web_badge: &quot;https://dailva123.github.io/dayia/chamados/icon-192.png&quot;, ttl: 86400 };
+    if (url) corpo.url = url;
+    var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
+      headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key }, payload: JSON.stringify(corpo) });
+    if (r.getResponseCode() &gt;= 300) console.log(&quot;aviso push recusado: &quot; + r.getResponseCode() + &quot; &quot; + r.getContentText().slice(0, 300));
+  } catch (x) { console.log(&quot;aviso push não enviado: &quot; + x); }
+}
+function testarAviso() {
+  var key = pushChave_();
+  if (!key) { console.log(&quot;❌ Falta colar a chave do OneSignal na aba Config (linha push_chave, coluna B).&quot;); return &quot;Falta colar a chave do OneSignal na aba Config (linha push_chave).&quot;; }
+  var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
+    headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key },
+    payload: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: [&quot;00000000-0000-0000-0000-000000000000&quot;], contents: { en: &quot;teste&quot; } }) });
+  var c = r.getResponseCode();
+  var msg = (c === 401 || c === 403) ? &quot;❌ A chave não foi aceita (&quot; + c + &quot;). Confira se copiou inteira, sem espaço.&quot; : &quot;✅ Chave do OneSignal funcionando!&quot;;
+  console.log(msg);
+  return msg;
+}
+
+/* ---------------- configurações pelo painel do gestor ---------------- */
+function linhaExemploGestor_() {
+  var v = aba_(&quot;Tecnicos&quot;).getDataRange().getValues();
+  for (var i = 1; i &lt; v.length; i++) if (String(v[i][1]).trim().toLowerCase() === &quot;dono@suaempresa.com.br&quot; &amp;&amp; sim_(v[i][3])) return i + 1;
+  return 0;
+}
+function configGestor_(eu, d) {
+  if (!eu.gestor) throw new Error(&quot;Só o gestor mexe nas configurações.&quot;);
+  if (d.tipo === &quot;verConfig&quot;) {
+    return { ok: true, empresa: cfg_(&quot;empresa&quot;), distribuicao: cfg_(&quot;distribuicao&quot;), avisar_tecnicos_email: sim_(cfg_(&quot;avisar_tecnicos_email&quot;)), avisar_cliente_email: sim_(cfg_(&quot;avisar_cliente_email&quot;)),
+      tecnicos: linhas_(&quot;Tecnicos&quot;).filter(function (r) { return String(r.nome).trim(); }).map(function (r) { return { nome: String(r.nome), email: String(r.email), gestor: sim_(r.gestor), ativo: sim_(r.ativo) }; }) };
+  }
+  return comTrava_(function () {
+    if (d.tipo === &quot;salvarConfig&quot;) {
+      var emp = lim_(d.empresa, 80);
+      if (!emp) throw new Error(&quot;Coloque o nome da empresa.&quot;);
+      setCfg_(&quot;empresa&quot;, emp);
+      setCfg_(&quot;distribuicao&quot;, d.distribuicao === &quot;rodizio&quot; ? &quot;rodizio&quot; : &quot;fila&quot;);
+      setCfg_(&quot;avisar_tecnicos_email&quot;, d.at ? &quot;SIM&quot; : &quot;NÃO&quot;);
+      setCfg_(&quot;avisar_cliente_email&quot;, d.ac ? &quot;SIM&quot; : &quot;NÃO&quot;);
+    } else {
+      var t = d.tec || {}, nome = lim_(t.nome, 60), email = lim_(t.email, 120).toLowerCase(), pin = lim_(t.pin, 20), orig = lim_(t.orig, 120).toLowerCase();
+      if (!nome) throw new Error(&quot;Coloque o nome.&quot;);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error(&quot;Coloque um e-mail válido.&quot;);
+      if (pin &amp;&amp; pin.length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;);
+      if (orig === String(eu.email).toLowerCase() &amp;&amp; (!t.gestor || !t.ativo)) throw new Error(&quot;Você não pode tirar o seu próprio acesso de gestor.&quot;);
+      var sh = aba_(&quot;Tecnicos&quot;), v = sh.getDataRange().getValues(), linha = -1;
+      for (var i = 1; i &lt; v.length; i++) {
+        var em = String(v[i][1]).trim().toLowerCase();
+        if (orig &amp;&amp; em === orig) linha = i + 1;
+        else if (em === email) throw new Error(&quot;Já existe alguém da equipe com esse e-mail.&quot;);
+      }
+      if (!orig &amp;&amp; v.some(function (r, i) { return i &gt; 0 &amp;&amp; String(r[0]).trim().toLowerCase() === nome.toLowerCase(); })) throw new Error(&quot;Já existe alguém da equipe com esse nome.&quot;);
+      if (linha &lt; 0) {
+        if (orig) throw new Error(&quot;Pessoa não encontrada.&quot;);
+        if (!pin) throw new Error(&quot;Crie uma senha para a pessoa nova.&quot;);
+        sh.appendRow([nome, email, &quot;&#x27;&quot; + pin, t.gestor ? &quot;SIM&quot; : &quot;NÃO&quot;, t.ativo ? &quot;SIM&quot; : &quot;NÃO&quot;]);
+      } else {
+        sh.getRange(linha, 2).setValue(email);
+        if (pin) sh.getRange(linha, 3).setValue(&quot;&#x27;&quot; + pin);
+        sh.getRange(linha, 4, 1, 2).setValues([[t.gestor ? &quot;SIM&quot; : &quot;NÃO&quot;, t.ativo ? &quot;SIM&quot; : &quot;NÃO&quot;]]);
+      }
+    }
+    mudou_();
+    return { ok: true };
+  });
+}
+
+/* ---------------- sessão longa: fica conectado por 30 dias ---------------- */
+var SESSAO_DIAS = 30;
+function guardarSessao_(token, valor) {
+  CacheService.getScriptCache().put(&quot;tk_&quot; + token, valor, 21600);
+  PropertiesService.getScriptProperties().setProperty(&quot;SS_&quot; + token, JSON.stringify({ v: valor, exp: Date.now() + SESSAO_DIAS * 86400000 }));
+  if (Math.random() &lt; 0.05) limparSessoes_();
+}
+function lerSessao_(token, valida) {
+  token = String(token || &quot;&quot;);
+  if (!token) return null;
+  var c = CacheService.getScriptCache(), v = c.get(&quot;tk_&quot; + token);
+  if (v) return v;
+  var P = PropertiesService.getScriptProperties(), raw = P.getProperty(&quot;SS_&quot; + token);
+  if (!raw) return null;
+  try {
+    var o = JSON.parse(raw);
+    if (!(o.exp &gt; Date.now()) || (valida &amp;&amp; !valida(o.v))) { P.deleteProperty(&quot;SS_&quot; + token); return null; }
+    P.setProperty(&quot;SS_&quot; + token, JSON.stringify({ v: o.v, exp: Date.now() + SESSAO_DIAS * 86400000 }));
+    c.put(&quot;tk_&quot; + token, o.v, 21600);
+    return o.v;
+  } catch (x) { return null; }
+}
+function encerrarSessao_(token) {
+  token = String(token || &quot;&quot;);
+  if (!token) return;
+  try { CacheService.getScriptCache().remove(&quot;tk_&quot; + token); } catch (x) {}
+  PropertiesService.getScriptProperties().deleteProperty(&quot;SS_&quot; + token);
+}
+function limparSessoes_() {
+  try {
+    var P = PropertiesService.getScriptProperties(), tudo = P.getProperties(), agora = Date.now();
+    Object.keys(tudo).forEach(function (k) {
+      if (k.indexOf(&quot;SS_&quot;) !== 0) return;
+      try { if (!(JSON.parse(tudo[k]).exp &gt; agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); }
+    });
+  } catch (x) {}
+}
+</textarea></main>
+<script>var b=document.getElementById("b"),t=document.getElementById("t");
+b.onclick=function(){t.select();var ok=function(){b.textContent="✅ Copiado! Agora cole no Apps Script";b.className="ok"};
+if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(ok,function(){document.execCommand("copy");ok()})}else{document.execCommand("copy");ok()}};</script>
+</body></html>

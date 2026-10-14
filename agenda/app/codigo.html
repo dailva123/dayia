@@ -1,0 +1,923 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Código do servidor · Agenda Fácil</title>
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#EEF2F7;color:#0E2238}main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:6px 0}p{margin:6px 0 12px;color:#4A5B75}
+button{background:#0E2238;color:#fff;border:0;border-radius:12px;padding:14px 22px;font-size:17px;font-weight:800;cursor:pointer}
+button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;font:12px/1.4 ui-monospace,Consolas,monospace;border:1px solid #D6DFEA;border-radius:12px;padding:10px;box-sizing:border-box;background:#fff}</style></head>
+<body><main><h1>Código do servidor · Agenda Fácil by DayIA</h1>
+<p>Clique em Copiar. Na planilha "Agenda Fácil": Extensões › Apps Script › apague tudo do Código.gs e cole (Ctrl+V) › Salvar. Depois escolha a função <b>configurar</b> › Executar. Por fim: Implantar › Gerenciar implantações › lápis › Versão: Nova versão › Implantar.</p>
+<button id="b">📋 Copiar código</button>
+<textarea id="t" readonly>/* =====================================================================
+   AGENDA FÁCIL by DayIA  ·  servidor (Google Apps Script)
+   ---------------------------------------------------------------------
+   UMA planilha só para todos os negócios. Cada negócio se cadastra
+   sozinho na página &quot;Criar minha agenda&quot; e recebe o próprio link.
+   Você controla tudo pela aba &quot;Negocios&quot; (coluna situacao):
+     teste     → funciona até a data da coluna teste_ate
+     ativo     → cliente pagante, funciona normalmente
+     cortesia  → funciona sempre, sem cobrança e sem nenhum aviso
+     suspenso  → o link e o painel mostram &quot;fale com a DayIA&quot;
+
+   Instalação (uma vez só):
+   1. Crie uma planilha Google em branco chamada &quot;Agenda Fácil&quot;.
+   2. Extensões &gt; Apps Script. Apague o que estiver lá e cole este arquivo.
+   3. Selecione a função &quot;configurar&quot; e clique em Executar (autorize).
+   4. Implantar &gt; Nova implantação &gt; App da Web
+        Executar como: Eu  ·  Quem pode acessar: Qualquer pessoa
+   5. Copie o endereço que termina em /exec.
+   ===================================================================== */
+
+var VERSAO_SISTEMA = &quot;2.6&quot;;
+var ABAS = {
+  Negocios:     [&quot;n&quot;,&quot;nome&quot;,&quot;segmento&quot;,&quot;situacao&quot;,&quot;teste_ate&quot;,&quot;criado&quot;,&quot;dono&quot;,&quot;whatsapp_dono&quot;,&quot;email_dono&quot;,&quot;senha&quot;,&quot;telefone&quot;,&quot;endereco&quot;,&quot;instagram&quot;,&quot;email_aviso&quot;,&quot;dias&quot;,&quot;abre&quot;,&quot;fecha&quot;,&quot;intervalo_ini&quot;,&quot;intervalo_fim&quot;,&quot;passo&quot;,&quot;antecedencia&quot;,&quot;cancelar_ate&quot;,&quot;observacao&quot;,&quot;marketing&quot;,&quot;lancamento_ate&quot;],
+  Agendamentos: [&quot;negocio&quot;,&quot;id&quot;,&quot;criado&quot;,&quot;ini&quot;,&quot;fim&quot;,&quot;quando&quot;,&quot;cliente&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;pet&quot;,&quot;servico&quot;,&quot;servico_nome&quot;,&quot;prof&quot;,&quot;prof_nome&quot;,&quot;preco&quot;,&quot;status&quot;,&quot;origem&quot;,&quot;obs&quot;,&quot;conversa&quot;,&quot;recado_novo&quot;,&quot;chave&quot;,&quot;promo&quot;],
+  Servicos:     [&quot;negocio&quot;,&quot;id&quot;,&quot;nome&quot;,&quot;minutos&quot;,&quot;preco&quot;,&quot;ativo&quot;],
+  Equipe:       [&quot;negocio&quot;,&quot;id&quot;,&quot;nome&quot;,&quot;ativo&quot;],
+  Bloqueios:    [&quot;negocio&quot;,&quot;id&quot;,&quot;prof&quot;,&quot;ini&quot;,&quot;fim&quot;,&quot;quando&quot;,&quot;motivo&quot;],
+  Config:       [&quot;chave&quot;,&quot;valor&quot;,&quot;explicacao&quot;],
+  Clientes:     [&quot;negocio&quot;,&quot;id&quot;,&quot;nome&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniversario&quot;,&quot;pet&quot;,&quot;origem&quot;,&quot;criado&quot;,&quot;nao_receber&quot;],
+  Promocoes:    [&quot;negocio&quot;,&quot;id&quot;,&quot;tipo&quot;,&quot;servicos&quot;,&quot;desconto&quot;,&quot;de&quot;,&quot;ate&quot;,&quot;horas&quot;,&quot;ativo&quot;,&quot;criado&quot;],
+  Envios:       [&quot;negocio&quot;,&quot;tel&quot;,&quot;tipo&quot;,&quot;canal&quot;,&quot;quando&quot;]
+};
+var MIN = 60000, DIA = 86400000;
+var MODELOS = {
+  manicure: { serv: [[&quot;Manicure&quot;,40,35],[&quot;Pedicure&quot;,50,40],[&quot;Pé e mão&quot;,80,70],[&quot;Esmaltação em gel&quot;,60,80],[&quot;Design de sobrancelhas&quot;,30,40],[&quot;Alongamento em fibra&quot;,150,180],[&quot;Manutenção do alongamento&quot;,90,120]], dias: &quot;2,3,4,5,6&quot;, abre: &quot;09:00&quot;, fecha: &quot;19:00&quot;, alm: [&quot;12:00&quot;,&quot;13:00&quot;] },
+  estetica: { serv: [[&quot;Limpeza de pele&quot;,60,150],[&quot;Drenagem linfática&quot;,50,120],[&quot;Massagem relaxante&quot;,60,130],[&quot;Design de sobrancelhas&quot;,30,45],[&quot;Depilação a laser&quot;,30,90],[&quot;Peeling&quot;,45,180]], dias: &quot;1,2,3,4,5,6&quot;, abre: &quot;08:00&quot;, fecha: &quot;19:00&quot;, alm: [&quot;12:00&quot;,&quot;13:00&quot;] },
+  medico:   { serv: [[&quot;Primeira consulta&quot;,50,300],[&quot;Consulta&quot;,30,250],[&quot;Retorno&quot;,20,0],[&quot;Pequeno procedimento&quot;,40,200]], dias: &quot;1,2,3,4,5&quot;, abre: &quot;08:00&quot;, fecha: &quot;18:00&quot;, alm: [&quot;12:00&quot;,&quot;13:30&quot;] },
+  odonto:   { serv: [[&quot;Avaliação&quot;,30,0],[&quot;Limpeza&quot;,45,180],[&quot;Restauração&quot;,60,250],[&quot;Clareamento&quot;,90,600],[&quot;Manutenção de aparelho&quot;,30,150]], dias: &quot;1,2,3,4,5,6&quot;, abre: &quot;08:00&quot;, fecha: &quot;18:00&quot;, alm: [&quot;12:00&quot;,&quot;13:00&quot;] },
+  psico:    { serv: [[&quot;Primeira sessão&quot;,60,180],[&quot;Sessão individual&quot;,50,160],[&quot;Sessão de casal&quot;,80,250],[&quot;Sessão online&quot;,50,150]], dias: &quot;1,2,3,4,5&quot;, abre: &quot;08:00&quot;, fecha: &quot;21:00&quot;, alm: [&quot;12:00&quot;,&quot;13:00&quot;] },
+  salao:    { serv: [[&quot;Corte masculino&quot;,30,45],[&quot;Barba&quot;,30,35],[&quot;Corte + barba&quot;,60,70],[&quot;Corte feminino&quot;,60,90],[&quot;Escova&quot;,45,60],[&quot;Coloração&quot;,120,180]], dias: &quot;2,3,4,5,6&quot;, abre: &quot;09:00&quot;, fecha: &quot;20:00&quot;, alm: [&quot;13:00&quot;,&quot;14:00&quot;] },
+  pet:      { serv: [[&quot;Banho (porte pequeno)&quot;,60,60],[&quot;Banho (porte grande)&quot;,90,90],[&quot;Banho e tosa&quot;,120,110],[&quot;Tosa higiênica&quot;,40,45],[&quot;Consulta veterinária&quot;,30,150]], dias: &quot;1,2,3,4,5,6&quot;, abre: &quot;08:00&quot;, fecha: &quot;18:00&quot;, alm: [&quot;12:00&quot;,&quot;13:00&quot;] },
+  fisio:    { serv: [[&quot;Avaliação&quot;,60,150],[&quot;Sessão de fisioterapia&quot;,50,120],[&quot;Pilates&quot;,50,90],[&quot;RPG&quot;,50,130]], dias: &quot;1,2,3,4,5,6&quot;, abre: &quot;07:00&quot;, fecha: &quot;20:00&quot;, alm: [&quot;12:00&quot;,&quot;13:00&quot;] },
+  outro:    { serv: [[&quot;Atendimento&quot;,60,100]], dias: &quot;1,2,3,4,5&quot;, abre: &quot;09:00&quot;, fecha: &quot;18:00&quot;, alm: [&quot;12:00&quot;,&quot;13:00&quot;] }
+};
+
+/* ---------------- instalação (uma vez só) ---------------- */
+function configurar() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error(&quot;Abra este script a partir da planilha (Extensões &gt; Apps Script).&quot;);
+  PropertiesService.getScriptProperties().setProperty(&quot;PLANILHA&quot;, ss.getId());
+  Object.keys(ABAS).forEach(function (nome) {
+    var sh = ss.getSheetByName(nome) || ss.insertSheet(nome);
+    if (sh.getLastRow() === 0) {
+      sh.appendRow(ABAS[nome]);
+      sh.setFrozenRows(1);
+      sh.getRange(1, 1, 1, ABAS[nome].length).setFontWeight(&quot;bold&quot;).setBackground(&quot;#0E2238&quot;).setFontColor(&quot;#FFFFFF&quot;);
+    }
+  });
+  var cfg = ss.getSheetByName(&quot;Config&quot;);
+  var padrao = [
+    [&quot;dias_teste&quot;, &quot;30&quot;, &quot;Quantos dias de teste grátis cada negócio novo ganha&quot;],
+    [&quot;cadastro_aberto&quot;, &quot;SIM&quot;, &quot;SIM = qualquer negócio pode criar a agenda pelo site · NÃO = só você cadastra&quot;],
+    [&quot;email_admin&quot;, &quot;&quot;, &quot;Seu e-mail: recebe aviso a cada negócio novo que se cadastrar&quot;],
+    [&quot;whatsapp_dayia&quot;, &quot;5519999389118&quot;, &quot;WhatsApp que aparece para negócios com teste vencido ou suspensos&quot;],
+    [&quot;fuso_minutos&quot;, &quot;-180&quot;, &quot;Fuso horário (Brasília = -180). Não mexa.&quot;],
+    [&quot;proximo_id&quot;, &quot;1&quot;, &quot;Uso interno (não mexa)&quot;],
+    [&quot;link_base&quot;, &quot;&quot;, &quot;Preenchido sozinho&quot;],
+    [&quot;push_chave&quot;, &quot;&quot;, &quot;Chave do OneSignal: avisos no celular mesmo com o app fechado (cole aqui a chave)&quot;]
+  ];
+  var tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
+  padrao.forEach(function (p) { if (tem.indexOf(p[0]) &lt; 0) cfg.appendRow([p[0], txt_(p[1]), p[2]]); });
+  cfg.autoResizeColumns(1, 3);
+  // a Ilumine-se já entra pronta, como cortesia
+  if (!negocio_(&quot;ilumine-se&quot;, true)) {
+    criarNegocio_({ n: &quot;ilumine-se&quot;, nome: &quot;Ilumine-se&quot;, segmento: &quot;manicure&quot;, situacao: &quot;cortesia&quot;, dono: &quot;Palmira Pastor&quot;, senha: &quot;1234&quot;,
+      servicos: [[&quot;Manicure&quot;,40,35],[&quot;Pedicure&quot;,50,40],[&quot;Pé e mão&quot;,80,70],[&quot;Esmaltação em gel&quot;,60,80],[&quot;Design de sobrancelhas&quot;,30,40],[&quot;Sobrancelha com henna&quot;,40,50],[&quot;Alongamento em fibra&quot;,150,180],[&quot;Manutenção do alongamento&quot;,90,120]] });
+  }
+  var sobra = ss.getSheetByName(&quot;Página1&quot;) || ss.getSheetByName(&quot;Sheet1&quot;);
+  if (sobra &amp;&amp; sobra.getLastRow() === 0 &amp;&amp; ss.getSheets().length &gt; 6) ss.deleteSheet(sobra);
+  garantirAbas_(true);
+  instalarRotina_();
+  MailApp.getRemainingDailyQuota();
+  return &quot;Pronto! Agora faça a implantação como App da Web.&quot;;
+}
+
+/* ---------------- entrada ---------------- */
+function doGet(e) {
+  var p = (e &amp;&amp; e.parameter) || {};
+  if (p.acao) return responder_(executar_(p));
+  return ContentService.createTextOutput(&quot;Agenda Fácil by DayIA · servidor funcionando (versão &quot; + VERSAO_SISTEMA + &quot;).&quot;);
+}
+function doPost(e) {
+  var d = {};
+  try { d = JSON.parse(e.postData.contents || &quot;{}&quot;); } catch (x) { return responder_({ erro: &quot;Pedido inválido.&quot; }); }
+  return responder_(executar_(d));
+}
+function responder_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function executar_(d) {
+  try { garantirAbas_(); var f = ACOES[d.acao]; if (!f) return { erro: &quot;Ação desconhecida.&quot; }; return f(d); }
+  catch (x) { return { erro: String(x &amp;&amp; x.message || x) }; }
+}
+
+var ACOES = {
+  ping: function () { return { ok: true, versao: VERSAO_SISTEMA, cadastro: sim_(cfgVal_(&quot;cadastro_aberto&quot;)) }; },
+  sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
+
+  /* guarda o aparelho para receber avisos com o app fechado */
+  pushReg: function (d) {
+    if (d.token) { pushGuardar_(&quot;N_&quot; + sessao_(d), d.sub); }
+    else {
+      var N = negocio_(d.n);
+      (d.lista || []).slice(0, 10).forEach(function (x) { try { var a = daCliente_(N, x); pushGuardar_(&quot;A_&quot; + N.n + &quot;_&quot; + a.id, d.sub); } catch (e) {} });
+    }
+    return { ok: true, ativo: !!pushChave_() };
+  },
+
+  /* ======== CADASTRO DE NEGÓCIO NOVO ======== */
+  cadastro: function (d) {
+    if (!sim_(cfgVal_(&quot;cadastro_aberto&quot;))) throw new Error(&quot;O cadastro de novas agendas está fechado. Fale com a DayIA pelo WhatsApp.&quot;);
+    var c = d.dados || {};
+    var nome = lim_(c.nome, 60), dono = lim_(c.dono, 60), senha = String(c.senha || &quot;&quot;);
+    if (!nome) throw new Error(&quot;Coloque o nome do seu negócio.&quot;);
+    if (!dono) throw new Error(&quot;Coloque o seu nome.&quot;);
+    if (String(c.whatsapp || &quot;&quot;).replace(/\D/g, &quot;&quot;).length &lt; 10) throw new Error(&quot;Coloque o seu WhatsApp com DDD.&quot;);
+    if (senha.length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;);
+    var seg = MODELOS[c.segmento] ? c.segmento : &quot;outro&quot;;
+    return comTrava_(function () {
+      var base = slug_(nome) || &quot;agenda&quot;, n = base, i = 2;
+      var todos = linhas_(&quot;Negocios&quot;).map(function (x) { return String(x.n).toLowerCase(); });
+      while (todos.indexOf(n) &gt;= 0) n = base + &quot;-&quot; + (i++);
+      var dias = Number(cfgVal_(&quot;dias_teste&quot;)) || 30;
+      criarNegocio_({ n: n, nome: nome, segmento: seg, situacao: &quot;teste&quot;, teste_ate: Date.now() + dias * DIA, dono: dono,
+        whatsapp_dono: lim_(c.whatsapp, 30), email_dono: lim_(c.email, 120), telefone: lim_(c.whatsapp, 30), email_aviso: lim_(c.email, 120), senha: senha });
+      if (d.base) setCfg_(&quot;link_base&quot;, String(d.base).split(&quot;?&quot;)[0].split(&quot;#&quot;)[0]);
+      var adm = cfgVal_(&quot;email_admin&quot;);
+      if (/@/.test(adm)) enviar_(adm, &quot;🎉 Novo cadastro na Agenda Fácil: &quot; + nome,
+        &quot;&lt;p&gt;&lt;b&gt;&quot; + esc_(nome) + &quot;&lt;/b&gt; (&quot; + esc_(seg) + &quot;) criou uma agenda.&lt;/p&gt;&lt;p&gt;Responsável: &quot; + esc_(dono) + &quot;&lt;br&gt;WhatsApp: &quot; + esc_(c.whatsapp) + &quot;&lt;br&gt;E-mail: &quot; + esc_(c.email) + &quot;&lt;/p&gt;&lt;p&gt;Situação: teste por &quot; + dias + &quot; dias. Para mudar, use a aba Negocios da planilha.&lt;/p&gt;&quot;, &quot;Agenda Fácil&quot;);
+      var lk = linkNeg_({ n: n });
+      if (/@/.test(c.email || &quot;&quot;) &amp;&amp; lk) enviar_(lim_(c.email, 120), &quot;Sua agenda &quot; + nome + &quot; está pronta!&quot;,
+        &quot;&lt;p&gt;Olá, &quot; + esc_(dono.split(&quot; &quot;)[0]) + &quot;!&lt;/p&gt;&lt;p&gt;Sua agenda online está pronta. Guarde este e-mail.&lt;/p&gt;&quot; +
+        &quot;&lt;p&gt;&lt;b&gt;Link para as suas clientes agendarem&lt;/b&gt; (coloque na bio e no WhatsApp):&lt;br&gt;&lt;a href=&#x27;&quot; + lk + &quot;&#x27;&gt;&quot; + lk + &quot;&lt;/a&gt;&lt;/p&gt;&quot; +
+        &quot;&lt;p&gt;&lt;b&gt;Seu painel&lt;/b&gt; (entre com a senha que você criou):&lt;br&gt;&lt;a href=&#x27;&quot; + lk + &quot;#painel&#x27;&gt;&quot; + lk + &quot;#painel&lt;/a&gt;&lt;/p&gt;&quot; +
+        &quot;&lt;p&gt;Você tem &quot; + dias + &quot; dias para testar à vontade.&lt;/p&gt;&lt;p style=&#x27;color:#4A5B75&#x27;&gt;Agenda Fácil by DayIA&lt;/p&gt;&quot;, &quot;Agenda Fácil&quot;);
+      return { ok: true, n: n, token: novoToken_(n), nome: nome, dias_teste: dias };
+    });
+  },
+
+  /* ======== PÁGINA DA CLIENTE ======== */
+  info: function (d) {
+    var N = negocio_(d.n), agora = Date.now();
+    if (!liberado_(N).ok) return { ok: true, bloqueado: true, negocio: { nome: String(N.nome) } };
+    var ocup = agendamentos_(N.n).filter(function (a) { return a.status !== &quot;cancelado&quot; &amp;&amp; a.fim &gt; agora - DIA &amp;&amp; a.ini &lt; agora + 45 * DIA; })
+      .map(function (a) { return { prof: a.prof, ini: a.ini, fim: a.fim }; });
+    var bloq = bloqueios_(N.n).filter(function (b) { return b.fim &gt; agora; }).map(function (b) { return { prof: b.prof, ini: b.ini, fim: b.fim }; });
+    return { ok: true, negocio: publicoNeg_(N), segmento: N.segmento, horario: horario_(N), passo: Number(N.passo) || 15, antecedencia: Number(N.antecedencia) || 0,
+      cancelar_ate: Number(N.cancelar_ate) || 0, servicos: servicos_(N.n, true), profs: equipe_(N.n, true), ocupados: ocup, bloq: bloq,
+      promos: promos_(N.n).filter(function (p) { return p.tipo === &quot;ultima&quot; || p.ate &gt; agora; }) };
+  },
+
+  agendar: function (d) {
+    var N = negocio_(d.n);
+    if (!liberado_(N).ok) throw new Error(&quot;Esta agenda está indisponível no momento.&quot;);
+    var c = d.dados || {};
+    if (!lim_(c.nome, 80)) throw new Error(&quot;Coloque o seu nome.&quot;);
+    if (String(c.tel || &quot;&quot;).replace(/\D/g, &quot;&quot;).length &lt; 10) throw new Error(&quot;Coloque um WhatsApp com DDD.&quot;);
+    var sv = servicos_(N.n, true).filter(function (s) { return s.id === String(c.servico); })[0];
+    if (!sv) throw new Error(&quot;Serviço não encontrado.&quot;);
+    var ini = Number(c.ini);
+    if (!ini) throw new Error(&quot;Escolha um horário.&quot;);
+    return comTrava_(function () {
+      var H = horario_(N), ags = agendamentos_(N.n), bl = bloqueios_(N.n);
+      var profs = equipe_(N.n, true).map(function (p) { return p.id; });
+      var candidatos = c.prof ? [String(c.prof)] : profs;
+      var livres = candidatos.filter(function (p) { return profs.indexOf(p) &gt;= 0 &amp;&amp; livre_(N, H, ags, bl, p, ini, sv.minutos, null, false); });
+      if (!livres.length) return { ok: false, ocupado: true, erro: &quot;Esse horário acabou de ser ocupado. Escolha outro, por favor.&quot; };
+      var pid = livres[0], pr = promoPara_(promos_(N.n), sv.id, ini, Date.now());
+      if (livres.length &gt; 1) {
+        var d0 = inicioDia_(ini), cont = {};
+        livres.forEach(function (p) { cont[p] = 0; });
+        ags.forEach(function (a) { if (a.status !== &quot;cancelado&quot; &amp;&amp; inicioDia_(a.ini) === d0 &amp;&amp; cont[a.prof] !== undefined) cont[a.prof]++; });
+        pid = livres.sort(function (a, b) { return cont[a] - cont[b]; })[0];
+      }
+      if (d.base) setCfg_(&quot;link_base&quot;, String(d.base).split(&quot;?&quot;)[0].split(&quot;#&quot;)[0]);
+      var a = {
+        negocio: N.n, id: proximoId_(), criado: Date.now(), ini: ini, fim: ini + sv.minutos * MIN, quando: legivel_(ini), cliente: lim_(c.nome, 80), tel: lim_(c.tel, 30),
+        email: lim_(c.email, 120), pet: lim_(c.pet, 40), servico: sv.id, servico_nome: sv.nome, prof: pid, prof_nome: nomeProf_(N.n, pid), preco: pr ? precoCom_(sv.preco, pr.desconto) : sv.preco, promo: pr ? pr.nome + &quot; -&quot; + pr.desconto + &quot;%&quot; : &quot;&quot;,
+        status: &quot;pendente&quot;, origem: &quot;online&quot;, obs: lim_(c.obs, 500), conversa: c.obs ? JSON.stringify([{ de: &quot;cli&quot;, x: lim_(c.obs, 500), t: Date.now() }]) : &quot;[]&quot;,
+        recado_novo: c.obs ? &quot;SIM&quot; : &quot;&quot;, chave: Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 10)
+      };
+      inserir_(&quot;Agendamentos&quot;, a);
+      mudou_(N.n);
+      avisarNegocio_(a, N);
+      emailCliente_(a, N, &quot;novo&quot;);
+      push_([&quot;N_&quot; + N.n], &quot;📅 Novo agendamento: &quot; + a.cliente, a.servico_nome + &quot; · &quot; + a.quando + (a.promo ? &quot; · 🔥 &quot; + a.promo : &quot;&quot;) + (a.obs ? &quot; · &quot; + a.obs : &quot;&quot;), linkPainel_(N));
+      return { ok: true, agendamento: publico_(a, true), chave: a.chave };
+    });
+  },
+
+  meus: function (d) {
+    var N = negocio_(d.n), todos = agendamentos_(N.n), out = [];
+    (d.lista || []).slice(0, 30).forEach(function (x) {
+      var a = todos.filter(function (y) { return y.id === Number(x.id) &amp;&amp; String(y.chave) === String(x.chave); })[0];
+      if (a) out.push(publico_(a, true));
+    });
+    return { ok: true, agendamentos: out, negocio: publicoNeg_(N), cancelar_ate: Number(N.cancelar_ate) || 0 };
+  },
+
+  cancelar: function (d) {
+    return comTrava_(function () {
+      var N = negocio_(d.n), a = daCliente_(N, d);
+      if (a.status === &quot;cancelado&quot;) return { ok: true };
+      if (a.ini - Date.now() &lt; (Number(N.cancelar_ate) || 0) * MIN) throw new Error(&quot;Falta pouco para o horário. Para cancelar, fale direto pelo WhatsApp.&quot;);
+      var conv = conversa_(a); conv.push({ de: &quot;sis&quot;, x: &quot;Cancelado pela cliente.&quot;, t: Date.now() });
+      atualizarAg_(a.id, { status: &quot;cancelado&quot;, conversa: JSON.stringify(conv), recado_novo: &quot;SIM&quot; });
+      mudou_(N.n);
+      push_([&quot;N_&quot; + N.n], &quot;❌ &quot; + a.cliente + &quot; cancelou o horário&quot;, a.servico_nome + &quot; · &quot; + a.quando, linkPainel_(N));
+      return { ok: true };
+    });
+  },
+
+  recado: function (d) {
+    var x = lim_(d.texto, 500);
+    if (!x) throw new Error(&quot;Escreva o recado.&quot;);
+    return comTrava_(function () {
+      var N = negocio_(d.n), a = daCliente_(N, d), conv = conversa_(a);
+      conv.push({ de: &quot;cli&quot;, x: x, t: Date.now() });
+      atualizarAg_(a.id, { conversa: JSON.stringify(conv), recado_novo: &quot;SIM&quot; });
+      mudou_(N.n);
+      push_([&quot;N_&quot; + N.n], &quot;💬 Recado de &quot; + a.cliente, x, linkPainel_(N));
+      return { ok: true };
+    });
+  },
+
+  /* ======== PAINEL DO NEGÓCIO ======== */
+  login: function (d) {
+    var N = negocio_(d.n);
+    if (!confereSenha_(N, String(d.senha || &quot;&quot;))) throw new Error(&quot;Senha incorreta.&quot;);
+    return { ok: true, token: novoToken_(N.n), nome: String(N.nome) };
+  },
+
+  painel: function (d) {
+    var n = sessao_(d), N = negocio_(n), lib = liberado_(N);
+    var v = versao_(n);
+    lib.lancamento_ate = lancAte_(N);
+    if (d.v &amp;&amp; Number(d.v) === v) return { ok: true, mudou: false, v: v, licenca: lib };
+    var de = Date.now() - 400 * DIA;
+    return { ok: true, mudou: true, v: v, licenca: lib, negocio: publicoNeg_(N), segmento: N.segmento, horario: horario_(N), passo: Number(N.passo) || 15,
+      antecedencia: Number(N.antecedencia) || 0, cancelar_ate: Number(N.cancelar_ate) || 0, email_aviso: String(N.email_aviso || &quot;&quot;),
+      servicos: servicos_(n, false), profs: equipe_(n, false),
+      ags: agendamentos_(n).filter(function (a) { return a.ini &gt; de; }).map(function (a) { return publico_(a, false); }),
+      bloq: bloqueios_(n).filter(function (b) { return b.fim &gt; Date.now() - 7 * DIA; }),
+      versao: VERSAO_SISTEMA, clientes: clientesDe_(n), promos: promos_(n), marketing: marketing_(N),
+      envios: envios_(n).filter(function (x) { return x.t &gt; Date.now() - 400 * DIA; }) };
+  },
+
+  acao: function (d) {
+    var n = sessao_(d), N = negocio_(n);
+    if (!liberado_(N).ok &amp;&amp; d.tipo !== &quot;lido&quot;) throw new Error(&quot;Agenda suspensa. Fale com a DayIA para reativar.&quot;);
+    return comTrava_(function () {
+      var H = horario_(N), a, conv, agora = Date.now();
+      switch (d.tipo) {
+        case &quot;status&quot;:
+          a = doNegocio_(n, d.id);
+          if ([&quot;pendente&quot;, &quot;confirmado&quot;, &quot;concluido&quot;, &quot;faltou&quot;, &quot;cancelado&quot;].indexOf(d.valor) &lt; 0) throw new Error(&quot;Situação inválida.&quot;);
+          conv = conversa_(a);
+          if (d.valor === &quot;confirmado&quot; || d.valor === &quot;cancelado&quot;) conv.push({ de: &quot;sis&quot;, x: d.valor === &quot;confirmado&quot; ? &quot;Horário confirmado.&quot; : &quot;Horário cancelado pelo negócio.&quot;, t: agora });
+          atualizarAg_(a.id, { status: d.valor, conversa: JSON.stringify(conv) });
+          if (d.valor === &quot;confirmado&quot;) emailCliente_(a, N, &quot;confirmado&quot;);
+          if (d.valor === &quot;cancelado&quot;) emailCliente_(a, N, &quot;cancelado&quot;);
+          if (d.valor === &quot;confirmado&quot; || d.valor === &quot;cancelado&quot;) push_([&quot;A_&quot; + n + &quot;_&quot; + a.id], String(N.nome), (d.valor === &quot;confirmado&quot; ? &quot;✅ Seu horário está confirmado: &quot; : &quot;❌ Seu horário foi cancelado: &quot;) + a.servico_nome + &quot; · &quot; + a.quando, linkCliAg_(N, a));
+          break;
+        case &quot;remarcar&quot;:
+          a = doNegocio_(n, d.id);
+          var sv = servicoPorId_(n, a.servico) || { minutos: (a.fim - a.ini) / MIN };
+          var ini = Number(d.ini), prof = String(d.prof || a.prof);
+          if (!d.forcar &amp;&amp; !livre_(N, H, agendamentos_(n), bloqueios_(n), prof, ini, sv.minutos, a.id, true)) return { ok: false, ocupado: true, erro: &quot;Horário ocupado ou fora do expediente.&quot; };
+          conv = conversa_(a);
+          conv.push({ de: &quot;sis&quot;, x: &quot;Horário remarcado para &quot; + legivel_(ini) + &quot;.&quot;, t: agora });
+          atualizarAg_(a.id, { ini: ini, fim: ini + sv.minutos * MIN, quando: legivel_(ini), prof: prof, prof_nome: nomeProf_(n, prof), status: a.status === &quot;faltou&quot; || a.status === &quot;cancelado&quot; ? &quot;confirmado&quot; : a.status, conversa: JSON.stringify(conv) });
+          a.quando = legivel_(ini); a.prof_nome = nomeProf_(n, prof);
+          emailCliente_(a, N, &quot;remarcado&quot;);
+          push_([&quot;A_&quot; + n + &quot;_&quot; + a.id], String(N.nome), &quot;🔁 Seu horário foi remarcado para &quot; + a.quando + &quot; (&quot; + a.servico_nome + &quot;)&quot;, linkCliAg_(N, a));
+          break;
+        case &quot;novo&quot;:
+          var c = d.dados || {}, s2 = servicoPorId_(n, c.servico);
+          if (!s2) throw new Error(&quot;Serviço não encontrado.&quot;);
+          if (!lim_(c.nome, 80)) throw new Error(&quot;Coloque o nome.&quot;);
+          var i2 = Number(c.ini);
+          if (!d.forcar &amp;&amp; !livre_(N, H, agendamentos_(n), bloqueios_(n), String(c.prof), i2, s2.minutos, null, true)) return { ok: false, ocupado: true, erro: &quot;Horário ocupado ou fora do expediente.&quot; };
+          inserir_(&quot;Agendamentos&quot;, { negocio: n, id: proximoId_(), criado: agora, ini: i2, fim: i2 + s2.minutos * MIN, quando: legivel_(i2), cliente: lim_(c.nome, 80), tel: lim_(c.tel, 30), email: lim_(c.email, 120),
+            pet: lim_(c.pet, 40), servico: s2.id, servico_nome: s2.nome, prof: String(c.prof), prof_nome: nomeProf_(n, c.prof), preco: s2.preco, status: &quot;confirmado&quot;, origem: &quot;balcão&quot;,
+            obs: lim_(c.obs, 500), conversa: &quot;[]&quot;, recado_novo: &quot;&quot;, chave: Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 10) });
+          break;
+        case &quot;responder&quot;:
+          a = doNegocio_(n, d.id);
+          var x = lim_(d.texto, 500);
+          if (!x) throw new Error(&quot;Escreva a resposta.&quot;);
+          conv = conversa_(a); conv.push({ de: &quot;neg&quot;, x: x, t: agora });
+          atualizarAg_(a.id, { conversa: JSON.stringify(conv), recado_novo: &quot;&quot; });
+          emailCliente_(a, N, &quot;resposta&quot;, x);
+          push_([&quot;A_&quot; + n + &quot;_&quot; + a.id], String(N.nome), &quot;💬 &quot; + x, linkCliAg_(N, a));
+          break;
+        case &quot;lido&quot;:
+          a = doNegocio_(n, d.id);
+          atualizarAg_(a.id, { recado_novo: &quot;&quot; });
+          break;
+        case &quot;bloquear&quot;:
+          var bi = Number(d.ini), bf = Number(d.fim);
+          if (!(bf &gt; bi)) throw new Error(&quot;O horário final precisa ser depois do inicial.&quot;);
+          inserir_(&quot;Bloqueios&quot;, { negocio: n, id: &quot;b&quot; + agora, prof: String(d.prof || &quot;todos&quot;), ini: bi, fim: bf, quando: legivel_(bi) + &quot; até &quot; + legivel_(bf), motivo: lim_(d.motivo, 80) });
+          break;
+        case &quot;desbloquear&quot;:
+          apagarLinha_(&quot;Bloqueios&quot;, n, String(d.id));
+          break;
+        case &quot;config&quot;:
+          salvarConfig_(N, d);
+          break;
+        case &quot;clientes&quot;:
+          var res = importarClientes_(n, d.lista || []);
+          mudou_(n);
+          return { ok: true, novos: res.novos, atualizados: res.atualizados };
+        case &quot;cliente&quot;:
+          salvarCliente_(n, d.cliente || {});
+          break;
+        case &quot;clienteApagar&quot;:
+          apagarLinha_(&quot;Clientes&quot;, n, String(d.id));
+          break;
+        case &quot;promo&quot;:
+          salvarPromo_(n, d.promo || {});
+          break;
+        case &quot;promoFim&quot;:
+          apagarLinha_(&quot;Promocoes&quot;, n, String(d.id));
+          break;
+        case &quot;marketing&quot;:
+          var mk = JSON.stringify(d.marketing || {});
+          if (mk.length &gt; 20000) throw new Error(&quot;Textos grandes demais.&quot;);
+          atualizarNeg_(n, { marketing: mk });
+          break;
+        case &quot;enviado&quot;:
+          registrarEnvios_(n, (d.lista || []).slice(0, 500), &quot;whatsapp&quot;);
+          break;
+        default: throw new Error(&quot;Ação desconhecida.&quot;);
+      }
+      mudou_(n);
+      return { ok: true };
+    });
+  }
+};
+
+/* ---------------- negócios e licença ---------------- */
+function criarNegocio_(o) {
+  var m = MODELOS[o.segmento] || MODELOS.outro;
+  inserir_(&quot;Negocios&quot;, {
+    n: o.n, nome: o.nome, segmento: o.segmento, situacao: o.situacao, teste_ate: o.teste_ate ? legivel_(o.teste_ate).slice(0, 10) : &quot;&quot;, criado: legivel_(Date.now()),
+    dono: o.dono || &quot;&quot;, whatsapp_dono: o.whatsapp_dono || &quot;&quot;, email_dono: o.email_dono || &quot;&quot;, senha: hash_(o.senha), telefone: o.telefone || &quot;&quot;, endereco: &quot;&quot;, instagram: &quot;&quot;,
+    email_aviso: o.email_aviso || &quot;&quot;, dias: m.dias, abre: m.abre, fecha: m.fecha, intervalo_ini: m.alm[0], intervalo_fim: m.alm[1], passo: &quot;15&quot;, antecedencia: &quot;60&quot;, cancelar_ate: &quot;120&quot;, observacao: &quot;&quot;
+  });
+  var serv = o.servicos || m.serv, sh = aba_(&quot;Servicos&quot;);
+  sh.getRange(sh.getLastRow() + 1, 1, serv.length, ABAS.Servicos.length)
+    .setValues(serv.map(function (s, i) { return txtRow_([o.n, &quot;s&quot; + (i + 1), s[0], s[1], s[2], &quot;SIM&quot;]); }));
+  inserir_(&quot;Equipe&quot;, { negocio: o.n, id: &quot;p1&quot;, nome: o.dono || o.nome, ativo: &quot;SIM&quot; });
+}
+function liberado_(N) {
+  var s = String(N.situacao || &quot;&quot;).toLowerCase().trim();
+  if (s === &quot;cortesia&quot; || s === &quot;ativo&quot;) return { ok: true, situacao: s };
+  if (s === &quot;suspenso&quot;) return { ok: false, situacao: s, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+  var ate = dataDe_(N.teste_ate);
+  if (ate &amp;&amp; Date.now() &gt; ate + DIA) return { ok: false, situacao: &quot;teste_vencido&quot;, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+  return { ok: true, situacao: &quot;teste&quot;, dias_restantes: ate ? Math.max(0, Math.floor((ate + DIA - Date.now()) / DIA)) : null, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+}
+function dataDe_(v) {
+  if (!v) return 0;
+  if (v instanceof Date) return v.getTime();
+  var m = String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return Date.UTC(+m[3], +m[2] - 1, +m[1]) - fuso_() * MIN; // meia-noite de Brasília
+  var t = Date.parse(v); return isNaN(t) ? 0 : t;
+}
+function negocio_(n, semErro) {
+  n = String(n || &quot;&quot;).toLowerCase().trim();
+  var N = linhas_(&quot;Negocios&quot;).filter(function (x) { return String(x.n).toLowerCase() === n; })[0];
+  if (!N &amp;&amp; !semErro) throw new Error(&quot;Agenda não encontrada. Confira o link.&quot;);
+  if (N) N.n = String(N.n).toLowerCase();
+  return N || null;
+}
+function publicoNeg_(N) { return { n: N.n, nome: String(N.nome), tel: String(N.telefone || &quot;&quot;), end: String(N.endereco || &quot;&quot;), insta: String(N.instagram || &quot;&quot;) }; }
+function horario_(N) {
+  /* coluna dias: &quot;0=09:00-13:00,2,3,4&quot; → dia 0 (domingo) com horário próprio, sem intervalo */
+  var dias = [], esp = {};
+  String(N.dias || &quot;&quot;).split(&quot;,&quot;).forEach(function (x) {
+    x = x.trim(); if (x === &quot;&quot;) return;
+    var m = x.match(/^(\d)\s*=\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+    if (m) { dias.push(Number(m[1])); esp[m[1]] = [m[2], m[3]]; } else if (/^\d$/.test(x)) dias.push(Number(x));
+  });
+  return { dias: dias, esp: esp, ini: hmTxt_(N.abre) || &quot;09:00&quot;, fim: hmTxt_(N.fecha) || &quot;18:00&quot;,
+    almoco: [hmTxt_(N.intervalo_ini), hmTxt_(N.intervalo_fim)] };
+}
+function hDia_(H, wd) { var e = H.esp &amp;&amp; H.esp[wd]; return e ? { ini: e[0], fim: e[1], almoco: [&quot;&quot;, &quot;&quot;] } : H; }
+function hmTxt_(v) { if (v instanceof Date) return (&quot;0&quot; + v.getHours()).slice(-2) + &quot;:&quot; + (&quot;0&quot; + v.getMinutes()).slice(-2); return String(v || &quot;&quot;).trim(); }
+function confereSenha_(N, senha) {
+  var s = String(N.senha || &quot;&quot;);
+  if (/^[0-9a-f]{64}$/.test(s)) return hash_(senha) === s;
+  // senha digitada direto na planilha (ex.: você trocou para ajudar o cliente): aceita e já guarda protegida
+  if (s !== &quot;&quot; &amp;&amp; s === senha) { atualizarNeg_(N.n, { senha: hash_(senha) }); return true; }
+  return false;
+}
+function hash_(s) {
+  var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, &quot;agendafacil:&quot; + String(s), Utilities.Charset.UTF_8);
+  return b.map(function (x) { return (&quot;0&quot; + ((x + 256) % 256).toString(16)).slice(-2); }).join(&quot;&quot;);
+}
+function salvarConfig_(N, d) {
+  var m = {};
+  if (d.negocio) { m.nome = lim_(d.negocio.nome, 60) || N.nome; m.telefone = lim_(d.negocio.tel, 30); m.endereco = lim_(d.negocio.end, 150); m.instagram = lim_(d.negocio.insta, 60); }
+  if (d.horario) { var esp = d.horario.esp || {}; m.dias = (d.horario.dias || []).map(function (x) { var e = esp[x]; return e &amp;&amp; /^\d{1,2}:\d{2}$/.test(e[0]) &amp;&amp; /^\d{1,2}:\d{2}$/.test(e[1]) &amp;&amp; e[0] &lt; e[1] ? x + &quot;=&quot; + e[0] + &quot;-&quot; + e[1] : String(x); }).join(&quot;,&quot;); m.abre = d.horario.ini; m.fecha = d.horario.fim; m.intervalo_ini = (d.horario.almoco || [])[0] || &quot;&quot;; m.intervalo_fim = (d.horario.almoco || [])[1] || &quot;&quot;; }
+  if (d.antecedencia !== undefined) m.antecedencia = String(Number(d.antecedencia) || 0);
+  if (d.email_aviso !== undefined) m.email_aviso = lim_(d.email_aviso, 120);
+  if (d.senha) { if (String(d.senha).length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;); m.senha = hash_(d.senha); }
+  atualizarNeg_(N.n, m);
+  if (d.servicos) regravar_(&quot;Servicos&quot;, N.n, d.servicos.map(function (s, i) {
+    return [N.n, s.id || &quot;s&quot; + Date.now() + i, lim_(s.nome, 60) || &quot;Serviço&quot;, Math.max(5, Number(s.min) || 30), Math.max(0, Number(s.preco) || 0), s.ativo === false ? &quot;NÃO&quot; : &quot;SIM&quot;]; }));
+  if (d.profs) regravar_(&quot;Equipe&quot;, N.n, d.profs.map(function (p, i) { return [N.n, p.id || &quot;p&quot; + Date.now() + i, lim_(p.nome, 60) || &quot;Profissional&quot;, p.ativo === false ? &quot;NÃO&quot; : &quot;SIM&quot;]; }));
+}
+function regravar_(aba, n, novas) {
+  var sh = aba_(aba), v = sh.getDataRange().getValues();
+  for (var i = v.length - 1; i &gt;= 1; i--) if (String(v[i][0]).toLowerCase() === n) sh.deleteRow(i + 1);
+  if (novas.length) sh.getRange(sh.getLastRow() + 1, 1, novas.length, ABAS[aba].length).setValues(novas.map(txtRow_));
+}
+
+/* ---------------- disponibilidade ---------------- */
+function livre_(N, H, ags, bl, pid, ini, minutos, ignorar, semAntecedencia) {
+  var fim = ini + minutos * MIN, off = fuso_();
+  var local = ini / MIN + off, minDia = ((local % 1440) + 1440) % 1440, dsem = ((Math.floor(local / 1440) + 4) % 7 + 7) % 7;
+  if (H.dias.indexOf(dsem) &lt; 0) return false;
+  H = hDia_(H, dsem);
+  var a = minDia, b = minDia + minutos;
+  if (a &lt; hm_(H.ini) || b &gt; hm_(H.fim)) return false;
+  if (H.almoco[0] &amp;&amp; H.almoco[1] &amp;&amp; a &lt; hm_(H.almoco[1]) &amp;&amp; b &gt; hm_(H.almoco[0])) return false;
+  if (!semAntecedencia &amp;&amp; ini &lt; Date.now() + (Number(N.antecedencia) || 0) * MIN) return false;
+  for (var i = 0; i &lt; ags.length; i++) { var x = ags[i]; if (x.prof !== pid || x.status === &quot;cancelado&quot; || (ignorar != null &amp;&amp; x.id === ignorar)) continue; if (ini &lt; x.fim &amp;&amp; fim &gt; x.ini) return false; }
+  for (var j = 0; j &lt; bl.length; j++) { var k = bl[j]; if (k.prof !== pid &amp;&amp; k.prof !== &quot;todos&quot;) continue; if (ini &lt; k.fim &amp;&amp; fim &gt; k.ini) return false; }
+  return true;
+}
+var FUSO_CACHE = null;
+function fuso_() { if (FUSO_CACHE === null) FUSO_CACHE = Number(cfgVal_(&quot;fuso_minutos&quot;)) || -180; return FUSO_CACHE; }
+function inicioDia_(t) { var off = fuso_() * MIN; return Math.floor((t + off) / DIA) * DIA - off; }
+function hm_(s) { var p = String(s || &quot;0:0&quot;).split(&quot;:&quot;); return Number(p[0]) * 60 + (Number(p[1]) || 0); }
+function legivel_(t) {
+  var d = new Date(t + fuso_() * MIN), p = function (n) { return (n &lt; 10 ? &quot;0&quot; : &quot;&quot;) + n; };
+  return p(d.getUTCDate()) + &quot;/&quot; + p(d.getUTCMonth() + 1) + &quot;/&quot; + d.getUTCFullYear() + &quot; &quot; + p(d.getUTCHours()) + &quot;:&quot; + p(d.getUTCMinutes());
+}
+
+/* ---------------- e-mails ---------------- */
+function linkPainel_(N) { var l = linkNeg_(N); return l ? l + &quot;#painel&quot; : &quot;&quot;; }
+function linkCliAg_(N, a) { var l = linkNeg_(N); return l ? l + &quot;&amp;ag=&quot; + a.id + &quot;&amp;k=&quot; + a.chave : &quot;&quot;; }
+function linkNeg_(N) { var b = cfgVal_(&quot;link_base&quot;); return b ? b + &quot;?n=&quot; + encodeURIComponent(N.n) : &quot;&quot;; }
+function avisarNegocio_(a, N) {
+  if (!/@/.test(N.email_aviso || &quot;&quot;)) return;
+  var link = linkNeg_(N);
+  enviar_(String(N.email_aviso), &quot;📅 Novo agendamento: &quot; + a.cliente + &quot; · &quot; + a.quando,
+    &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Novo agendamento online&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(a.cliente) + &quot;&lt;/b&gt;&quot; + (a.pet ? &quot; · pet &quot; + esc_(a.pet) : &quot;&quot;) + &quot;&lt;br&gt;&quot; + esc_(a.servico_nome) + &quot; com &quot; + esc_(a.prof_nome) + &quot;&lt;br&gt;&lt;b&gt;&quot; + esc_(a.quando) + &quot;&lt;/b&gt;&lt;br&gt;WhatsApp: &quot; + esc_(a.tel) + (a.obs ? &quot;&lt;br&gt;Recado: &quot; + esc_(a.obs) : &quot;&quot;) + &quot;&lt;/p&gt;&quot; +
+    (link ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + link + &quot;#painel&#x27; style=&#x27;background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Abrir o painel&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;), String(N.nome));
+}
+function emailCliente_(a, N, tipo, texto) {
+  if (!/@/.test(a.email || &quot;&quot;)) return;
+  var link = linkNeg_(N); if (link) link += &quot;&amp;ag=&quot; + a.id + &quot;&amp;k=&quot; + a.chave;
+  var tit = { novo: &quot;Recebemos seu agendamento&quot;, confirmado: &quot;Seu horário está confirmado&quot;, cancelado: &quot;Seu horário foi cancelado&quot;, remarcado: &quot;Seu horário foi remarcado&quot;, resposta: &quot;Você recebeu uma resposta&quot; }[tipo];
+  enviar_(a.email, tit + &quot; · &quot; + N.nome,
+    &quot;&lt;p&gt;Olá, &quot; + esc_(String(a.cliente).split(&quot; &quot;)[0]) + &quot;!&lt;/p&gt;&lt;p&gt;&lt;b&gt;&quot; + tit + &quot;&lt;/b&gt;.&lt;/p&gt;&lt;p&gt;&quot; + esc_(a.servico_nome) + &quot; com &quot; + esc_(a.prof_nome) + &quot;&lt;br&gt;&lt;b&gt;&quot; + esc_(a.quando) + &quot;&lt;/b&gt;&lt;/p&gt;&quot; +
+    (texto ? &quot;&lt;blockquote style=&#x27;border-left:4px solid #8EC5E8;margin:0;padding:8px 12px;background:#F2F6FA&#x27;&gt;&quot; + esc_(texto) + &quot;&lt;/blockquote&gt;&quot; : &quot;&quot;) +
+    (link ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + link + &quot;&#x27; style=&#x27;background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Ver meu horário&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;) +
+    &quot;&lt;p style=&#x27;color:#4A5B75&#x27;&gt;&quot; + esc_(N.nome) + (N.endereco ? &quot; · &quot; + esc_(N.endereco) : &quot;&quot;) + &quot;&lt;/p&gt;&quot;, String(N.nome));
+}
+function enviar_(para, assunto, html, nome) {
+  try {
+    if (MailApp.getRemainingDailyQuota() &lt; 1) return;
+    MailApp.sendEmail({ to: para, subject: assunto, htmlBody: &quot;&lt;div style=&#x27;font-family:Arial,sans-serif;color:#0E2238;font-size:14px&#x27;&gt;&quot; + html + &quot;&lt;/div&gt;&quot;, name: nome || &quot;Agenda Fácil&quot; });
+  } catch (x) { console.log(&quot;e-mail não enviado: &quot; + x); }
+}
+
+/* ---------------- planilha ---------------- */
+function planilha_() { var id = PropertiesService.getScriptProperties().getProperty(&quot;PLANILHA&quot;); return id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(); }
+function aba_(n) { var sh = planilha_().getSheetByName(n); if (!sh) throw new Error(&quot;A aba &quot; + n + &quot; não existe. Rode a função configurar.&quot;); return sh; }
+function linhas_(n) {
+  var v = aba_(n).getDataRange().getValues(), cab = v.shift();
+  return v.filter(function (r) { return r.join(&quot;&quot;) !== &quot;&quot;; }).map(function (r) { var o = {}; cab.forEach(function (c, i) { o[c] = r[i]; }); return o; });
+}
+var CAB_ = {};
+function cab_(n) { if (!CAB_[n]) { var sh = aba_(n); CAB_[n] = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String); } return CAB_[n]; }
+function linhaDe_(n, o) { return txtRow_(cab_(n).map(function (c) { return o[c] === undefined || o[c] === null ? &quot;&quot; : o[c]; })); }
+function inserir_(n, o) { aba_(n).appendRow(linhaDe_(n, o)); }
+function inserirVarias_(n, lista) { if (!lista.length) return; var sh = aba_(n), c = cab_(n); sh.getRange(sh.getLastRow() + 1, 1, lista.length, c.length).setValues(lista.map(function (o) { return linhaDe_(n, o); })); }
+function atualizarAg_(id, campos) { atualizarPor_(&quot;Agendamentos&quot;, 1, Number(id), campos); }
+function atualizarNeg_(n, campos) { atualizarPor_(&quot;Negocios&quot;, 0, n, campos); }
+function atualizarPor_(aba, col0, chave, campos) {
+  var sh = aba_(aba), v = sh.getDataRange().getValues();
+  for (var i = 1; i &lt; v.length; i++) {
+    var k = v[i][col0];
+    if ((typeof chave === &quot;number&quot; &amp;&amp; Number(k) === chave) || (typeof chave === &quot;string&quot; &amp;&amp; String(k).toLowerCase() === chave)) {
+      var cab = cab_(aba);
+      Object.keys(campos).forEach(function (c) { var col = cab.indexOf(c); if (col &gt;= 0) sh.getRange(i + 1, col + 1).setValue(txt_(campos[c])); });
+      return;
+    }
+  }
+}
+function apagarLinha_(aba, n, id) {
+  var sh = aba_(aba), v = sh.getDataRange().getValues();
+  for (var i = v.length - 1; i &gt;= 1; i--) if (String(v[i][0]).toLowerCase() === n &amp;&amp; String(v[i][1]) === id) { sh.deleteRow(i + 1); return; }
+}
+function agendamentos_(n) {
+  return linhas_(&quot;Agendamentos&quot;).filter(function (a) { return String(a.negocio).toLowerCase() === n; }).map(function (a) {
+    a.id = Number(a.id); a.ini = Number(a.ini); a.fim = Number(a.fim); a.preco = Number(a.preco) || 0; a.criado = Number(a.criado);
+    a.prof = String(a.prof); a.servico = String(a.servico); return a;
+  });
+}
+function bloqueios_(n) { return linhas_(&quot;Bloqueios&quot;).filter(function (b) { return String(b.negocio).toLowerCase() === n; }).map(function (b) { return { id: String(b.id), prof: String(b.prof), ini: Number(b.ini), fim: Number(b.fim), motivo: String(b.motivo || &quot;&quot;) }; }); }
+function servicos_(n, soAtivos) {
+  return linhas_(&quot;Servicos&quot;).filter(function (s) { return String(s.negocio).toLowerCase() === n &amp;&amp; (!soAtivos || sim_(s.ativo)); })
+    .map(function (s) { return { id: String(s.id), nome: String(s.nome), minutos: Number(s.minutos) || 30, min: Number(s.minutos) || 30, preco: Number(s.preco) || 0, ativo: sim_(s.ativo) }; });
+}
+function servicoPorId_(n, id) { return servicos_(n, false).filter(function (s) { return s.id === String(id); })[0]; }
+function equipe_(n, soAtivos) { return linhas_(&quot;Equipe&quot;).filter(function (p) { return String(p.negocio).toLowerCase() === n &amp;&amp; (!soAtivos || sim_(p.ativo)); }).map(function (p) { return { id: String(p.id), nome: String(p.nome), ativo: sim_(p.ativo) }; }); }
+function nomeProf_(n, id) { var p = equipe_(n, false).filter(function (x) { return x.id === String(id); })[0]; return p ? p.nome : &quot;&quot;; }
+function doNegocio_(n, id) { var a = agendamentos_(n).filter(function (x) { return x.id === Number(id); })[0]; if (!a) throw new Error(&quot;Agendamento não encontrado.&quot;); return a; }
+function daCliente_(N, d) { var a = doNegocio_(N.n, d.id); if (!d.chave || String(a.chave) !== String(d.chave)) throw new Error(&quot;Agendamento não encontrado.&quot;); return a; }
+function conversa_(a) { try { var c = JSON.parse(a.conversa || &quot;[]&quot;); return Array.isArray(c) ? c : []; } catch (x) { return []; } }
+function cfgVal_(k) { var r = linhas_(&quot;Config&quot;).filter(function (x) { return x.chave === k; })[0]; return r ? String(r.valor) : &quot;&quot;; }
+function setCfg_(k, v) {
+  var sh = aba_(&quot;Config&quot;), v0 = sh.getDataRange().getValues();
+  for (var i = 1; i &lt; v0.length; i++) if (v0[i][0] === k) { if (String(v0[i][1]) !== String(v)) sh.getRange(i + 1, 2).setValue(txt_(String(v))); return; }
+  sh.appendRow([k, txt_(String(v)), &quot;&quot;]);
+}
+function proximoId_() { var id = Number(cfgVal_(&quot;proximo_id&quot;)) || 1; setCfg_(&quot;proximo_id&quot;, id + 1); return id; }
+function publico_(a, paraCliente) {
+  var o = { id: a.id, ini: a.ini, fim: a.fim, cli: String(a.cliente), tel: String(a.tel), email: String(a.email || &quot;&quot;), pet: String(a.pet || &quot;&quot;), serv: a.servico, servico_nome: String(a.servico_nome), prof: a.prof, prof_nome: String(a.prof_nome),
+    preco: a.preco, promo: String(a.promo || &quot;&quot;), status: a.status, origem: a.origem, obs: String(a.obs || &quot;&quot;), conversa: conversa_(a), recado_novo: sim_(a.recado_novo), criado: a.criado };
+  if (paraCliente) { o.chave = a.chave; delete o.recado_novo; }
+  return o;
+}
+function slug_(s) { return String(s).toLowerCase().normalize(&quot;NFD&quot;).replace(/[̀-ͯ]/g, &quot;&quot;).replace(/[^a-z0-9]+/g, &quot;-&quot;).replace(/^-+|-+$/g, &quot;&quot;).slice(0, 40); }
+
+/* ---------------- sessão, versão e trava ---------------- */
+function novoToken_(n) { var t = Utilities.getUuid(); guardarSessao_(t, n); return t; }
+function sessao_(d) { var n = lerSessao_(d.token, function (v) { return !!negocio_(v, true); }); if (!n) throw new Error(&quot;SESSAO&quot;); return n; }
+function versao_(n) { return Number(PropertiesService.getScriptProperties().getProperty(&quot;V_&quot; + n) || 1); }
+function mudou_(n) { PropertiesService.getScriptProperties().setProperty(&quot;V_&quot; + n, String(Date.now())); }
+function comTrava_(fn) {
+  var l = LockService.getScriptLock();
+  if (!l.tryLock(20000)) throw new Error(&quot;Muita gente agendando agora. Tente de novo em alguns segundos.&quot;);
+  try { return fn(); } finally { SpreadsheetApp.flush(); l.releaseLock(); }
+}
+
+/* ---------------- utilidades ---------------- */
+// o apóstrofo faz a planilha guardar como texto: telefone não vira número, &quot;09:00&quot; não vira hora e nada vira fórmula
+function txt_(v) { return (typeof v === &quot;string&quot; &amp;&amp; v !== &quot;&quot;) ? &quot;&#x27;&quot; + v : v; }
+function txtRow_(r) { return r.map(txt_); }
+function sim_(v) { return /^s/i.test(String(v).trim()); }
+function lim_(v, n) { return String(v === undefined || v === null ? &quot;&quot; : v).trim().slice(0, n); }
+function esc_(s) { return String(s === undefined || s === null ? &quot;&quot; : s).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g, function (c) { return { &quot;&amp;&quot;: &quot;&amp;amp;&quot;, &quot;&lt;&quot;: &quot;&amp;lt;&quot;, &quot;&gt;&quot;: &quot;&amp;gt;&quot;, &#x27;&quot;&#x27;: &quot;&amp;quot;&quot;, &quot;&#x27;&quot;: &quot;&amp;#39;&quot; }[c]; }); }
+
+/* ---------------- avisos no celular, mesmo com o app fechado (OneSignal) ---------------- */
+var ONESIGNAL_APP = &quot;7a1178de-2e8b-4205-aeb9-8171f97fb614&quot;;
+function pushGuardar_(chave, sub) {
+  sub = String(sub || &quot;&quot;).trim();
+  if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error(&quot;Aparelho inválido.&quot;);
+  var P = PropertiesService.getScriptProperties(), k = &quot;PS_&quot; + chave, o = { s: [], t: 0 };
+  try { o = JSON.parse(P.getProperty(k) || &#x27;{&quot;s&quot;:[]}&#x27;); } catch (x) {}
+  var l = (o.s || []).filter(function (s) { return s !== sub; }); l.push(sub);
+  P.setProperty(k, JSON.stringify({ s: l.slice(-5), t: Date.now() }));
+  if (Math.random() &lt; 0.03) pushLimpar_();
+}
+function pushLimpar_() {
+  try {
+    var P = PropertiesService.getScriptProperties(), tudo = P.getProperties(), velho = Date.now() - 120 * 86400000;
+    Object.keys(tudo).forEach(function (k) {
+      if (k.indexOf(&quot;PS_&quot;) !== 0) return;
+      try { if ((JSON.parse(tudo[k]).t || 0) &lt; velho) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); }
+    });
+  } catch (x) {}
+}
+function pushDe_(chave) { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;PS_&quot; + chave) || &#x27;{&quot;s&quot;:[]}&#x27;).s || []; } catch (x) { return []; } }
+function pushChave_() { return String(cfgVal_(&quot;push_chave&quot;) || &quot;&quot;).trim(); }
+function push_(chaves, titulo, texto, url) {
+  try {
+    var key = pushChave_();
+    if (!key) return;
+    var subs = [];
+    chaves.forEach(function (c) { pushDe_(c).forEach(function (s) { if (subs.indexOf(s) &lt; 0) subs.push(s); }); });
+    if (!subs.length) return;
+    var corpo = { app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
+      chrome_web_icon: &quot;https://dailva123.github.io/dayia/agenda/app/icon-192.png&quot;, chrome_web_badge: &quot;https://dailva123.github.io/dayia/agenda/app/icon-192.png&quot;, ttl: 86400 };
+    if (url) corpo.url = url;
+    var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
+      headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key }, payload: JSON.stringify(corpo) });
+    if (r.getResponseCode() &gt;= 300) console.log(&quot;aviso push recusado: &quot; + r.getResponseCode() + &quot; &quot; + r.getContentText().slice(0, 300));
+  } catch (x) { console.log(&quot;aviso push não enviado: &quot; + x); }
+}
+function testarAviso() {
+  var key = pushChave_();
+  if (!key) { console.log(&quot;❌ Falta colar a chave do OneSignal na aba Config (linha push_chave, coluna B).&quot;); return &quot;Falta colar a chave do OneSignal na aba Config (linha push_chave).&quot;; }
+  var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
+    headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key },
+    payload: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: [&quot;00000000-0000-0000-0000-000000000000&quot;], contents: { en: &quot;teste&quot; } }) });
+  var c = r.getResponseCode();
+  var msg = (c === 401 || c === 403) ? &quot;❌ A chave não foi aceita (&quot; + c + &quot;). Confira se copiou inteira, sem espaço.&quot; : &quot;✅ Chave do OneSignal funcionando!&quot;;
+  console.log(msg);
+  return msg;
+}
+
+/* ---------------- sessão longa: fica conectado por 30 dias ---------------- */
+var SESSAO_DIAS = 30;
+function guardarSessao_(token, valor) {
+  CacheService.getScriptCache().put(&quot;tk_&quot; + token, valor, 21600);
+  PropertiesService.getScriptProperties().setProperty(&quot;SS_&quot; + token, JSON.stringify({ v: valor, exp: Date.now() + SESSAO_DIAS * 86400000 }));
+  if (Math.random() &lt; 0.05) limparSessoes_();
+}
+function lerSessao_(token, valida) {
+  token = String(token || &quot;&quot;);
+  if (!token) return null;
+  var c = CacheService.getScriptCache(), v = c.get(&quot;tk_&quot; + token);
+  if (v) return v;
+  var P = PropertiesService.getScriptProperties(), raw = P.getProperty(&quot;SS_&quot; + token);
+  if (!raw) return null;
+  try {
+    var o = JSON.parse(raw);
+    if (!(o.exp &gt; Date.now()) || (valida &amp;&amp; !valida(o.v))) { P.deleteProperty(&quot;SS_&quot; + token); return null; }
+    P.setProperty(&quot;SS_&quot; + token, JSON.stringify({ v: o.v, exp: Date.now() + SESSAO_DIAS * 86400000 }));
+    c.put(&quot;tk_&quot; + token, o.v, 21600);
+    return o.v;
+  } catch (x) { return null; }
+}
+function encerrarSessao_(token) {
+  token = String(token || &quot;&quot;);
+  if (!token) return;
+  try { CacheService.getScriptCache().remove(&quot;tk_&quot; + token); } catch (x) {}
+  PropertiesService.getScriptProperties().deleteProperty(&quot;SS_&quot; + token);
+}
+function limparSessoes_() {
+  try {
+    var P = PropertiesService.getScriptProperties(), tudo = P.getProperties(), agora = Date.now();
+    Object.keys(tudo).forEach(function (k) {
+      if (k.indexOf(&quot;SS_&quot;) !== 0) return;
+      try { if (!(JSON.parse(tudo[k]).exp &gt; agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); }
+    });
+  } catch (x) {}
+}
+
+/* =====================================================================
+   MARKETING (versão 2.4): clientes importados, promoções e mensagens
+   ===================================================================== */
+
+/* cria as abas novas e as colunas que faltarem, sem mexer nos dados */
+function garantirAbas_(forcar) {
+  var P = PropertiesService.getScriptProperties();
+  if (!forcar &amp;&amp; P.getProperty(&quot;ESQUEMA&quot;) === VERSAO_SISTEMA) return;
+  var ss = planilha_();
+  Object.keys(ABAS).forEach(function (nome) {
+    var sh = ss.getSheetByName(nome) || ss.insertSheet(nome), cols = ABAS[nome];
+    if (sh.getLastRow() === 0) {
+      sh.appendRow(cols); sh.setFrozenRows(1);
+      sh.getRange(1, 1, 1, cols.length).setFontWeight(&quot;bold&quot;).setBackground(&quot;#0E2238&quot;).setFontColor(&quot;#FFFFFF&quot;);
+      return;
+    }
+    var cab = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String);
+    cols.forEach(function (c) {
+      if (cab.indexOf(c) &gt;= 0) return;
+      cab.push(c);
+      sh.getRange(1, cab.length).setValue(c).setFontWeight(&quot;bold&quot;).setBackground(&quot;#0E2238&quot;).setFontColor(&quot;#FFFFFF&quot;);
+    });
+  });
+  CAB_ = {};
+  P.setProperty(&quot;ESQUEMA&quot;, VERSAO_SISTEMA);
+}
+
+/* roda a rotina das mensagens automáticas todo dia por volta das 10h */
+function instalarRotina_() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === &quot;rotinaDiaria&quot;) ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger(&quot;rotinaDiaria&quot;).timeBased().everyDays(1).atHour(10).inTimezone(&quot;America/Sao_Paulo&quot;).create();
+}
+
+/* ---------- clientes cadastrados ou importados ---------- */
+function soDig_(t) { return String(t || &quot;&quot;).replace(/\D/g, &quot;&quot;); }
+function chaveTel_(t) { var d = soDig_(t); if (d.length &gt; 11 &amp;&amp; d.indexOf(&quot;55&quot;) === 0) d = d.slice(2); return d.slice(-11); }
+function chaveEnv_(t) { t = String(t || &quot;&quot;); return /^nome:/.test(t) ? t : (chaveTel_(t) || t); }
+function anivTxt_(v) {
+  if (v instanceof Date) return (&quot;0&quot; + v.getDate()).slice(-2) + &quot;/&quot; + (&quot;0&quot; + (v.getMonth() + 1)).slice(-2);
+  var m = String(v || &quot;&quot;).match(/(\d{1,2})\s*[\/\-.]\s*(\d{1,2})/);
+  if (!m) return &quot;&quot;;
+  var d = +m[1], M = +m[2];
+  if (d &lt; 1 || d &gt; 31 || M &lt; 1 || M &gt; 12) return &quot;&quot;;
+  return (&quot;0&quot; + d).slice(-2) + &quot;/&quot; + (&quot;0&quot; + M).slice(-2);
+}
+function clientesDe_(n) {
+  return linhas_(&quot;Clientes&quot;).filter(function (c) { return String(c.negocio).toLowerCase() === n; }).map(function (c) {
+    return { id: String(c.id), nome: String(c.nome || &quot;&quot;), tel: String(c.tel || &quot;&quot;), email: String(c.email || &quot;&quot;), aniv: anivTxt_(c.aniversario), pet: String(c.pet || &quot;&quot;), origem: String(c.origem || &quot;&quot;), naoQuer: sim_(c.nao_receber) };
+  });
+}
+function importarClientes_(n, lista) {
+  if (lista.length &gt; 3000) throw new Error(&quot;Importe no máximo 3.000 contatos de cada vez.&quot;);
+  var atuais = clientesDe_(n), porTel = {}, porNome = {}, novos = [], atualizados = 0, agora = Date.now();
+  atuais.forEach(function (c) { var k = chaveTel_(c.tel); if (k) porTel[k] = c; porNome[c.nome.toLowerCase()] = c; });
+  lista.forEach(function (x, i) {
+    var nome = lim_(x.nome, 80), tel = lim_(x.tel, 30), k = chaveTel_(tel);
+    if (!nome &amp;&amp; !k) return;
+    if (k.length &lt; 8) { k = &quot;&quot;; tel = &quot;&quot;; }
+    var ja = k ? porTel[k] : porNome[nome.toLowerCase()];
+    if (ja) {
+      var m = {};
+      if (!ja.email &amp;&amp; x.email) m.email = lim_(x.email, 120);
+      if (!ja.aniv &amp;&amp; anivTxt_(x.aniv)) m.aniversario = anivTxt_(x.aniv);
+      if (!ja.nome &amp;&amp; nome) m.nome = nome;
+      if (Object.keys(m).length) { atualizarCli_(n, ja.id, m); atualizados++; }
+      return;
+    }
+    var c = { negocio: n, id: &quot;c&quot; + agora + &quot;-&quot; + i, nome: nome || tel, tel: tel, email: lim_(x.email, 120), aniversario: anivTxt_(x.aniv), pet: lim_(x.pet, 40), origem: lim_(x.origem, 20) || &quot;importado&quot;, criado: legivel_(agora) };
+    novos.push(c);
+    if (k) porTel[k] = { id: c.id, nome: c.nome, email: c.email, aniv: c.aniversario };
+    else porNome[(nome || &quot;&quot;).toLowerCase()] = { id: c.id, nome: c.nome, email: c.email, aniv: c.aniversario };
+  });
+  inserirVarias_(&quot;Clientes&quot;, novos);
+  return { novos: novos.length, atualizados: atualizados };
+}
+function atualizarCli_(n, id, campos) {
+  var sh = aba_(&quot;Clientes&quot;), v = sh.getDataRange().getValues(), cab = cab_(&quot;Clientes&quot;);
+  for (var i = 1; i &lt; v.length; i++) {
+    if (String(v[i][0]).toLowerCase() === n &amp;&amp; String(v[i][1]) === String(id)) {
+      Object.keys(campos).forEach(function (c) { var col = cab.indexOf(c); if (col &gt;= 0) sh.getRange(i + 1, col + 1).setValue(txt_(campos[c])); });
+      return true;
+    }
+  }
+  return false;
+}
+function salvarCliente_(n, c) {
+  var nome = lim_(c.nome, 80), tel = lim_(c.tel, 30);
+  if (!nome) throw new Error(&quot;Coloque o nome.&quot;);
+  var campos = { nome: nome, tel: tel, email: lim_(c.email, 120), aniversario: anivTxt_(c.aniv), pet: lim_(c.pet, 40), nao_receber: c.naoQuer ? &quot;SIM&quot; : &quot;&quot; };
+  if (c.id &amp;&amp; atualizarCli_(n, c.id, campos)) return;
+  var k = chaveTel_(tel), ja = k ? clientesDe_(n).filter(function (x) { return chaveTel_(x.tel) === k; })[0] : null;
+  if (ja) { atualizarCli_(n, ja.id, campos); return; }
+  campos.negocio = n; campos.id = &quot;c&quot; + Date.now(); campos.origem = &quot;manual&quot;; campos.criado = legivel_(Date.now());
+  inserir_(&quot;Clientes&quot;, campos);
+}
+
+/* ---------- promoções ---------- */
+function promos_(n) {
+  return linhas_(&quot;Promocoes&quot;).filter(function (p) { return String(p.negocio).toLowerCase() === n &amp;&amp; sim_(p.ativo); }).map(function (p) {
+    var sv = String(p.servicos || &quot;todos&quot;);
+    return { id: String(p.id), tipo: String(p.tipo), servicos: sv === &quot;todos&quot; ? &quot;todos&quot; : sv.split(&quot;,&quot;).filter(String), desconto: Number(p.desconto) || 0,
+      de: Number(p.de) || 0, ate: Number(p.ate) || 0, horas: Number(p.horas) || 0 };
+  });
+}
+function salvarPromo_(n, p) {
+  var tipo = p.tipo === &quot;ultima&quot; ? &quot;ultima&quot; : &quot;rapida&quot;, desc = Math.round(Number(p.desconto) || 0);
+  if (desc &lt; 1 || desc &gt; 90) throw new Error(&quot;O desconto precisa ser de 1% a 90%.&quot;);
+  var sv = p.servicos === &quot;todos&quot; || !p.servicos || !p.servicos.length ? &quot;todos&quot; : p.servicos.map(String).join(&quot;,&quot;);
+  var o = { negocio: n, id: &quot;pr&quot; + Date.now(), tipo: tipo, servicos: sv, desconto: desc, de: &quot;&quot;, ate: &quot;&quot;, horas: &quot;&quot;, ativo: &quot;SIM&quot;, criado: legivel_(Date.now()) };
+  if (tipo === &quot;rapida&quot;) {
+    o.de = Number(p.de) || 0; o.ate = Number(p.ate) || 0;
+    if (!(o.ate &gt; o.de)) throw new Error(&quot;Confira as datas da promoção.&quot;);
+  } else {
+    o.horas = Math.max(1, Math.min(48, Number(p.horas) || 2));
+    promos_(n).filter(function (x) { return x.tipo === &quot;ultima&quot;; }).forEach(function (x) { apagarLinha_(&quot;Promocoes&quot;, n, x.id); });
+  }
+  inserir_(&quot;Promocoes&quot;, o);
+}
+function promoPara_(lista, sid, ini, agora) {
+  var melhor = null;
+  lista.forEach(function (p) {
+    if (p.servicos !== &quot;todos&quot; &amp;&amp; p.servicos.indexOf(String(sid)) &lt; 0) return;
+    var vale = p.tipo === &quot;rapida&quot; ? (ini &gt;= p.de &amp;&amp; ini &lt; p.ate &amp;&amp; agora &lt; p.ate) : (ini &gt; agora &amp;&amp; ini - agora &lt;= p.horas * 3600000);
+    if (vale &amp;&amp; (!melhor || p.desconto &gt; melhor.desconto)) melhor = { desconto: p.desconto, nome: p.tipo === &quot;rapida&quot; ? &quot;Promoção&quot; : &quot;Última hora&quot; };
+  });
+  return melhor;
+}
+function precoCom_(preco, desc) { return Math.round(Number(preco || 0) * (100 - desc)) / 100; }
+
+/* ---------- configurações de marketing e envios ---------- */
+function marketing_(N) { try { var o = JSON.parse(N.marketing || &quot;{}&quot;); return o &amp;&amp; typeof o === &quot;object&quot; ? o : {}; } catch (x) { return {}; } }
+function envios_(n) {
+  return linhas_(&quot;Envios&quot;).filter(function (e) { return String(e.negocio).toLowerCase() === n; })
+    .map(function (e) { return { tel: chaveEnv_(e.tel), tipo: String(e.tipo), canal: String(e.canal), t: Number(e.quando) || 0 }; });
+}
+function registrarEnvios_(n, lista, canal) {
+  var agora = Date.now();
+  inserirVarias_(&quot;Envios&quot;, lista.filter(function (x) { return x &amp;&amp; x.tel &amp;&amp; x.tipo; }).map(function (x) {
+    return { negocio: n, tel: chaveEnv_(lim_(x.tel, 80)), tipo: lim_(x.tipo, 60), canal: x.canal || canal, quando: agora };
+  }));
+}
+
+/* mesmas regras do painel: quem deve receber cada mensagem automática hoje */
+var MSG_PADRAO = {
+  boasvindas: &quot;Olá, {nome}! Agradecemos a sua visita na {negocio} 💛 Foi um prazer te atender. Quando quiser marcar de novo, é só usar o link: {link}&quot;,
+  servicos: &quot;Olá, {nome}! Tudo bem? Aqui é da {negocio}. Você sabia que a gente também faz {servicos}? Veja os horários livres e agende em 1 minuto: {link}&quot;,
+  volta21: &quot;Olá, {nome}! Já faz umas semanas desde o seu último horário na {negocio}. Que tal agendar o próximo? É rapidinho: {link}&quot;,
+  volta45: &quot;Olá, {nome}! Estamos com saudade de você aqui na {negocio} 💛 Separe um tempinho para você e agende o seu horário: {link}&quot;,
+  volta90: &quot;Olá, {nome}! Faz tempo que você não vem na {negocio}. Que tal voltar? Veja os horários livres: {link}&quot;,
+  aniver: &quot;Olá, {nome}! Seu aniversário está chegando 🎉 Toda a equipe da {negocio} deseja um ano lindo para você. Que tal comemorar se cuidando? Agende aqui: {link}&quot;
+};
+function fichas_(ags, clis, agora) {
+  var m = {};
+  function ficha(tel, nome) { var k = chaveTel_(tel) || (&quot;nome:&quot; + String(nome).toLowerCase()); return m[k] || (m[k] = { k: k, nome: nome, tel: tel, email: &quot;&quot;, aniv: &quot;&quot;, vis: 0, prim: 0, ult: 0, prox: 0, ultId: 0 }); }
+  ags.forEach(function (a) {
+    var c = ficha(a.tel, a.cliente);
+    if (a.email &amp;&amp; !c.email) c.email = String(a.email);
+    if (a.id &gt; c.ultId) c.ultId = a.id;
+    if (a.status === &quot;concluido&quot;) { c.vis++; c.prim = c.prim ? Math.min(c.prim, a.ini) : a.ini; c.ult = Math.max(c.ult, a.ini); }
+    if ((a.status === &quot;confirmado&quot; || a.status === &quot;pendente&quot;) &amp;&amp; a.ini &gt; agora) c.prox = c.prox ? Math.min(c.prox, a.ini) : a.ini;
+  });
+  clis.forEach(function (x) { var c = ficha(x.tel, x.nome); if (x.naoQuer) c.naoQuer = true; if (x.nome) c.nome = x.nome; if (x.email &amp;&amp; !c.email) c.email = x.email; if (x.aniv) c.aniv = x.aniv; });
+  return Object.keys(m).map(function (k) { return m[k]; });
+}
+function devidas_(fichas, envios, mk, agora) {
+  var auto = (mk &amp;&amp; mk.auto) || {}, H = 3600000, out = [];
+  function enviado(c, tipo, desde) { return envios.some(function (e) { return e.tipo === tipo &amp;&amp; e.tel === c.k &amp;&amp; e.t &gt;= desde; }); }
+  fichas.forEach(function (c) {
+    if (c.naoQuer) return;
+    var tipos = [];
+    if (auto.boasvindas &amp;&amp; c.prim &amp;&amp; agora &gt;= c.prim + 2 * H &amp;&amp; agora &lt;= c.prim + 3 * DIA &amp;&amp; !enviado(c, &quot;boasvindas&quot;, 0)) tipos.push(&quot;boasvindas&quot;);
+    if (auto.servicos &amp;&amp; c.prim &amp;&amp; agora &gt;= c.prim + 21 * DIA &amp;&amp; agora &lt;= c.prim + 35 * DIA &amp;&amp; !enviado(c, &quot;servicos&quot;, 0)) tipos.push(&quot;servicos&quot;);
+    if (c.ult &amp;&amp; !c.prox) {
+      var x = agora - c.ult;
+      if (auto.volta21 &amp;&amp; x &gt;= 21 * DIA &amp;&amp; x &lt; 45 * DIA &amp;&amp; !enviado(c, &quot;volta21&quot;, c.ult)) tipos.push(&quot;volta21&quot;);
+      if (auto.volta45 &amp;&amp; x &gt;= 45 * DIA &amp;&amp; x &lt; 90 * DIA &amp;&amp; !enviado(c, &quot;volta45&quot;, c.ult)) tipos.push(&quot;volta45&quot;);
+      if (auto.volta90 &amp;&amp; x &gt;= 90 * DIA &amp;&amp; x &lt; 120 * DIA &amp;&amp; !enviado(c, &quot;volta90&quot;, c.ult)) tipos.push(&quot;volta90&quot;);
+    }
+    if (auto.aniver &amp;&amp; c.aniv) {
+      var p = c.aniv.split(&quot;/&quot;), hoje = new Date(agora + fuso_() * MIN), ano = hoje.getUTCFullYear();
+      var dt = Date.UTC(ano, +p[1] - 1, +p[0]), h0 = Date.UTC(ano, hoje.getUTCMonth(), hoje.getUTCDate());
+      if (dt &lt; h0) dt = Date.UTC(ano + 1, +p[1] - 1, +p[0]);
+      if (dt - h0 &lt;= 7 * DIA &amp;&amp; !enviado(c, &quot;aniver&quot;, agora - 300 * DIA)) tipos.push(&quot;aniver&quot;);
+    }
+    if (tipos.length) out.push({ c: c, tipo: tipos[0] });
+  });
+  return out;
+}
+function textoMsg_(mk, tipo, nome, N, servs) {
+  var t = (mk &amp;&amp; mk.textos &amp;&amp; mk.textos[tipo]) || MSG_PADRAO[tipo] || &quot;&quot;;
+  return t.replace(/\{nome\}/g, String(nome || &quot;&quot;).split(&quot; &quot;)[0]).replace(/\{negocio\}/g, String(N.nome)).replace(/\{link\}/g, linkNeg_(N))
+    .replace(/\{servicos\}/g, servs.slice(0, 4).join(&quot;, &quot;));
+}
+
+/* ---------- preço de lançamento: 6 meses depois que o teste acaba ---------- */
+var MESES_LANCAMENTO = 6;
+function lancAte_(N) {
+  var manual = dataDe_(N.lancamento_ate);
+  if (manual) return manual;
+  var base = dataDe_(N.teste_ate) || dataDe_(N.criado);
+  if (!base) return 0;
+  var d = new Date(base); d.setMonth(d.getMonth() + MESES_LANCAMENTO);
+  return d.getTime();
+}
+/* avisa a DayIA e a dona do negócio uma semana antes do preço de lançamento acabar */
+function avisarLancamento_(N, agora) {
+  var s = String(N.situacao || &quot;&quot;).toLowerCase().trim();
+  if (s !== &quot;ativo&quot;) return;
+  var fim = lancAte_(N);
+  if (!fim || fim - agora &gt; 7 * DIA || agora - fim &gt; DIA) return;
+  var P = PropertiesService.getScriptProperties(), k = &quot;LANC_&quot; + N.n;
+  if (P.getProperty(k)) return;
+  var data = legivel_(fim).slice(0, 10), adm = cfgVal_(&quot;email_admin&quot;) || &quot;dayaraujoia@gmail.com&quot;;
+  if (/@/.test(adm)) enviar_(adm, &quot;⏰ Fim do preço de lançamento: &quot; + N.nome + &quot; (&quot; + data + &quot;)&quot;,
+    &quot;&lt;p&gt;O preço de lançamento de &lt;b&gt;&quot; + esc_(N.nome) + &quot;&lt;/b&gt; termina em &lt;b&gt;&quot; + data + &quot;&lt;/b&gt;.&lt;/p&gt;&lt;p&gt;Responsável: &quot; + esc_(N.dono) + &quot; · WhatsApp: &quot; + esc_(N.whatsapp_dono) + &quot;&lt;/p&gt;&lt;p&gt;No painel dela, os botões de pagamento já mudam sozinhos para o valor novo nessa data. Se ela pagava por assinatura no Mercado Pago, cancele a assinatura antiga lá.&lt;/p&gt;&quot;, &quot;Agenda Fácil&quot;);
+  if (/@/.test(N.email_dono || &quot;&quot;)) enviar_(String(N.email_dono), &quot;Seu preço de lançamento da Agenda Fácil termina em &quot; + data,
+    &quot;&lt;p&gt;Olá, &quot; + esc_(String(N.dono || &quot;&quot;).split(&quot; &quot;)[0]) + &quot;!&lt;/p&gt;&lt;p&gt;Obrigada por usar a Agenda Fácil. O seu preço de lançamento vai até &lt;b&gt;&quot; + data + &quot;&lt;/b&gt;. A partir daí, o plano continua com o valor normal.&lt;/p&gt;&lt;p&gt;No seu painel, em &lt;b&gt;Ver planos e pagar&lt;/b&gt;, já aparece o link certo. Qualquer dúvida, é só chamar a DayIA no WhatsApp.&lt;/p&gt;&lt;p style=&#x27;color:#4A5B75&#x27;&gt;Agenda Fácil by DayIA&lt;/p&gt;&quot;, &quot;Agenda Fácil&quot;);
+  P.setProperty(k, String(agora));
+}
+
+/* teste grátis: lembra a dona quando faltam 10 e 3 dias, mostrando o que a agenda já fez */
+function avisarTeste_(N, agora, ags) {
+  var L = liberado_(N);
+  if (L.situacao !== &quot;teste&quot; || L.dias_restantes === null || [10, 3].indexOf(L.dias_restantes) &lt; 0) return;
+  if (!/@/.test(N.email_dono || &quot;&quot;)) return;
+  var P = PropertiesService.getScriptProperties(), k = &quot;TESTE_&quot; + N.n + &quot;_&quot; + L.dias_restantes;
+  if (P.getProperty(k)) return;
+  var meus = ags.filter(function (a) { return String(a.negocio).toLowerCase() === N.n &amp;&amp; String(a.status) !== &quot;cancelado&quot;; });
+  var online = meus.filter(function (a) { return String(a.origem) === &quot;online&quot;; }).length, lk = linkPainel_(N);
+  enviar_(String(N.email_dono), &quot;Faltam &quot; + L.dias_restantes + &quot; dias do seu teste da Agenda Fácil&quot;,
+    &quot;&lt;p&gt;Olá, &quot; + esc_(String(N.dono || &quot;&quot;).split(&quot; &quot;)[0]) + &quot;!&lt;/p&gt;&lt;p&gt;Faltam &lt;b&gt;&quot; + L.dias_restantes + &quot; dias&lt;/b&gt; para acabar o seu teste grátis da Agenda Fácil.&lt;/p&gt;&quot; +
+    (meus.length ? &quot;&lt;p&gt;Até agora a sua agenda recebeu &lt;b&gt;&quot; + meus.length + &quot; agendamento&quot; + (meus.length &gt; 1 ? &quot;s&quot; : &quot;&quot;) + &quot;&lt;/b&gt;&quot; + (online ? &quot;, sendo &lt;b&gt;&quot; + online + &quot;&lt;/b&gt; feito&quot; + (online &gt; 1 ? &quot;s&quot; : &quot;&quot;) + &quot; pelas clientes sozinhas, pelo link&quot; : &quot;&quot;) + &quot;.&lt;/p&gt;&quot; : &quot;&lt;p&gt;Ainda não chegou nenhum agendamento pelo link. Coloque o link na bio do Instagram e no WhatsApp para as clientes começarem a marcar.&lt;/p&gt;&quot;) +
+    &quot;&lt;p&gt;Para continuar sem parar, é só assinar em &lt;b&gt;Ver planos e pagar&lt;/b&gt;, no seu painel. O tempo pago só começa quando o teste acabar.&lt;/p&gt;&quot; +
+    (lk ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + lk + &quot;&#x27; style=&#x27;background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Abrir o meu painel&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;) +
+    &quot;&lt;p&gt;Obrigada por testar!&lt;br&gt;Qualquer dúvida, é só chamar a DayIA no WhatsApp.&lt;/p&gt;&lt;p style=&#x27;color:#4A5B75&#x27;&gt;Agenda Fácil by DayIA&lt;/p&gt;&quot;, &quot;Agenda Fácil&quot;);
+  P.setProperty(k, String(agora));
+}
+
+/* todo dia: manda por e-mail e aviso no celular para quem tem; o resto aparece no painel para mandar pelo WhatsApp */
+function rotinaDiaria() {
+  garantirAbas_();
+  var agora = Date.now(), negs = linhas_(&quot;Negocios&quot;), ags = linhas_(&quot;Agendamentos&quot;), clis = linhas_(&quot;Clientes&quot;), env = linhas_(&quot;Envios&quot;), servs = linhas_(&quot;Servicos&quot;);
+  negs.forEach(function (N) {
+    try {
+      N.n = String(N.n).toLowerCase();
+      avisarLancamento_(N, agora);
+      avisarTeste_(N, agora, ags);
+      var mk = marketing_(N);
+      if (!mk.auto || !Object.keys(mk.auto).some(function (k) { return mk.auto[k]; }) || !liberado_(N).ok) return;
+      var a1 = ags.filter(function (a) { return String(a.negocio).toLowerCase() === N.n; }).map(function (a) { a.id = Number(a.id); a.ini = Number(a.ini); return a; });
+      var c1 = clis.filter(function (c) { return String(c.negocio).toLowerCase() === N.n; }).map(function (c) { return { nome: String(c.nome || &quot;&quot;), tel: String(c.tel || &quot;&quot;), email: String(c.email || &quot;&quot;), aniv: anivTxt_(c.aniversario), naoQuer: sim_(c.nao_receber) }; });
+      var e1 = env.filter(function (e) { return String(e.negocio).toLowerCase() === N.n; }).map(function (e) { return { tel: chaveEnv_(e.tel), tipo: String(e.tipo), t: Number(e.quando) || 0 }; });
+      var sv = servs.filter(function (s) { return String(s.negocio).toLowerCase() === N.n &amp;&amp; sim_(s.ativo); }).map(function (s) { return String(s.nome); });
+      var feitos = [];
+      devidas_(fichas_(a1, c1, agora), e1, mk, agora).forEach(function (d) {
+        var txt = textoMsg_(mk, d.tipo, d.c.nome, N, sv), foi = false;
+        if (/@/.test(d.c.email)) { enviar_(d.c.email, String(N.nome), &quot;&lt;p&gt;&quot; + esc_(txt).replace(/(https?:\/\/\S+)/g, &quot;&lt;a href=&#x27;$1&#x27;&gt;$1&lt;/a&gt;&quot;) + &quot;&lt;/p&gt;&quot;, String(N.nome)); foi = true; }
+        if (d.c.ultId &amp;&amp; pushDe_(&quot;A_&quot; + N.n + &quot;_&quot; + d.c.ultId).length) { push_([&quot;A_&quot; + N.n + &quot;_&quot; + d.c.ultId], String(N.nome), txt, linkNeg_(N)); foi = true; }
+        if (foi) feitos.push({ tel: d.c.k, tipo: d.tipo, canal: &quot;automático&quot; });
+      });
+      registrarEnvios_(N.n, feitos, &quot;automático&quot;);
+    } catch (x) { console.log(&quot;rotina &quot; + N.n + &quot;: &quot; + x); }
+  });
+}
+</textarea></main>
+<script>var b=document.getElementById("b"),t=document.getElementById("t");
+b.onclick=function(){t.select();var ok=function(){b.textContent="✅ Copiado! Agora cole no Apps Script";b.className="ok"};
+if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(ok,function(){document.execCommand("copy");ok()})}else{document.execCommand("copy");ok()}};</script>
+</body></html>

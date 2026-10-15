@@ -615,7 +615,8 @@ function pCardapio(){
   };
 }
 /* ----- ajustes ----- */
-function linkCliente(){var u=location.origin+location.pathname,q=[];if(!SID_FIXO&&!DEMO){if(Q.get("api"))q.push("api="+encodeURIComponent(API));else q.push("s="+SID)}q.push("n="+encodeURIComponent(NEG));return u+"?"+q.join("&")}
+var LINK_CURTO={"la-vecchi":"https://dayia.com.br/lavecchi"};
+function linkCliente(){if(LINK_CURTO[NEG]&&(SID_FIXO||DEMO))return LINK_CURTO[NEG];var u=location.origin+location.pathname,q=[];if(!SID_FIXO&&!DEMO){if(Q.get("api"))q.push("api="+encodeURIComponent(API));else q.push("s="+SID)}q.push("n="+encodeURIComponent(NEG));return u+"?"+q.join("&")}
 function pAjustes(){
   var n=P.d.negocio,lk=linkCliente();
   var div="Olá! 😊 Agora você pode fazer o seu pedido da "+n.nome+" direto pelo nosso cardápio online. É só escolher, pagar no Pix e mandar o comprovante:\n"+lk+"\n\nObrigada!";
@@ -671,7 +672,7 @@ function botaoAvisos(onde,txt){
 var OS_APP="7a1178de-2e8b-4205-aeb9-8171f97fb614",PUSH={os:null,sub:null};
 (function(){
   if(DEMO||!("serviceWorker" in navigator)||!window.PushManager&&!window.safari)return;
-  var raiz=location.pathname.split("/").slice(0,2).join("/")+"/";
+  var raiz=/github\.io$/.test(location.hostname)?location.pathname.split("/").slice(0,2).join("/")+"/":"/";
   window.OneSignalDeferred=window.OneSignalDeferred||[];
   OneSignalDeferred.push(async function(OS){
     try{

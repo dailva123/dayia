@@ -424,7 +424,7 @@ function push_(chaves, titulo, texto, url) {
     var subs = []; chaves.forEach(function (c) { try { (JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;PS_&quot; + c) || &#x27;{&quot;s&quot;:[]}&#x27;).s || []).forEach(function (s) { if (subs.indexOf(s) &lt; 0) subs.push(s); }); } catch (x) {} });
     if (!subs.length) return;
     var corpo = { app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
-      chrome_web_icon: &quot;https://dailva123.github.io/dayia/pedido/app/icon-192.png&quot;, ttl: 86400 };
+      chrome_web_icon: &quot;https://dayia.com.br/pedido/icon-192.png&quot;, ttl: 86400 };
     if (url) corpo.url = url;
     var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
       headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key }, payload: JSON.stringify(corpo) });

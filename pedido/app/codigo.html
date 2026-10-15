@@ -1,0 +1,454 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Código do servidor · Pedido Fácil</title>
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#EEF2F7;color:#0E2238}main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:6px 0}p{margin:6px 0 12px;color:#4A5B75}
+button{background:#0E2238;color:#fff;border:0;border-radius:12px;padding:14px 22px;font-size:17px;font-weight:800;cursor:pointer}
+button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;font:12px/1.4 ui-monospace,Consolas,monospace;border:1px solid #D6DFEA;border-radius:12px;padding:10px;box-sizing:border-box;background:#fff}</style></head>
+<body><main><h1>Código do servidor · Pedido Fácil by DayIA</h1>
+<p>Clique em Copiar. Na planilha "Pedido Fácil": Extensões › Apps Script › apague tudo do Código.gs e cole (Ctrl+V) › Salvar. Depois escolha a função <b>configurar</b> › Executar. Por fim: Implantar › Nova implantação › App da Web (Executar como: Eu · Quem pode acessar: Qualquer pessoa) e mande o endereço que termina em /exec para a DayIA.</p>
+<button id="b">📋 Copiar código</button>
+<textarea id="t" readonly>/* =====================================================================
+   PEDIDO FÁCIL by DayIA  ·  servidor (Google Apps Script)
+   ---------------------------------------------------------------------
+   Cardápio online com pedido, Pix e comprovante. UMA planilha para
+   todos os restaurantes. Cada restaurante tem o próprio link e painel.
+   Aba &quot;Negocios&quot;, coluna situacao:
+     teste · ativo · cortesia · suspenso   (igual à Agenda Fácil)
+
+   Instalação (uma vez só):
+   1. Crie uma planilha Google em branco chamada &quot;Pedido Fácil&quot;.
+   2. Extensões &gt; Apps Script. Apague o que estiver lá e cole este arquivo.
+   3. Selecione a função &quot;configurar&quot; e clique em Executar (autorize).
+   4. Implantar &gt; Nova implantação &gt; App da Web
+        Executar como: Eu  ·  Quem pode acessar: Qualquer pessoa
+   5. Copie o endereço que termina em /exec e mande para a DayIA.
+   6. Aba Config, linha push_chave: cole a mesma chave do OneSignal da
+      Agenda Fácil (começa com os_v2_) e rode a função testarAviso.
+   ===================================================================== */
+
+var VERSAO_SISTEMA = &quot;1.0&quot;;
+var ABAS = {
+  Negocios: [&quot;n&quot;,&quot;nome&quot;,&quot;situacao&quot;,&quot;teste_ate&quot;,&quot;criado&quot;,&quot;dono&quot;,&quot;whatsapp&quot;,&quot;email_aviso&quot;,&quot;senha&quot;,&quot;telefone&quot;,&quot;endereco&quot;,&quot;instagram&quot;,&quot;logo&quot;,
+             &quot;pix_chave&quot;,&quot;pix_nome&quot;,&quot;pix_banco&quot;,&quot;taxa_entrega&quot;,&quot;entrega_obs&quot;,&quot;retirada&quot;,&quot;entrega&quot;,&quot;pagar_na_hora&quot;,&quot;dias&quot;,&quot;abre&quot;,&quot;fecha&quot;,&quot;tempo&quot;,&quot;pedido_minimo&quot;,&quot;aviso&quot;,&quot;cardapio&quot;],
+  Pedidos:  [&quot;negocio&quot;,&quot;id&quot;,&quot;num&quot;,&quot;criado&quot;,&quot;quando&quot;,&quot;cliente&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;tipo&quot;,&quot;endereco&quot;,&quot;itens&quot;,&quot;resumo&quot;,&quot;subtotal&quot;,&quot;taxa&quot;,&quot;total&quot;,
+             &quot;pagamento&quot;,&quot;comprovante&quot;,&quot;pago&quot;,&quot;status&quot;,&quot;obs&quot;,&quot;chave&quot;,&quot;historico&quot;],
+  Config:   [&quot;chave&quot;,&quot;valor&quot;,&quot;explicacao&quot;]
+};
+var MIN = 60000, DIA = 86400000;
+var STATUS = { novo: &quot;Recebido&quot;, confirmado: &quot;Confirmado&quot;, preparo: &quot;Em preparo&quot;, pronto: &quot;Pronto para retirar&quot;, saiu: &quot;Saiu para entrega&quot;, entregue: &quot;Entregue&quot;, cancelado: &quot;Cancelado&quot; };
+
+/* ---------------- instalação ---------------- */
+function configurar() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error(&quot;Abra este script a partir da planilha (Extensões &gt; Apps Script).&quot;);
+  PropertiesService.getScriptProperties().setProperty(&quot;PLANILHA&quot;, ss.getId());
+  Object.keys(ABAS).forEach(function (nome) {
+    var sh = ss.getSheetByName(nome) || ss.insertSheet(nome);
+    if (sh.getLastRow() === 0) { sh.appendRow(ABAS[nome]); sh.setFrozenRows(1); sh.getRange(1, 1, 1, ABAS[nome].length).setFontWeight(&quot;bold&quot;).setBackground(&quot;#0E2238&quot;).setFontColor(&quot;#FFFFFF&quot;); }
+  });
+  var cfg = ss.getSheetByName(&quot;Config&quot;), tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
+  [[&quot;dias_teste&quot;, &quot;30&quot;, &quot;Dias de teste grátis para restaurante novo&quot;],
+   [&quot;email_admin&quot;, &quot;&quot;, &quot;Seu e-mail (opcional): recebe aviso de problemas&quot;],
+   [&quot;whatsapp_dayia&quot;, &quot;5519999389118&quot;, &quot;WhatsApp que aparece quando o teste vence ou o restaurante está suspenso&quot;],
+   [&quot;fuso_minutos&quot;, &quot;-180&quot;, &quot;Fuso horário (Brasília = -180). Não mexa.&quot;],
+   [&quot;proximo_id&quot;, &quot;1&quot;, &quot;Uso interno (não mexa)&quot;],
+   [&quot;link_base&quot;, &quot;&quot;, &quot;Preenchido sozinho&quot;],
+   [&quot;pasta_comprovantes&quot;, &quot;&quot;, &quot;Preenchido sozinho (pasta do Drive com os comprovantes)&quot;],
+   [&quot;push_chave&quot;, &quot;&quot;, &quot;Chave do OneSignal (a mesma da Agenda Fácil, começa com os_v2_)&quot;]
+  ].forEach(function (p) { if (tem.indexOf(p[0]) &lt; 0) cfg.appendRow([p[0], txt_(p[1]), p[2]]); });
+  cfg.autoResizeColumns(1, 3);
+  if (!negocio_(&quot;la-vecchi&quot;, true)) criarLaVecchi_();
+  var sobra = ss.getSheetByName(&quot;Página1&quot;) || ss.getSheetByName(&quot;Sheet1&quot;);
+  if (sobra &amp;&amp; sobra.getLastRow() === 0 &amp;&amp; ss.getSheets().length &gt; 3) ss.deleteSheet(sobra);
+  pasta_();
+  MailApp.getRemainingDailyQuota();
+  return &quot;Pronto! Agora faça a implantação como App da Web.&quot;;
+}
+function criarLaVecchi_() {
+  inserir_(&quot;Negocios&quot;, {
+    n: &quot;la-vecchi&quot;, nome: &quot;La Vecchi Cozinha e Confeitaria&quot;, situacao: &quot;teste&quot;, teste_ate: legivel_(Date.now() + (Number(cfgVal_(&quot;dias_teste&quot;)) || 30) * DIA).slice(0, 10),
+    criado: legivel_(Date.now()), dono: &quot;La Vecchi&quot;, whatsapp: &quot;5519997576919&quot;, email_aviso: &quot;&quot;, senha: hash_(&quot;1234&quot;), telefone: &quot;(19) 99757-6919&quot;,
+    endereco: &quot;&quot;, instagram: &quot;&quot;, logo: &quot;&quot;, pix_chave: &quot;49.939.307/0001-41&quot;, pix_nome: &quot;Paulo Henrique da Silva Refeições&quot;, pix_banco: &quot;Banco do Brasil&quot;,
+    taxa_entrega: 3.5, entrega_obs: &quot;&quot;, retirada: &quot;SIM&quot;, entrega: &quot;SIM&quot;, pagar_na_hora: &quot;NÃO&quot;, dias: &quot;1,2,3,4,5,6&quot;, abre: &quot;08:00&quot;, fecha: &quot;14:00&quot;,
+    tempo: &quot;40 a 60 min&quot;, pedido_minimo: 0, aviso: &quot;&quot;, cardapio: JSON.stringify(CARDAPIO_LA_VECCHI)
+  });
+}
+var CARDAPIO_LA_VECCHI = {
+  acomp: { titulo: &quot;Acompanhamento&quot;, opcoes: [&quot;Fritas&quot;, &quot;Purê&quot;, &quot;Legumes&quot;, &quot;Batata sauté&quot;] },
+  grupos: [
+    { id: &quot;exec&quot;, nome: &quot;Marmita Executiva&quot;, desc: &quot;Arroz, feijão e mais um acompanhamento à sua escolha.&quot;, tamanhos: [],
+      pratos: [
+        { id: &quot;e1&quot;, nome: &quot;Filé de frango com creme de milho&quot;, preco: 35, dias: [4] },
+        { id: &quot;e2&quot;, nome: &quot;Contrafilé à parmegiana&quot;, preco: 42, dias: [4] },
+        { id: &quot;e3&quot;, nome: &quot;Filé de frango grelhado&quot;, preco: 32, dias: [1,2,3,4,5,6] },
+        { id: &quot;e4&quot;, nome: &quot;Filé de peixe ao molho branco&quot;, preco: 39, dias: [4] },
+        { id: &quot;e5&quot;, nome: &quot;Talharim com sobrecoxa de frango&quot;, preco: 37, dias: [4], variacoes: { titulo: &quot;Molho&quot;, opcoes: [&quot;Sugo&quot;, &quot;Bolonhesa&quot;, &quot;Branco&quot;] }, semAcomp: true }
+      ] },
+    { id: &quot;pm&quot;, nome: &quot;Marmita Pequena ou Média&quot;, desc: &quot;Arroz, feijão e mais um acompanhamento à sua escolha.&quot;, tamanhos: [{ id: &quot;p&quot;, nome: &quot;Pequena&quot;, preco: 24 }, { id: &quot;m&quot;, nome: &quot;Média&quot;, preco: 27 }],
+      pratos: [
+        { id: &quot;p1&quot;, nome: &quot;Peixe empanado&quot;, dias: [4] },
+        { id: &quot;p2&quot;, nome: &quot;Filé de frango com creme de milho&quot;, dias: [4] },
+        { id: &quot;p3&quot;, nome: &quot;Coxa assada&quot;, dias: [4] }
+      ] }
+  ]
+};
+
+/* ---------------- entrada ---------------- */
+function doGet(e) { var p = (e &amp;&amp; e.parameter) || {}; if (p.acao) return responder_(executar_(p)); return ContentService.createTextOutput(&quot;Pedido Fácil by DayIA · servidor funcionando (versão &quot; + VERSAO_SISTEMA + &quot;).&quot;); }
+function doPost(e) { var d = {}; try { d = JSON.parse(e.postData.contents || &quot;{}&quot;); } catch (x) { return responder_({ erro: &quot;Pedido inválido.&quot; }); } return responder_(executar_(d)); }
+function responder_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function executar_(d) { try { var f = ACOES[d.acao]; if (!f) return { erro: &quot;Ação desconhecida.&quot; }; return f(d); } catch (x) { return { erro: String(x &amp;&amp; x.message || x) }; } }
+
+var ACOES = {
+  ping: function () { return { ok: true, versao: VERSAO_SISTEMA }; },
+
+  /* ======== PÁGINA DO CLIENTE ======== */
+  info: function (d) {
+    var N = negocio_(d.n), L = liberado_(N);
+    if (!L.ok) return { ok: true, bloqueado: true, negocio: { nome: String(N.nome) }, whatsapp: L.whatsapp };
+    return { ok: true, negocio: publicoNeg_(N), cardapio: cardapio_(N), agora: Date.now(), fuso: fuso_() };
+  },
+  pedir: function (d) {
+    var N = negocio_(d.n);
+    if (!liberado_(N).ok) throw new Error(&quot;Os pedidos online estão indisponíveis no momento.&quot;);
+    var c = d.dados || {};
+    if (!lim_(c.nome, 80)) throw new Error(&quot;Coloque o seu nome.&quot;);
+    if (soDig_(c.tel).length &lt; 10) throw new Error(&quot;Coloque um WhatsApp com DDD.&quot;);
+    var tipo = c.tipo === &quot;entrega&quot; ? &quot;entrega&quot; : &quot;retirada&quot;;
+    if (tipo === &quot;entrega&quot; &amp;&amp; !sim_(N.entrega)) throw new Error(&quot;Este restaurante não está fazendo entrega.&quot;);
+    if (tipo === &quot;retirada&quot; &amp;&amp; !sim_(N.retirada)) throw new Error(&quot;Este restaurante não está fazendo retirada.&quot;);
+    if (tipo === &quot;entrega&quot; &amp;&amp; lim_(c.endereco, 300).length &lt; 8) throw new Error(&quot;Coloque o endereço completo para a entrega.&quot;);
+    if (!aberto_(N)) throw new Error(&quot;O restaurante está fechado agora. &quot; + horarioTxt_(N));
+    var calc = calcular_(N, c.itens || []);
+    if (!calc.itens.length) throw new Error(&quot;Escolha pelo menos um prato.&quot;);
+    var minimo = Number(N.pedido_minimo) || 0;
+    if (minimo &amp;&amp; calc.subtotal &lt; minimo) throw new Error(&quot;O pedido mínimo é &quot; + brl_(minimo) + &quot;.&quot;);
+    var taxa = tipo === &quot;entrega&quot; ? (Number(N.taxa_entrega) || 0) : 0, total = Math.round((calc.subtotal + taxa) * 100) / 100;
+    var pag = c.pagamento === &quot;na_hora&quot; &amp;&amp; sim_(N.pagar_na_hora) ? &quot;na_hora&quot; : &quot;pix&quot;;
+    return comTrava_(function () {
+      var id = proximoId_(), agora = Date.now();
+      var p = { negocio: N.n, id: id, num: numDia_(N.n, agora), criado: agora, quando: legivel_(agora), cliente: lim_(c.nome, 80), tel: lim_(c.tel, 30), email: lim_(c.email, 120),
+        tipo: tipo, endereco: tipo === &quot;entrega&quot; ? lim_(c.endereco, 300) : &quot;&quot;, itens: JSON.stringify(calc.itens), resumo: calc.resumo, subtotal: calc.subtotal, taxa: taxa, total: total,
+        pagamento: pag, comprovante: &quot;&quot;, pago: &quot;&quot;, status: &quot;novo&quot;, obs: lim_(c.obs, 400), chave: Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 10), historico: JSON.stringify([{ s: &quot;novo&quot;, t: agora }]) };
+      if (c.arquivo &amp;&amp; c.arquivo.dados) p.comprovante = salvarComprovante_(N, p, c.arquivo);
+      inserir_(&quot;Pedidos&quot;, p);
+      if (d.base) setCfg_(&quot;link_base&quot;, String(d.base).split(&quot;?&quot;)[0].split(&quot;#&quot;)[0]);
+      mudou_(N.n);
+      avisarNegocio_(N, p);
+      emailCliente_(N, p, &quot;novo&quot;);
+      push_([&quot;N_&quot; + N.n], &quot;🛎️ Pedido #&quot; + p.num + &quot; · &quot; + p.cliente, brl_(total) + &quot; · &quot; + (tipo === &quot;entrega&quot; ? &quot;Entrega&quot; : &quot;Retirada&quot;) + &quot; · &quot; + p.resumo, linkPainel_(N));
+      return { ok: true, pedido: publico_(p), chave: p.chave };
+    });
+  },
+  comprovante: function (d) { // cliente manda o comprovante depois
+    var N = negocio_(d.n), p = doCliente_(N, d);
+    if (!d.arquivo || !d.arquivo.dados) throw new Error(&quot;Escolha a foto ou o PDF do comprovante.&quot;);
+    var id = salvarComprovante_(N, p, d.arquivo);
+    atualizarPed_(p.id, { comprovante: id }); mudou_(N.n);
+    push_([&quot;N_&quot; + N.n], &quot;🧾 Comprovante do pedido #&quot; + p.num, p.cliente + &quot; mandou o comprovante · &quot; + brl_(p.total), linkPainel_(N));
+    return { ok: true };
+  },
+  meus: function (d) {
+    var N = negocio_(d.n), out = [];
+    (d.lista || []).slice(0, 15).forEach(function (x) { try { out.push(publico_(doCliente_(N, x))); } catch (e) {} });
+    return { ok: true, pedidos: out };
+  },
+  pushReg: function (d) {
+    if (d.token) pushGuardar_(&quot;N_&quot; + sessao_(d), d.sub);
+    else { var N = negocio_(d.n); (d.lista || []).slice(0, 10).forEach(function (x) { try { var p = doCliente_(N, x); pushGuardar_(&quot;C_&quot; + N.n + &quot;_&quot; + p.id, d.sub); } catch (e) {} }); }
+    return { ok: true, ativo: !!pushChave_() };
+  },
+
+  /* ======== PAINEL DO RESTAURANTE ======== */
+  entrar: function (d) {
+    var N = negocio_(d.n);
+    if (!confereSenha_(N, String(d.senha || &quot;&quot;))) throw new Error(&quot;Senha incorreta.&quot;);
+    return { ok: true, token: novoToken_(N.n) };
+  },
+  sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
+  versao: function (d) { var n = sessao_(d); return { ok: true, v: versao_(n) }; },
+  painel: function (d) {
+    var n = sessao_(d), N = negocio_(n), desde = Date.now() - (Number(d.dias) || 2) * DIA;
+    var lista = pedidos_(n).filter(function (p) { return p.criado &gt;= desde || [&quot;novo&quot;, &quot;confirmado&quot;, &quot;preparo&quot;, &quot;pronto&quot;, &quot;saiu&quot;].indexOf(p.status) &gt;= 0; });
+    return { ok: true, v: versao_(n), negocio: completoNeg_(N), cardapio: cardapio_(N), pedidos: lista.map(function (p) { return publico_(p, true); }), licenca: liberado_(N), resumo: resumo_(n) };
+  },
+  status: function (d) {
+    var n = sessao_(d), N = negocio_(n);
+    return comTrava_(function () {
+      var p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
+      if (!p) throw new Error(&quot;Pedido não encontrado.&quot;);
+      var campos = {};
+      if (d.status &amp;&amp; STATUS[d.status]) { campos.status = d.status; var h = hist_(p); h.push({ s: d.status, t: Date.now() }); campos.historico = JSON.stringify(h); }
+      if (d.pago !== undefined) campos.pago = d.pago ? &quot;SIM&quot; : &quot;&quot;;
+      atualizarPed_(p.id, campos); mudou_(n);
+      if (campos.status) {
+        Object.keys(campos).forEach(function (k) { p[k] = campos[k]; });
+        push_([&quot;C_&quot; + n + &quot;_&quot; + p.id], N.nome, avisoCli_(p), linkCli_(N, p));
+        if ([&quot;confirmado&quot;, &quot;saiu&quot;, &quot;pronto&quot;, &quot;cancelado&quot;].indexOf(d.status) &gt;= 0) emailCliente_(N, p, d.status);
+      }
+      return { ok: true };
+    });
+  },
+  verComprovante: function (d) {
+    var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
+    if (!p || !p.comprovante) throw new Error(&quot;Este pedido não tem comprovante.&quot;);
+    var f = DriveApp.getFileById(String(p.comprovante)), b = f.getBlob();
+    return { ok: true, tipo: b.getContentType(), dados: Utilities.base64Encode(b.getBytes()), nome: f.getName() };
+  },
+  salvarCardapio: function (d) {
+    var n = sessao_(d), c = d.cardapio || {};
+    if (!c.grupos || !c.grupos.length) throw new Error(&quot;O cardápio precisa ter pelo menos um grupo.&quot;);
+    var s = JSON.stringify(c); if (s.length &gt; 45000) throw new Error(&quot;Cardápio grande demais.&quot;);
+    atualizarNeg_(n, { cardapio: s }); mudou_(n);
+    return { ok: true };
+  },
+  salvarAjustes: function (d) {
+    var n = sessao_(d), a = d.ajustes || {}, m = {};
+    [&quot;nome&quot;, &quot;telefone&quot;, &quot;endereco&quot;, &quot;instagram&quot;, &quot;pix_chave&quot;, &quot;pix_nome&quot;, &quot;pix_banco&quot;, &quot;entrega_obs&quot;, &quot;abre&quot;, &quot;fecha&quot;, &quot;tempo&quot;, &quot;aviso&quot;, &quot;email_aviso&quot;, &quot;whatsapp&quot;].forEach(function (k) { if (a[k] !== undefined) m[k] = lim_(a[k], 200); });
+    [&quot;taxa_entrega&quot;, &quot;pedido_minimo&quot;].forEach(function (k) { if (a[k] !== undefined) m[k] = Math.max(0, Number(String(a[k]).replace(&quot;,&quot;, &quot;.&quot;)) || 0); });
+    [&quot;retirada&quot;, &quot;entrega&quot;, &quot;pagar_na_hora&quot;].forEach(function (k) { if (a[k] !== undefined) m[k] = a[k] ? &quot;SIM&quot; : &quot;NÃO&quot;; });
+    if (a.dias) m.dias = a.dias.map(Number).filter(function (x) { return x &gt;= 0 &amp;&amp; x &lt;= 6; }).join(&quot;,&quot;);
+    if (a.logo !== undefined) { if (String(a.logo).length &gt; 40000) throw new Error(&quot;Logo grande demais.&quot;); m.logo = String(a.logo); }
+    if (a.senha) { if (String(a.senha).length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;); m.senha = hash_(a.senha); }
+    atualizarNeg_(n, m); mudou_(n);
+    return { ok: true };
+  }
+};
+
+/* ---------------- regras ---------------- */
+function cardapio_(N) { try { var c = JSON.parse(N.cardapio || &quot;{}&quot;); return c &amp;&amp; c.grupos ? c : { grupos: [] }; } catch (x) { return { grupos: [] }; } }
+function calcular_(N, itens) {
+  var C = cardapio_(N), out = [], sub = 0, wd = diaSemana_(Date.now());
+  itens.slice(0, 40).forEach(function (it) {
+    var g = (C.grupos || []).filter(function (x) { return x.id === it.g; })[0]; if (!g) return;
+    var p = (g.pratos || []).filter(function (x) { return x.id === it.p; })[0]; if (!p || p.esgotado || p.ativo === false) return;
+    if (p.dias &amp;&amp; p.dias.length &amp;&amp; p.dias.indexOf(wd) &lt; 0) return;
+    var preco = Number(p.preco) || 0, tam = &quot;&quot;;
+    if (g.tamanhos &amp;&amp; g.tamanhos.length) { var t = g.tamanhos.filter(function (x) { return x.id === it.t; })[0] || g.tamanhos[0]; preco = Number(t.preco) || 0; tam = t.nome; }
+    var q = Math.max(1, Math.min(50, Number(it.q) || 1));
+    var ac = !p.semAcomp &amp;&amp; C.acomp &amp;&amp; (C.acomp.opcoes || []).indexOf(it.a) &gt;= 0 ? it.a : &quot;&quot;;
+    var va = p.variacoes &amp;&amp; (p.variacoes.opcoes || []).indexOf(it.v) &gt;= 0 ? it.v : &quot;&quot;;
+    out.push({ grupo: g.nome, prato: p.nome, tam: tam, acomp: ac, var: va, obs: lim_(it.obs, 160), q: q, unit: preco, total: Math.round(preco * q * 100) / 100 });
+    sub += preco * q;
+  });
+  return { itens: out, subtotal: Math.round(sub * 100) / 100, resumo: out.map(function (i) { return i.q + &quot;× &quot; + (i.tam ? i.tam + &quot; &quot; : &quot;&quot;) + i.prato; }).join(&quot;, &quot;) };
+}
+function aberto_(N) {
+  var wd = diaSemana_(Date.now()), dias = String(N.dias || &quot;&quot;).split(&quot;,&quot;).map(Number);
+  if (dias.indexOf(wd) &lt; 0) return false;
+  var m = minutosHoje_(Date.now());
+  return m &gt;= hm_(hmTxt_(N.abre)) &amp;&amp; m &lt; hm_(hmTxt_(N.fecha));
+}
+function horarioTxt_(N) { return &quot;Pedidos das &quot; + hmTxt_(N.abre) + &quot; às &quot; + hmTxt_(N.fecha) + &quot;.&quot;; }
+function numDia_(n, agora) { var d0 = inicioDia_(agora); return pedidos_(n).filter(function (p) { return p.criado &gt;= d0; }).length + 1; }
+function resumo_(n) {
+  var hoje = inicioDia_(Date.now()), sem = hoje - 6 * DIA, ok = pedidos_(n).filter(function (p) { return p.status !== &quot;cancelado&quot;; });
+  var soma = function (l) { return Math.round(l.reduce(function (a, p) { return a + Number(p.total || 0); }, 0) * 100) / 100; };
+  var lh = ok.filter(function (p) { return p.criado &gt;= hoje; }), ls = ok.filter(function (p) { return p.criado &gt;= sem; });
+  var cont = {}; ls.forEach(function (p) { try { JSON.parse(p.itens).forEach(function (i) { cont[i.prato] = (cont[i.prato] || 0) + i.q; }); } catch (e) {} });
+  var top = Object.keys(cont).map(function (k) { return [k, cont[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 5);
+  var dias = []; for (var i = 6; i &gt;= 0; i--) { var a = hoje - i * DIA; dias.push([a, soma(ok.filter(function (p) { return p.criado &gt;= a &amp;&amp; p.criado &lt; a + DIA; }))]); }
+  return { hoje: { n: lh.length, total: soma(lh) }, semana: { n: ls.length, total: soma(ls) }, top: top, dias: dias };
+}
+function avisoCli_(p) {
+  return { confirmado: &quot;✅ Seu pedido #&quot; + p.num + &quot; foi confirmado&quot;, preparo: &quot;👩‍🍳 Seu pedido #&quot; + p.num + &quot; está sendo preparado&quot;, pronto: &quot;🛍️ Seu pedido #&quot; + p.num + &quot; está pronto para retirar&quot;,
+    saiu: &quot;🛵 Seu pedido #&quot; + p.num + &quot; saiu para entrega&quot;, entregue: &quot;🎉 Pedido #&quot; + p.num + &quot; entregue. Bom apetite!&quot;, cancelado: &quot;❌ Seu pedido #&quot; + p.num + &quot; foi cancelado&quot; }[p.status] || &quot;Seu pedido foi atualizado&quot;;
+}
+
+/* ---------------- comprovante no Drive ---------------- */
+function pasta_() {
+  var id = cfgVal_(&quot;pasta_comprovantes&quot;);
+  if (id) { try { return DriveApp.getFolderById(id); } catch (x) {} }
+  var f = DriveApp.createFolder(&quot;Pedido Fácil · Comprovantes&quot;); setCfg_(&quot;pasta_comprovantes&quot;, f.getId()); return f;
+}
+function salvarComprovante_(N, p, arq) {
+  var tipo = String(arq.tipo || &quot;image/jpeg&quot;);
+  if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(tipo)) throw new Error(&quot;Mande o comprovante em foto ou PDF.&quot;);
+  var bytes = Utilities.base64Decode(String(arq.dados).replace(/^data:[^,]+,/, &quot;&quot;));
+  if (bytes.length &gt; 6 * 1024 * 1024) throw new Error(&quot;Arquivo grande demais (máximo 6 MB).&quot;);
+  var ext = tipo === &quot;application/pdf&quot; ? &quot;.pdf&quot; : (tipo === &quot;image/png&quot; ? &quot;.png&quot; : &quot;.jpg&quot;);
+  var f = pasta_().createFile(Utilities.newBlob(bytes, tipo, N.n + &quot;_pedido&quot; + p.id + &quot;_&quot; + soDig_(legivel_(Date.now())) + ext));
+  return f.getId();
+}
+
+/* ---------------- e-mails ---------------- */
+function itensHtml_(p) {
+  var l = []; try { l = JSON.parse(p.itens); } catch (x) {}
+  return &quot;&lt;table style=&#x27;border-collapse:collapse;width:100%;max-width:520px&#x27;&gt;&quot; + l.map(function (i) {
+    return &quot;&lt;tr&gt;&lt;td style=&#x27;padding:6px 0;border-bottom:1px solid #eee&#x27;&gt;&lt;b&gt;&quot; + i.q + &quot;× &quot; + esc_((i.tam ? i.tam + &quot; · &quot; : &quot;&quot;) + i.prato) + &quot;&lt;/b&gt;&quot; +
+      [i.var &amp;&amp; &quot;Molho: &quot; + i.var, i.acomp &amp;&amp; &quot;Acomp.: &quot; + i.acomp, i.obs].filter(Boolean).map(function (x) { return &quot;&lt;br&gt;&lt;span style=&#x27;color:#555&#x27;&gt;&quot; + esc_(x) + &quot;&lt;/span&gt;&quot;; }).join(&quot;&quot;) +
+      &quot;&lt;/td&gt;&lt;td style=&#x27;text-align:right;border-bottom:1px solid #eee&#x27;&gt;&quot; + brl_(i.total) + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;; }).join(&quot;&quot;) +
+    (Number(p.taxa) ? &quot;&lt;tr&gt;&lt;td style=&#x27;padding:6px 0&#x27;&gt;Taxa de entrega&lt;/td&gt;&lt;td style=&#x27;text-align:right&#x27;&gt;&quot; + brl_(p.taxa) + &quot;&lt;/td&gt;&lt;/tr&gt;&quot; : &quot;&quot;) +
+    &quot;&lt;tr&gt;&lt;td style=&#x27;padding:6px 0&#x27;&gt;&lt;b&gt;Total&lt;/b&gt;&lt;/td&gt;&lt;td style=&#x27;text-align:right&#x27;&gt;&lt;b&gt;&quot; + brl_(p.total) + &quot;&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&quot;;
+}
+function avisarNegocio_(N, p) {
+  if (!/@/.test(N.email_aviso || &quot;&quot;)) return;
+  var lk = linkPainel_(N);
+  enviar_(String(N.email_aviso), &quot;🛎️ Pedido #&quot; + p.num + &quot; · &quot; + p.cliente + &quot; · &quot; + brl_(p.total),
+    &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Novo pedido #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; · WhatsApp &quot; + esc_(p.tel) + &quot;&lt;br&gt;&quot; +
+    (p.tipo === &quot;entrega&quot; ? &quot;🛵 Entrega: &quot; + esc_(p.endereco) : &quot;🛍️ Retirada no local&quot;) + &quot;&lt;br&gt;Pagamento: &quot; + (p.pagamento === &quot;pix&quot; ? &quot;Pix&quot; + (p.comprovante ? &quot; · comprovante enviado ✅&quot; : &quot; · aguardando comprovante&quot;) : &quot;na entrega/retirada&quot;) +
+    (p.obs ? &quot;&lt;br&gt;Recado: &quot; + esc_(p.obs) : &quot;&quot;) + &quot;&lt;/p&gt;&quot; + itensHtml_(p) +
+    (lk ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + lk + &quot;&#x27; style=&#x27;background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Abrir o painel&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;), String(N.nome));
+}
+function emailCliente_(N, p, tipo) {
+  if (!/@/.test(p.email || &quot;&quot;)) return;
+  var tit = { novo: &quot;Recebemos seu pedido #&quot; + p.num, confirmado: &quot;Pedido #&quot; + p.num + &quot; confirmado&quot;, saiu: &quot;Pedido #&quot; + p.num + &quot; saiu para entrega&quot;, pronto: &quot;Pedido #&quot; + p.num + &quot; pronto para retirar&quot;, cancelado: &quot;Pedido #&quot; + p.num + &quot; cancelado&quot; }[tipo] || &quot;Pedido #&quot; + p.num;
+  var lk = linkCli_(N, p);
+  enviar_(p.email, tit + &quot; · &quot; + N.nome,
+    &quot;&lt;p&gt;Olá, &quot; + esc_(String(p.cliente).split(&quot; &quot;)[0]) + &quot;!&lt;/p&gt;&lt;p&gt;&lt;b&gt;&quot; + tit + &quot;&lt;/b&gt;.&lt;/p&gt;&quot; + itensHtml_(p) +
+    &quot;&lt;p&gt;&quot; + (p.tipo === &quot;entrega&quot; ? &quot;🛵 Entrega em: &quot; + esc_(p.endereco) : &quot;🛍️ Retirada no local&quot; + (N.endereco ? &quot;: &quot; + esc_(N.endereco) : &quot;&quot;)) + &quot;&lt;/p&gt;&quot; +
+    (lk ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + lk + &quot;&#x27; style=&#x27;background:#0E2238;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Acompanhar meu pedido&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;) +
+    &quot;&lt;p style=&#x27;color:#4A5B75&#x27;&gt;&quot; + esc_(N.nome) + (N.telefone ? &quot; · &quot; + esc_(N.telefone) : &quot;&quot;) + &quot;&lt;/p&gt;&quot;, String(N.nome));
+}
+function enviar_(para, assunto, html, nome) {
+  try { if (MailApp.getRemainingDailyQuota() &lt; 1) return; MailApp.sendEmail({ to: para, subject: assunto, htmlBody: &quot;&lt;div style=&#x27;font-family:Arial,sans-serif;color:#0E2238;font-size:14px&#x27;&gt;&quot; + html + &quot;&lt;/div&gt;&quot;, name: nome || &quot;Pedido Fácil&quot; }); }
+  catch (x) { console.log(&quot;e-mail não enviado: &quot; + x); }
+}
+
+/* ---------------- negócio e licença ---------------- */
+function negocio_(n, semErro) {
+  n = String(n || &quot;&quot;).toLowerCase().trim();
+  var N = linhas_(&quot;Negocios&quot;).filter(function (x) { return String(x.n).toLowerCase() === n; })[0];
+  if (!N &amp;&amp; !semErro) throw new Error(&quot;Restaurante não encontrado. Confira o link.&quot;);
+  if (N) N.n = String(N.n).toLowerCase();
+  return N || null;
+}
+function liberado_(N) {
+  var s = String(N.situacao || &quot;&quot;).toLowerCase().trim();
+  if (s === &quot;cortesia&quot; || s === &quot;ativo&quot;) return { ok: true, situacao: s };
+  if (s === &quot;suspenso&quot;) return { ok: false, situacao: s, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+  var ate = dataDe_(N.teste_ate);
+  if (ate &amp;&amp; Date.now() &gt; ate + DIA) return { ok: false, situacao: &quot;teste_vencido&quot;, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+  return { ok: true, situacao: &quot;teste&quot;, dias_restantes: ate ? Math.max(0, Math.floor((ate + DIA - Date.now()) / DIA)) : null, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+}
+function publicoNeg_(N) {
+  return { n: N.n, nome: String(N.nome), tel: String(N.telefone || &quot;&quot;), whats: soDig_(N.whatsapp), end: String(N.endereco || &quot;&quot;), insta: String(N.instagram || &quot;&quot;), logo: String(N.logo || &quot;&quot;),
+    pix_chave: String(N.pix_chave || &quot;&quot;), pix_nome: String(N.pix_nome || &quot;&quot;), pix_banco: String(N.pix_banco || &quot;&quot;), taxa: Number(N.taxa_entrega) || 0, entrega_obs: String(N.entrega_obs || &quot;&quot;),
+    retirada: sim_(N.retirada), entrega: sim_(N.entrega), na_hora: sim_(N.pagar_na_hora), dias: String(N.dias || &quot;&quot;).split(&quot;,&quot;).filter(String).map(Number),
+    abre: hmTxt_(N.abre), fecha: hmTxt_(N.fecha), tempo: String(N.tempo || &quot;&quot;), minimo: Number(N.pedido_minimo) || 0, aviso: String(N.aviso || &quot;&quot;), aberto: aberto_(N) };
+}
+function completoNeg_(N) { var o = publicoNeg_(N); o.email_aviso = String(N.email_aviso || &quot;&quot;); o.whatsapp = String(N.whatsapp || &quot;&quot;); return o; }
+function confereSenha_(N, senha) {
+  var s = String(N.senha || &quot;&quot;);
+  if (/^[0-9a-f]{64}$/.test(s)) return hash_(senha) === s;
+  if (s !== &quot;&quot; &amp;&amp; s === senha) { atualizarNeg_(N.n, { senha: hash_(senha) }); return true; }
+  return false;
+}
+function hash_(s) { var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, &quot;pedidofacil:&quot; + String(s), Utilities.Charset.UTF_8); return b.map(function (x) { return (&quot;0&quot; + ((x + 256) % 256).toString(16)).slice(-2); }).join(&quot;&quot;); }
+
+/* ---------------- pedidos ---------------- */
+function pedidos_(n) {
+  return linhas_(&quot;Pedidos&quot;).filter(function (p) { return String(p.negocio).toLowerCase() === n; }).map(function (p) {
+    p.id = Number(p.id); p.num = Number(p.num); p.criado = Number(p.criado); p.total = Number(p.total); p.subtotal = Number(p.subtotal); p.taxa = Number(p.taxa); p.status = String(p.status); return p; });
+}
+function doCliente_(N, x) { var p = pedidos_(N.n).filter(function (y) { return y.id === Number(x.id); })[0]; if (!p || !x.chave || String(p.chave) !== String(x.chave)) throw new Error(&quot;Pedido não encontrado.&quot;); return p; }
+function hist_(p) { try { return JSON.parse(p.historico || &quot;[]&quot;); } catch (x) { return []; } }
+function publico_(p, painel) {
+  var o = { id: p.id, num: p.num, criado: p.criado, cliente: String(p.cliente), tipo: String(p.tipo), endereco: String(p.endereco || &quot;&quot;), itens: (function () { try { return JSON.parse(p.itens); } catch (x) { return []; } })(),
+    subtotal: p.subtotal, taxa: p.taxa, total: p.total, pagamento: String(p.pagamento), comprovante: !!p.comprovante, pago: sim_(p.pago), status: p.status, obs: String(p.obs || &quot;&quot;), historico: hist_(p) };
+  if (painel) { o.tel = String(p.tel); o.email = String(p.email || &quot;&quot;); }
+  return o;
+}
+function atualizarPed_(id, campos) { atualizarPor_(&quot;Pedidos&quot;, 1, Number(id), campos); }
+function atualizarNeg_(n, campos) { atualizarPor_(&quot;Negocios&quot;, 0, n, campos); }
+function linkNeg_(N) { var b = cfgVal_(&quot;link_base&quot;); return b ? b + &quot;?n=&quot; + encodeURIComponent(N.n) : &quot;&quot;; }
+function linkPainel_(N) { var l = linkNeg_(N); return l ? l + &quot;#painel&quot; : &quot;&quot;; }
+function linkCli_(N, p) { var l = linkNeg_(N); return l ? l + &quot;&amp;p=&quot; + p.id + &quot;&amp;k=&quot; + p.chave : &quot;&quot;; }
+
+/* ---------------- planilha ---------------- */
+function planilha_() { var id = PropertiesService.getScriptProperties().getProperty(&quot;PLANILHA&quot;); return id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(); }
+function aba_(n) { var sh = planilha_().getSheetByName(n); if (!sh) throw new Error(&quot;A aba &quot; + n + &quot; não existe. Rode a função configurar.&quot;); return sh; }
+function linhas_(n) { var v = aba_(n).getDataRange().getValues(), cab = v.shift(); return v.filter(function (r) { return r.join(&quot;&quot;) !== &quot;&quot;; }).map(function (r) { var o = {}; cab.forEach(function (c, i) { o[c] = r[i]; }); return o; }); }
+var CAB_ = {};
+function cab_(n) { if (!CAB_[n]) { var sh = aba_(n); CAB_[n] = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String); } return CAB_[n]; }
+function inserir_(n, o) { aba_(n).appendRow(txtRow_(cab_(n).map(function (c) { return o[c] === undefined || o[c] === null ? &quot;&quot; : o[c]; }))); }
+function atualizarPor_(aba, col0, chave, campos) {
+  var sh = aba_(aba), v = sh.getDataRange().getValues();
+  for (var i = 1; i &lt; v.length; i++) {
+    var k = v[i][col0];
+    if ((typeof chave === &quot;number&quot; &amp;&amp; Number(k) === chave) || (typeof chave === &quot;string&quot; &amp;&amp; String(k).toLowerCase() === chave)) {
+      var cab = cab_(aba); Object.keys(campos).forEach(function (c) { var col = cab.indexOf(c); if (col &gt;= 0) sh.getRange(i + 1, col + 1).setValue(txt_(campos[c])); }); return;
+    }
+  }
+}
+function cfgVal_(k) { var r = linhas_(&quot;Config&quot;).filter(function (x) { return x.chave === k; })[0]; return r ? String(r.valor) : &quot;&quot;; }
+function setCfg_(k, v) {
+  var sh = aba_(&quot;Config&quot;), d = sh.getDataRange().getValues();
+  for (var i = 1; i &lt; d.length; i++) if (d[i][0] === k) { sh.getRange(i + 1, 2).setValue(txt_(String(v))); return; }
+  sh.appendRow([k, txt_(String(v)), &quot;&quot;]);
+}
+function proximoId_() { var id = Number(cfgVal_(&quot;proximo_id&quot;)) || 1; setCfg_(&quot;proximo_id&quot;, id + 1); return id; }
+
+/* ---------------- tempo ---------------- */
+var FUSO_CACHE = null;
+function fuso_() { if (FUSO_CACHE === null) FUSO_CACHE = Number(cfgVal_(&quot;fuso_minutos&quot;)) || -180; return FUSO_CACHE; }
+function inicioDia_(t) { var off = fuso_() * MIN; return Math.floor((t + off) / DIA) * DIA - off; }
+function diaSemana_(t) { return new Date(t + fuso_() * MIN).getUTCDay(); }
+function minutosHoje_(t) { return Math.floor((t - inicioDia_(t)) / MIN); }
+function hm_(s) { var p = String(s || &quot;0:0&quot;).split(&quot;:&quot;); return Number(p[0]) * 60 + (Number(p[1]) || 0); }
+function hmTxt_(v) { if (v instanceof Date) return (&quot;0&quot; + v.getHours()).slice(-2) + &quot;:&quot; + (&quot;0&quot; + v.getMinutes()).slice(-2); return String(v || &quot;&quot;).trim(); }
+function legivel_(t) { var d = new Date(t + fuso_() * MIN); var z = function (x) { return (&quot;0&quot; + x).slice(-2); }; return z(d.getUTCDate()) + &quot;/&quot; + z(d.getUTCMonth() + 1) + &quot;/&quot; + d.getUTCFullYear() + &quot; &quot; + z(d.getUTCHours()) + &quot;:&quot; + z(d.getUTCMinutes()); }
+function dataDe_(v) {
+  if (!v) return 0; if (v instanceof Date) return v.getTime();
+  var m = String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return Date.UTC(+m[3], +m[2] - 1, +m[1]) - fuso_() * MIN;
+  var t = Date.parse(v); return isNaN(t) ? 0 : t;
+}
+
+/* ---------------- sessão, versão e trava ---------------- */
+var SESSAO_DIAS = 60;
+function novoToken_(n) { var t = Utilities.getUuid(); PropertiesService.getScriptProperties().setProperty(&quot;SS_&quot; + t, JSON.stringify({ v: n, exp: Date.now() + SESSAO_DIAS * DIA })); return t; }
+function sessao_(d) {
+  var t = String(d.token || &quot;&quot;), raw = t &amp;&amp; PropertiesService.getScriptProperties().getProperty(&quot;SS_&quot; + t);
+  if (!raw) throw new Error(&quot;SESSAO&quot;);
+  var o = JSON.parse(raw); if (!(o.exp &gt; Date.now())) throw new Error(&quot;SESSAO&quot;);
+  return o.v;
+}
+function encerrarSessao_(t) { if (t) PropertiesService.getScriptProperties().deleteProperty(&quot;SS_&quot; + t); }
+function versao_(n) { return Number(PropertiesService.getScriptProperties().getProperty(&quot;V_&quot; + n) || 1); }
+function mudou_(n) { PropertiesService.getScriptProperties().setProperty(&quot;V_&quot; + n, String(Date.now())); }
+function comTrava_(fn) { var l = LockService.getScriptLock(); if (!l.tryLock(20000)) throw new Error(&quot;Muitos pedidos agora. Tente de novo em alguns segundos.&quot;); try { return fn(); } finally { SpreadsheetApp.flush(); l.releaseLock(); } }
+
+/* ---------------- avisos no celular (OneSignal, o mesmo app da Agenda Fácil) ---------------- */
+var ONESIGNAL_APP = &quot;7a1178de-2e8b-4205-aeb9-8171f97fb614&quot;;
+function pushGuardar_(chave, sub) {
+  sub = String(sub || &quot;&quot;).trim(); if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error(&quot;Aparelho inválido.&quot;);
+  var P = PropertiesService.getScriptProperties(), k = &quot;PS_&quot; + chave, o = { s: [] };
+  try { o = JSON.parse(P.getProperty(k) || &#x27;{&quot;s&quot;:[]}&#x27;); } catch (x) {}
+  var l = (o.s || []).filter(function (s) { return s !== sub; }); l.push(sub);
+  P.setProperty(k, JSON.stringify({ s: l.slice(-5), t: Date.now() }));
+}
+function pushChave_() { return String(cfgVal_(&quot;push_chave&quot;) || &quot;&quot;).trim(); }
+function push_(chaves, titulo, texto, url) {
+  try {
+    var key = pushChave_(); if (!key) return;
+    var subs = []; chaves.forEach(function (c) { try { (JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;PS_&quot; + c) || &#x27;{&quot;s&quot;:[]}&#x27;).s || []).forEach(function (s) { if (subs.indexOf(s) &lt; 0) subs.push(s); }); } catch (x) {} });
+    if (!subs.length) return;
+    var corpo = { app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
+      chrome_web_icon: &quot;https://dailva123.github.io/dayia/pedido/app/icon-192.png&quot;, ttl: 86400 };
+    if (url) corpo.url = url;
+    var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
+      headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key }, payload: JSON.stringify(corpo) });
+    if (r.getResponseCode() &gt;= 300) console.log(&quot;aviso push recusado: &quot; + r.getResponseCode() + &quot; &quot; + r.getContentText().slice(0, 300));
+  } catch (x) { console.log(&quot;aviso push não enviado: &quot; + x); }
+}
+function testarAviso() {
+  var key = pushChave_(); if (!key) return &quot;Falta colar a chave do OneSignal na aba Config (linha push_chave).&quot;;
+  var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
+    headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key }, payload: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: [&quot;00000000-0000-0000-0000-000000000000&quot;], contents: { en: &quot;teste&quot; } }) });
+  var c = r.getResponseCode(), msg = (c === 401 || c === 403) ? &quot;❌ A chave não foi aceita (&quot; + c + &quot;). Confira se copiou inteira.&quot; : &quot;✅ Chave do OneSignal funcionando!&quot;;
+  console.log(msg); return msg;
+}
+
+/* ---------------- utilidades ---------------- */
+function txt_(v) { return (typeof v === &quot;string&quot; &amp;&amp; v !== &quot;&quot;) ? &quot;&#x27;&quot; + v : v; }
+function txtRow_(r) { return r.map(txt_); }
+function sim_(v) { return /^s/i.test(String(v).trim()); }
+function lim_(v, n) { return String(v === undefined || v === null ? &quot;&quot; : v).trim().slice(0, n); }
+function soDig_(t) { return String(t || &quot;&quot;).replace(/\D/g, &quot;&quot;); }
+function brl_(v) { return &quot;R$ &quot; + (Number(v) || 0).toFixed(2).replace(&quot;.&quot;, &quot;,&quot;); }
+function esc_(s) { return String(s === undefined || s === null ? &quot;&quot; : s).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g, function (c) { return { &quot;&amp;&quot;: &quot;&amp;amp;&quot;, &quot;&lt;&quot;: &quot;&amp;lt;&quot;, &quot;&gt;&quot;: &quot;&amp;gt;&quot;, &#x27;&quot;&#x27;: &quot;&amp;quot;&quot;, &quot;&#x27;&quot;: &quot;&amp;#39;&quot; }[c]; }); }
+</textarea></main>
+<script>var b=document.getElementById("b"),t=document.getElementById("t");
+b.onclick=function(){t.select();var ok=function(){b.textContent="✅ Copiado! Agora cole no Apps Script";b.className="ok"};
+if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(ok,function(){document.execCommand("copy");ok()})}else{document.execCommand("copy");ok()}};</script>
+</body></html>

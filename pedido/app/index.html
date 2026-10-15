@@ -324,7 +324,8 @@ function rCli(){
   h+=ab?'<div class="faixa ab"><span class="pt"></span><span style="flex:1">Aberto agora · pedidos até '+esc(n.fecha)+(n.tempo?' · entrega em '+esc(n.tempo):'')+'</span></div>'
        :'<div class="faixa fe"><span class="pt"></span><span style="flex:1">Fechado agora · pedidos de '+esc(diasTxt(n.dias))+', das '+esc(n.abre)+' às '+esc(n.fecha)+'</span></div>';
   if(n.aviso)h+='<div class="aviso-neg">📣 '+esc(n.aviso)+'</div>';
-  var ml=meus();if(ml.length)h+='<button class="btn sec blk" id="bMeus" style="margin-bottom:6px">🧾 Acompanhar meus pedidos</button>';
+  var ml=meus(),fw=n.whats?'<a class="btn wa" style="flex:1" target="_blank" rel="noopener" href="'+esc(wa(n.whats,"Olá! Vim pelo cardápio online da "+n.nome+" 😊"))+'">💬 Falar com o restaurante</a>':'';
+  if(ml.length||fw)h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'+(ml.length?'<button class="btn sec" style="flex:1" id="bMeus">🧾 Meus pedidos</button>':'')+fw+'</div>';
   h+='<p class="sub" style="margin-top:6px">Cardápio de <b>'+DSL[wd]+'</b>. Toque no prato para escolher.</p>';
   var tem=0;
   (CARD.grupos||[]).forEach(function(g){
@@ -444,7 +445,9 @@ function abrirMeus(foco,novo){
       else if(ix===0)h+='<ul class="tl">'+pa.map(function(s,k){var lbl=s==="entregue"&&p.tipo==="retirada"?"Retirado":STATUS[s];return '<li class="'+(k<at?"ok":k===at?(s==="entregue"?"ok":"at"):"")+'"><i>'+(k<at||(k===at&&s==="entregue")?"✓":k+1)+'</i>'+lbl+'</li>'}).join("")+'</ul>';
       h+='<div style="margin-top:8px">'+p.itens.map(function(i){return '<div class="linha"><span>'+esc(itemTxt(i))+'</span><span>'+brl(i.total)+'</span></div>'}).join("")+(p.taxa?'<div class="linha"><span>Taxa de entrega</span><span>'+brl(p.taxa)+'</span></div>':'')+'<div class="tot"><span>Total</span><span>'+brl(p.total)+'</span></div></div>';
       if(p.pagamento==="pix")h+=p.comprovante?'<p class="pg ok">🧾 Comprovante enviado</p>':'<label class="arq" style="margin-top:8px"><span style="font-size:24px">🧾</span><span><b>Enviar comprovante do Pix</b></span><input type="file" accept="image/*,application/pdf" hidden data-comp="'+p.id+'"></label>';
-      if(ix===0)h+='<a class="btn wa blk" style="margin-top:10px" target="_blank" rel="noopener" href="'+esc(wa(NEGD.whats,msgCli(p)))+'">💬 Avisar no WhatsApp do restaurante</a>';
+      var dt=new Date(p.criado).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
+      h+=(ix===0&&p.status==="novo")?'<a class="btn wa blk" style="margin-top:10px" target="_blank" rel="noopener" href="'+esc(wa(NEGD.whats,msgCli(p)))+'">💬 Avisar no WhatsApp do restaurante</a>'
+        :'<a class="btn wa blk" style="margin-top:10px" target="_blank" rel="noopener" href="'+esc(wa(NEGD.whats,"Olá! É sobre o meu pedido #"+p.num+" de "+dt+" ("+p.cliente+"):\n"))+'">💬 Falar sobre este pedido</a>';
       return h+'</div>'}).join("")+(novo?'<p class="sub" style="text-align:center;margin-top:8px">Você vai ver aqui cada passo do seu pedido'+(C.dados.email?' e também recebe por e-mail':'')+'.</p>':'')+'<div id="mAv"></div><button class="btn sec blk" style="margin-top:10px" id="mFim">Voltar ao cardápio</button>';
     $("#mFim",f).onclick=fechar;botaoAvisos($("#mAv",f),"🔔 Me avise aqui quando o pedido andar");
     $$("[data-comp]",f).forEach(function(inp){inp.onchange=function(){var fl=this.files[0];if(!fl)return;toast("Enviando comprovante…");

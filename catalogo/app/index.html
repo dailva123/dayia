@@ -1195,7 +1195,7 @@ function pRender(){
     :L.situacao==="ativo"&&L.vence&&L.dias_restantes<=5?`<div class="lic"><div class="${L.dias_restantes<0?"v":"t"}">${L.dias_restantes<0?`⚠️ Seu plano venceu em ${esc(L.vence)}. O catálogo sai do ar em ${L.tolerancia+L.dias_restantes+1} dia(s) se o pagamento não chegar.`:`📅 Seu plano vence em ${esc(L.vence)}.`}${pagar}</div></div>`:"";
   $("#app").innerHTML=`${lic}<div class="adm-titulo"><b>${nome}</b>${P.aba==="inicio"?'<button class="mini" type="button" data-a="verCli">👩 Ver como cliente</button>':""}</div><div class="adm-main" id="pc"></div>
     <nav class="adm-nav" id="admNav">${ABAS.filter(a=>L.ok||a[0]==="ajustes").map(a=>`<button type="button" data-tab="${a[0]}" class="${P.aba===a[0]?"on":""}"><span>${a[1]}</span>${a[2]}${a[0]==="encomendas"&&novos?`<i class="nbadge">${novos}</i>`:""}</button>`).join("")}</nav>`;
-  ({inicio:rInicio,encomendas:rEnc,clientes:rCli,marketing:rMkt,catalogo:rCat,ajustes:rAjustes})[P.aba]();
+  ({inicio:rInicio,encomendas:rEnc,clientes:rCli,marketing:rMkt,catalogo:rCat,ajustes:rAjustes})[P.aba]();if(P.aba==="ajustes")filtAj();
 }
 function ir(t){P.aba=t;P.ed=null;pRender();scrollTo(0,0)}
 function sheet(html){return folha(html,"adm")}
@@ -1209,7 +1209,10 @@ function salvar(acao,dados,msg,depois){
 P.busca={};
 function lupa(k,ph){const v=P.busca[k]||"";return `<div class="lupa"><span aria-hidden="true">🔍</span><input type="search" id="lp_${k}" data-lupa="${k}" placeholder="${ph}" value="${esc(v)}" autocomplete="off" enterkeyhint="search" aria-label="${ph}">${v?`<button type="button" data-lupax="${k}" aria-label="Limpar busca">×</button>`:""}</div>`}
 const achou=(k,...partes)=>{const q=norm(P.busca[k]||"").trim();if(!q)return true;const t=norm(partes.join(" "));const tn=soNum(t);return q.split(/\s+/).every(w=>t.includes(w)||(soNum(w).length>=3&&tn.includes(soNum(w))))};
-const RLUPA={enc:()=>rEnc(),cli:()=>rCli(),pec:()=>rCat(),promo:()=>rMkt(),div:()=>{const t=$("#dvMsg");if(t)sheetDivulgar(t.dataset.id)}};
+function filtAj(){const q=norm(P.busca.aj||"").trim(),i=$("#lp_aj");if(!i)return;if(i.value!==(P.busca.aj||""))i.value=P.busca.aj||"";let n=0;
+  $$("#pc section.box").forEach(s=>{const t=norm(s.textContent+" "+[...s.querySelectorAll("input,textarea,select,label")].map(e=>e.value||e.textContent||"").join(" "));const ok=!q||t.includes(q);s.style.display=ok?"":"none";if(ok)n++});
+  $("#ajNada").style.display=q&&!n?"":"none";const box=i.parentElement,x=box.querySelector("[data-lupax]");if(q&&!x)box.insertAdjacentHTML("beforeend",'<button type="button" data-lupax="aj" aria-label="Limpar busca">×</button>');if(!q&&x)x.remove()}
+const RLUPA={aj:()=>filtAj(),enc:()=>rEnc(),cli:()=>rCli(),pec:()=>rCat(),promo:()=>rMkt(),div:()=>{const t=$("#dvMsg");if(t)sheetDivulgar(t.dataset.id)}};
 function lupaRe(k,pos){(RLUPA[k]||(()=>{}))();const i=$("#lp_"+k);if(i){i.focus();try{i.setSelectionRange(pos,pos)}catch(e){}}}
 document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.lupa;if(!k||location.hash!=="#painel")return;P.busca[k]=e.target.value;lupaRe(k,e.target.selectionStart)});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-lupax]");if(!b||location.hash!=="#painel")return;P.busca[b.dataset.lupax]="";lupaRe(b.dataset.lupax,0)});
@@ -1549,7 +1552,7 @@ function rAjustes(){
   const div=`Olá! 💛 Agora você pode ver todas as peças da ${N.nome}, com fotos e preços, e fazer o seu pedido direto pelo nosso catálogo:\n${lk}\n\nObrigada!`;
   const c=(id,lbl,v,ex)=>`<div class="fld"><label for="${id}">${lbl}</label><input type="text" id="${id}" value="${esc(v==null?"":v)}"${ex||""}></div>`;
   const tps=TIPOS(),B=N.brinde||{};
-  $("#pc").innerHTML=`
+  $("#pc").innerHTML=`${lupa("aj","Procurar nos ajustes (ex.: Pix, senha, entrega)")}<p class="vazio" id="ajNada" style="display:none">Não achei nada com esse nome nos ajustes.</p>
     <section class="box"><h4>🔗 Seu link</h4><p class="tiny left" style="margin-top:0">Coloque no WhatsApp, na bio do Instagram e no status.</p>
       <div class="copiar"><input type="text" readonly value="${esc(lk)}" aria-label="Seu link"><button class="mini" type="button" data-a="cpL">Copiar</button></div>
       <div class="btns"><button class="mini" type="button" data-a="cpM">Copiar mensagem pronta</button><a class="mini wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(div)}">Enviar no WhatsApp</a><button class="mini" type="button" data-a="verCli">Ver como cliente</button></div></section>

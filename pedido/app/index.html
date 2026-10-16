@@ -689,7 +689,7 @@ var OS_APP="7a1178de-2e8b-4205-aeb9-8171f97fb614",PUSH={os:null,sub:null};
   window.OneSignalDeferred=window.OneSignalDeferred||[];
   OneSignalDeferred.push(async function(OS){
     try{
-      await OS.init({appId:OS_APP,serviceWorkerPath:raiz.slice(1)+"push/OneSignalSDKWorker.js",serviceWorkerParam:{scope:raiz+"push/"},autoResubscribe:true,notifyButton:{enable:false},welcomeNotification:{disable:true}});
+      await OS.init({appId:OS_APP,serviceWorkerPath:raiz.slice(1)+"push/OneSignalSDKWorker.js",serviceWorkerParam:{scope:raiz+"push/"},autoResubscribe:true,notifyButton:{enable:false},welcomeNotification:{disable:true},promptOptions:{slidedown:{prompts:[{type:"push",autoPrompt:false,text:{actionMessage:"Quer receber os avisos aqui no celular?",acceptButton:"Permitir",cancelButton:"Agora não"}}]}}});
       PUSH.os=OS;var at=function(){var s=OS.User.PushSubscription;PUSH.sub=(s.optedIn&&s.id)?s.id:null;if(PUSH.sub)setTimeout(pushRegistrar,300)};
       OS.User.PushSubscription.addEventListener("change",at);
       if(window.Notification&&Notification.permission==="granted"&&!OS.User.PushSubscription.optedIn){try{await OS.User.PushSubscription.optIn()}catch(e){}}

@@ -434,6 +434,11 @@ body.painel .bag{display:none!important}
 .btns .mini,.btns a.mini{text-decoration:none;display:inline-flex;align-items:center;padding:8px 11px;font-size:12px}
 .mini.wa{background:var(--wa);border-color:var(--wa);color:#fff}
 .cat-ed{display:flex;gap:6px;align-items:center;margin-top:8px}
+.rast{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:#F3F7FB;border:1px solid #D6E2EE;border-radius:12px;padding:10px 12px;margin-top:10px}.rast small{display:block;color:#5A6B80;font-size:12px}.rast b{font-size:15px;letter-spacing:.5px;word-break:break-all}.rast-bt{display:flex;gap:6px}.rast .mini{text-decoration:none}
+.ent-ed{display:grid;grid-template-columns:1fr 84px auto 40px;gap:6px;align-items:center;margin-top:8px}
+.ent-ed input[type=text]{padding:10px}
+.ent-ed .en-r{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--brown);white-space:nowrap}
+.ent-ed button{width:40px;height:42px;border-radius:12px;border:1px solid var(--line);background:#fff;color:#B4423A;font-size:18px}
 .cat-ed input{flex:1}
 .cat-ed button{flex:none;width:40px;height:44px;border-radius:12px;border:1px solid var(--line);background:#fff;color:#B4423A;font-size:18px}
 .box .btn{width:100%;margin:12px 0 0}
@@ -509,14 +514,16 @@ body.painel .bag{display:none!important}
         <div class="fld"><label for="cliNome">Seu nome</label><input type="text" id="cliNome" autocomplete="name" placeholder="Como você se chama?"></div>
         <div class="fld"><label for="cliTel">Seu WhatsApp</label><input type="text" id="cliTel" inputmode="tel" autocomplete="tel" placeholder="(19) 99999-9999"></div>
         <div class="fld"><label for="cliEmail">Seu e-mail <span class="hint">(para receber a confirmação)</span></label><input type="email" id="cliEmail" inputmode="email" autocomplete="email" placeholder="seunome@email.com"></div>
-        <div class="two"><div class="fld"><label for="cliTipo">Como prefere receber?</label><select id="cliTipo"></select></div>
-        <div class="fld"><label for="cliAniv">Seu aniversário <span class="hint">(ganhe um mimo 🎁)</span></label><input type="text" id="cliAniv" inputmode="numeric" maxlength="5" placeholder="dia/mês"></div></div>
+        <div class="fld"><label for="cliTipo">Como prefere receber?</label><select id="cliTipo"></select></div>
+        <div class="fld"><label for="cliAniv">Seu aniversário <span class="hint">(ganhe um mimo 🎁)</span></label><input type="text" id="cliAniv" inputmode="numeric" maxlength="5" placeholder="dia/mês"></div>
+        <div id="cliEndBox" hidden><div class="fld"><label for="cliEnd">Endereço para a entrega</label><input type="text" id="cliEnd" autocomplete="street-address" placeholder="Rua, número, bairro e cidade"></div>
+        <div class="fld"><label for="cliCep">CEP</label><input type="text" id="cliCep" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000"></div></div>
         <div class="fld"><label for="cliData">Para quando você precisa? <span class="hint">(opcional)</span></label><input type="date" id="cliData"></div>
         <div class="fld"><label for="cliObs">Algum recado? <span class="hint">(opcional)</span></label><textarea id="cliObs" placeholder="Ex.: é para um chá de bebê, tema floresta"></textarea></div>
         <div class="err" id="cliErr"></div>
       </div>
     </div>
-    <div class="total" id="bagSum"><div><small>Total estimado</small><b id="bagSumV">R$ 0,00</b></div><small style="max-width:150px;text-align:right">O valor final é confirmado pela artesã</small></div>
+    <div class="total" id="bagSum"><div><small>Total estimado</small><b id="bagSumV">R$ 0,00</b></div><small id="bagFrete" style="max-width:170px;text-align:right">O valor final é confirmado pela artesã</small></div>
     <button class="btn" id="sendPed" type="button">Enviar pedido</button>
     <button class="btn ghost" data-close type="button">Continuar escolhendo</button>
   </div>
@@ -586,6 +593,10 @@ function precoItemL(p,q,F,promos){const d=p.campos.lembr?faixaDe(F,q).desc:0,pr=
 function faixasTxt(F){return F.map((f,i)=>Object.assign({},f,{txt:i?`${f.min}+ un.: ${Math.round(f.desc*100)}% off`:(F[1]?`1 a ${F[1].min-1} un.`:"1 un.")}))}
 function detItem(i){return [i.texto&&`"${i.texto}"`,i.idade&&`${i.idade} anos`,i.tema,i.data,i.cor&&(i.cor+(i.glitter?" ("+String(i.glitter).toLowerCase()+")":"")),i.modelo&&"Celular: "+i.modelo,i.foto&&"📷 foto enviada",i.obs].filter(Boolean).join(" · ")}
 
+function entregasNorm(t){let l=Array.isArray(t)?t:String(t||"Retirada,Entrega,Correios").split(",");
+  return l.map(e=>typeof e==="string"?{nome:e.trim(),taxa:/retir/i.test(e)?0:null,retira:/retir/i.test(e)}:e).map(e=>({nome:String(e.nome||"").trim().slice(0,40),taxa:e.taxa===null||e.taxa===""||e.taxa===undefined?null:Math.max(0,num(e.taxa)),retira:!!e.retira})).filter(e=>e.nome)}
+const taxaTxt=e=>e.retira&&!e.taxa?"grátis":e.taxa===null?"a combinar":e.taxa?brl(e.taxa):"grátis";
+
 /* ======================= DEMONSTRAÇÃO (servidor falso neste aparelho) ======================= */
 const PECAS_DEMO=[{"id": "laco-trio", "ordem": 1, "nome": "Trio de laços", "cat": "lacos", "preco": 35, "desc": "Trio encantador e básico. Você escolhe a cor principal.", "fotos": ["demo/laco-trio.jpg"], "videos": [], "campos": {"cor": 1}}, {"id": "tiara-encantada", "ordem": 2, "nome": "Tiara encantada", "cat": "lacos", "preco": 45, "desc": "Tiara com borboleta e florzinhas. Um encanto!", "fotos": ["demo/tiara1.jpg", "demo/tiara3.jpg"], "videos": ["demo/tiara.mp4"], "campos": {}}, {"id": "laco-organza", "ordem": 3, "nome": "Laço de organza preto", "cat": "lacos", "preco": 29, "desc": "Elegância que encanta em cada detalhe.", "fotos": ["demo/laco-preto.jpg"], "videos": [], "campos": {}}, {"id": "kit-lacos", "ordem": 4, "nome": "Kit de laços temático", "cat": "lacos", "preco": 39, "desc": "3 laços com cartela temática. Lindo para presentear.", "fotos": ["demo/kit-criancas.jpg"], "videos": [], "campos": {"cor": 1, "tema": 1, "lembr": 1}}, {"id": "caneta", "ordem": 5, "nome": "Caneta pompom personalizada", "cat": "canetas", "preco": 15, "desc": "Com o nome em letrinhas e pompom. A queridinha das lembrancinhas!", "fotos": ["demo/caneta.jpg", "demo/caneta2.jpg"], "videos": [], "campos": {"nome": 1, "cor": 1, "lembr": 1}}, {"id": "topo", "ordem": 6, "nome": "Topo de bolo personalizado", "cat": "topos", "preco": 45, "desc": "Com o nome, a idade e o tema da festa.", "fotos": ["demo/topo-alice.jpg", "demo/topo-stitch.jpg"], "videos": [], "campos": {"nome": 1, "idade": 1, "tema": 1}}, {"id": "cad-safari", "ordem": 7, "nome": "Caderneta de saúde · Safari", "cat": "cadernetas", "preco": 65, "desc": "Capa dura com o nome do bebê e os bichinhos do safari.", "fotos": ["demo/cad-oliver.jpg"], "videos": [], "campos": {"nome": 1}}, {"id": "cad-floral", "ordem": 8, "nome": "Caderneta de saúde · Floral", "cat": "cadernetas", "preco": 65, "desc": "Capa dura floral com coração e o nome do bebê.", "fotos": ["demo/cad-rebeca.jpg"], "videos": [], "campos": {"nome": 1}}, {"id": "cad-cereja", "ordem": 9, "nome": "Caderneta · Cerejinha", "cat": "cadernetas", "preco": 65, "desc": "Estampa cerejinha com o nome.", "fotos": ["demo/cad-livia.jpg"], "videos": [], "campos": {"nome": 1}}, {"id": "cad-carrinho", "ordem": 10, "nome": "Caderneta de saúde · Carrinho", "cat": "cadernetas", "preco": 65, "desc": "Delicada, com carrinho de bebê.", "fotos": ["demo/cad-carrinho.jpg"], "videos": [], "campos": {"nome": 1}}, {"id": "bolsa-bege", "ordem": 11, "nome": "Bolsa na tela · Bege", "cat": "bolsas", "preco": 189, "desc": "Feita à mão, com alça de mão e corrente dourada. Estilo e elegância para o dia a dia.", "fotos": ["demo/bolsa-bege1.jpg", "demo/bolsa-bege2.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-preta", "ordem": 12, "nome": "Bolsa na tela · Preta", "cat": "bolsas", "preco": 189, "desc": "Feita à mão, com fecho dourado e alça trançada.", "fotos": ["demo/bolsa-preta.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-rose", "ordem": 13, "nome": "Bolsa na tela · Rosê", "cat": "bolsas", "preco": 179, "desc": "Feita à mão, com corrente dourada.", "fotos": ["demo/bolsa-rose.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-bordo", "ordem": 14, "nome": "Bolsa na tela · Bordô e dourada", "cat": "bolsas", "preco": 199, "desc": "Feita à mão, com corrente e fecho dourados.", "fotos": ["demo/bolsa-bordo.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-vermelha", "ordem": 15, "nome": "Bolsa na tela · Vermelha com alça", "cat": "bolsas", "preco": 189, "desc": "Feita à mão, com alça trançada e corrente dourada.", "fotos": ["demo/b-vermelha.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-nude", "ordem": 16, "nome": "Bolsa na tela · Nude e branca", "cat": "bolsas", "preco": 179, "desc": "Feita à mão, em zigue-zague, com corrente dourada.", "fotos": ["demo/b-nude.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-royal", "ordem": 17, "nome": "Bolsa na tela · Azul royal", "cat": "bolsas", "preco": 199, "desc": "Feita à mão, com alça trançada e corrente prateada.", "fotos": ["demo/b-azul.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-pink", "ordem": 18, "nome": "Bolsa na tela · Pink", "cat": "bolsas", "preco": 179, "desc": "Feita à mão, com corrente dourada.", "fotos": ["demo/b-pink.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-verm-zig", "ordem": 19, "nome": "Bolsa na tela · Vermelha e branca", "cat": "bolsas", "preco": 179, "desc": "Feita à mão, em zigue-zague, com corrente dourada.", "fotos": ["demo/b-verm-zig.jpg"], "videos": [], "campos": {}}, {"id": "porta-doc", "ordem": 20, "nome": "Porta-documentos personalizado", "cat": "documentos", "preco": 55, "desc": "Para guardar os documentos com o nome e o tema que você escolher.", "fotos": ["demo/porta-pedro.jpg"], "videos": [], "campos": {"nome": 1, "tema": 1}}];
 const CATS_DEMO=[["lacos","Laços e tiaras"],["canetas","Canetas"],["topos","Topos de bolo"],["cadernetas","Cadernetas"],["documentos","Porta-documentos"],["bolsas","Bolsas"]];
@@ -616,7 +627,7 @@ function demoSemear(){
     neg:{n:"bab-atelie",nome:"B.A.B Ateliê",situacao:"teste",teste_ate:addDias(30),whatsapp:"5519996977016",telefone:"(19) 99697-7016",email_aviso:"",logo:"",
       titulo:"Laços, tiaras, bolsas e papelaria personalizada ✨",subtitulo:"Escolha, personalize do seu jeito e envie o pedido prontinho pelo WhatsApp.",aviso:"",
       cats:CATS_DEMO,faixas:FAIXAS_PADRAO,brinde:{cada:100,txt:"maleta para guardar seus laços",txtPl:"maletas para guardar seus laços",img:"demo/maleta.jpg"},
-      redes:{instagram:"https://www.instagram.com/bab.atelie",tiktokp:"#demo",facebook:"#demo",shopee:"#demo",tiktok:"#demo"},tipos:["Retirada","Entrega","Correios"],mkt:Object.assign({},MKT_PADRAO),plano:"",valor:"",vence:"",link_pagto:""},
+      redes:{instagram:"https://www.instagram.com/bab.atelie",tiktokp:"#demo",facebook:"#demo",shopee:"#demo",tiktok:"#demo"},tipos:[{nome:"Retirada",taxa:0,retira:true},{nome:"Entrega na cidade",taxa:10,retira:false},{nome:"Correios",taxa:null,retira:false},{nome:"Transportadora",taxa:null,retira:false}],mkt:Object.assign({},MKT_PADRAO),plano:"",valor:"",vence:"",link_pagto:""},
     promos:[{id:"r1",titulo:"Semana dos Laços",desc:10,alvo:"lacos",ate:addDias(6),ativa:true},{id:"r2",titulo:"Mês das Mamães",desc:15,alvo:"cadernetas",ate:addDias(-60),ativa:false}],
     ev:{dia:"",n:0,ultimo:0,env:{}}};
 }
@@ -626,7 +637,8 @@ function DEMOAPI(d){
   const salva=()=>{s.v=Date.now();if(!ls("cf-demo",s))throw new Error("Sem espaço neste aparelho para mais fotos na demonstração.")};
   const sess=()=>{if(d.token!=="demo")throw new Error("SESSAO")};
   const ativas=()=>s.promos.filter(r=>r.ativa&&r.ate>=h);
-  const pubNeg=()=>({n:N.n,nome:N.nome,whats:soNum(N.whatsapp),tel:N.telefone,logo:N.logo,titulo:N.titulo,subtitulo:N.subtitulo,aviso:N.aviso,cats:N.cats,faixas:N.faixas,brinde:N.brinde,redes:N.redes,tipos:N.tipos});
+  const ents=()=>entregasNorm(N.tipos);
+  const pubNeg=()=>({n:N.n,nome:N.nome,whats:soNum(N.whatsapp),tel:N.telefone,logo:N.logo,titulo:N.titulo,subtitulo:N.subtitulo,aviso:N.aviso,cats:N.cats,faixas:N.faixas,brinde:N.brinde,redes:N.redes,entregas:ents(),tipos:ents().map(e=>e.nome)});
   const pub=(p,painel)=>{const o=JSON.parse(JSON.stringify(p));o.itens.forEach(i=>{i.foto=!!i._f;delete i._f});delete o.chave;if(!painel){delete o.tel;delete o.email;delete o.aniv;delete o.anot;delete o.cliente_id}return o};
   const doCli=x=>{const p=s.pedidos.find(y=>y.id===Number(x.id));if(!p||p.chave!==x.chave)throw new Error("Pedido não encontrado.");return p};
   const hist=(p,st)=>{p.historico.push({s:st,t:Date.now()})};
@@ -647,12 +659,16 @@ function DEMOAPI(d){
       const o={id:p.id,nome:p.nome,q,total:precoItemL(p,q,N.faixas,pr)};["texto","idade","tema","data","modelo","cor","glitter","obs"].forEach(k=>{if(it[k])o[k]=String(it[k]).slice(0,200)});
       if(p.campos.foto&&!(it.foto&&it.foto.dados))throw new Error("Falta a foto da peça "+p.nome+".");if(it.foto&&it.foto.dados)o._f=1;o._dados=it.foto&&it.foto.dados;out.push(o)});
     if(!out.length)throw new Error("Escolha pelo menos uma peça.");
-    const cli=cliUp({nome:c.nome,tel:c.tel,email:c.email,aniv:anivDe(c.aniv||"")},"pedido"),t=Date.now(),id=s.seq++,total=Math.round(soma(out,i=>i.total)*100)/100;
+    const en=ents().find(e=>e.nome===c.tipo)||ents()[0];
+    if(!en.retira&&String(c.endereco||"").trim().length<8)throw new Error("Coloque o endereço para a entrega (rua, número e bairro).");
+    if(!en.retira&&soNum(c.cep).length!==8)throw new Error("Coloque o CEP com 8 números.");
+    const cli=cliUp({nome:c.nome,tel:c.tel,email:c.email,aniv:anivDe(c.aniv||"")},"pedido"),t=Date.now(),id=s.seq++,total=Math.round((soma(out,i=>i.total)+(en.taxa||0))*100)/100;
     out.forEach((o,k)=>{if(o._dados)try{localStorage.setItem("cf-demo-f-"+id+"-"+k,o._dados)}catch(e){}delete o._dados});
-    const p={id,num:proxNum(),criado:t,cliente_id:cli.id,cliente:String(c.nome).trim(),tel:normTel(c.tel),email:String(c.email).trim(),aniv:anivDe(c.aniv||""),tipo:c.tipo||"Retirada",entrega:c.entrega||"",
+    const p={id,num:proxNum(),criado:t,cliente_id:cli.id,cliente:String(c.nome).trim(),tel:normTel(c.tel),email:String(c.email).trim(),aniv:anivDe(c.aniv||""),tipo:en.nome,endereco:en.retira?"":String(c.endereco||"").trim(),cep:en.retira?"":soNum(c.cep),taxa:en.taxa,entrega:c.entrega||"",
       itens:out,resumo:out.map(i=>i.q+"× "+i.nome).join(", "),total,sinal:0,pago:false,status:"novo",obs:c.obs||"",anot:"",origem:"catalogo",chave:uid()+uid(),historico:[{s:"novo",t}]};
     s.pedidos.push(p);salva();return {ok:true,pedido:pub(p),chave:p.chave};}
   case "meus":{const out=[];(d.lista||[]).forEach(x=>{try{out.push(pub(doCli(x)))}catch(e){}});return {ok:true,pedidos:out};}
+  case "cancelar":{const p=doCli(d);if(p.status!=="cancelado"){if(p.status!=="novo")throw new Error("A loja já confirmou este pedido. Para cancelar, fale com ela pelo WhatsApp.");p.status="cancelado";p.historico.push({s:"cancelado",t:Date.now(),por:"cliente"});p.anot=(p.anot?p.anot+"\n":"")+"❌ Cancelado pela cliente"+(d.motivo?" · Motivo: "+String(d.motivo).slice(0,200):"");salva()}return {ok:true,pedido:pub(p)};}
   case "pushReg":return {ok:true,ativo:false};
   case "admEstado":return {ok:true,temSenha:true};
   case "admEntrar":return {ok:true,token:"demo-dayia"};
@@ -673,7 +689,7 @@ function DEMOAPI(d){
   case "status":{sess();const p=s.pedidos.find(y=>y.id===Number(d.id));if(!p)throw new Error("Encomenda não encontrada.");
     if(d.status&&d.status!==p.status){p.status=d.status;hist(p,d.status);if(d.status==="entregue")p.pago=true}
     if(d.pago!==undefined)p.pago=!!d.pago;if(d.sinal!==undefined)p.sinal=num(d.sinal);if(d.total!==undefined&&num(d.total)>0)p.total=num(d.total);
-    ["entrega","tipo","anot"].forEach(k=>{if(d[k]!==undefined)p[k]=d[k]});salva();return {ok:true};}
+    ["entrega","tipo","anot","endereco","rastreio"].forEach(k=>{if(d[k]!==undefined)p[k]=d[k]});if(d.taxa!==undefined)p.taxa=d.taxa===null||d.taxa===""?null:num(d.taxa);salva();return {ok:true};}
   case "novaEncomenda":{sess();const e=d.dados||{};if(!String(e.nome||"").trim())throw new Error("Coloque o nome da cliente.");if(!String(e.itens||"").trim())throw new Error("Escreva o que ela pediu.");
     const total=num(e.total);if(!(total>0))throw new Error("Coloque o valor da encomenda.");const cli=cliUp({nome:e.nome,tel:e.tel},"manual"),sinal=num(e.sinal),st=sinal>0?"sinal":"novo",t=Date.now(),id=s.seq++;
     s.pedidos.push({id,num:proxNum(),criado:t,cliente_id:cli.id,cliente:String(e.nome).trim(),tel:normTel(e.tel),email:"",aniv:"",tipo:e.tipo||"Retirada",entrega:e.entrega||"",itens:[{nome:String(e.itens).trim(),q:1,total}],
@@ -698,7 +714,7 @@ function DEMOAPI(d){
     if(Date.now()-(e.ultimo||0)<15000)throw new Error("Aguarde alguns segundos antes do próximo envio.");
     const k=d.chave+"|"+d.cliente;if(e.env[k])throw new Error("Essa mensagem já foi enviada para essa cliente.");e.n++;e.ultimo=Date.now();e.env[k]=h;salva();return {ok:true,envios:evEst()};}
   case "salvarAjustes":{sess();const a=d.ajustes||{};["nome","titulo","subtitulo","aviso","telefone","email_aviso","logo"].forEach(k=>{if(a[k]!==undefined)N[k]=a[k]});
-    if(a.whatsapp!==undefined)N.whatsapp=soNum(a.whatsapp);["tipos","cats","faixas","brinde","redes"].forEach(k=>{if(a[k]!==undefined)N[k]=a[k]});
+    if(a.whatsapp!==undefined)N.whatsapp=soNum(a.whatsapp);["cats","faixas","brinde","redes"].forEach(k=>{if(a[k]!==undefined)N[k]=a[k]});if(a.tipos!==undefined){const en=entregasNorm(a.tipos);if(!en.length)throw new Error("Deixe pelo menos uma forma de entrega.");N.tipos=en}
     if(a.cats!==undefined&&!a.cats.length)throw new Error("Deixe pelo menos uma categoria.");if(a.mkt!==undefined)N.mkt=Object.assign({},N.mkt,a.mkt);if(a.senha)s.senha=String(a.senha);salva();return {ok:true};}
   }
   throw new Error("Ação desconhecida.");
@@ -897,33 +913,42 @@ function barra(){
   $("#bagCount").textContent=L.length;$("#bagTotal").textContent=`${n} ${n>1?"peças":"peça"} · ${brl(t)}`;
   $("#bagBar").classList.toggle("show",L.length>0&&!/^#(painel|dayia)$/.test(location.hash));
 }
+const entregas=()=>entregasNorm(NEGD&&(NEGD.entregas||NEGD.tipos));
+const entSel=()=>{const v=$("#cliTipo")&&$("#cliTipo").value;return entregas().find(e=>e.nome===v)||entregas()[0]||{nome:"Retirada",taxa:0,retira:true}};
+function totalBag(){const L=bagItens(),t=soma(L,i=>i.total),en=entSel();
+  $("#bagSumV").textContent=brl(t+(en.taxa||0));$("#cliEndBox").hidden=!!en.retira;
+  $("#bagFrete").textContent=en.retira?"Retirada sem custo. O valor final é confirmado pela artesã":en.taxa===null?`${en.nome}: frete a combinar com a artesã`:`Inclui ${en.nome}: ${brl(en.taxa)}`;}
 function lista(){
   const L=bagItens(),t=soma(L,i=>i.total);
-  $("#bagSumV").textContent=brl(t);
   $("#bagList").innerHTML=L.length?L.map((i,k)=>`<div class="item">${i.foto?`<img src="${i.foto.dados}" alt="">`:imgHtml(i.p.fotos[0],"")}<div class="m"><b>${i.q}× ${esc(i.nome)}</b>${esc(detItem(Object.assign({},i,{foto:false,obs:""})))}<br>${brl(i.total)}</div><button class="rm" data-rm="${k}" type="button">Tirar</button></div>`).join("")+brindeBox(t)
     :`<div class="empty">Seu pedido está vazio.</div>`;
   ["#bagForm","#bagSum","#sendPed"].forEach(s=>$(s).style.display=L.length?"":"none");
   const d=C.dados;["Nome","Tel","Email","Aniv"].forEach(k=>{const el=$("#cli"+k);if(el&&!el.value&&d[k.toLowerCase()])el.value=d[k.toLowerCase()]});
-  $("#cliTipo").innerHTML=(NEGD.tipos||["Retirada"]).map(t=>`<option ${t===d.tipo?"selected":""}>${esc(t)}</option>`).join("");
+  $("#cliTipo").innerHTML=entregas().map(e=>`<option value="${esc(e.nome)}" ${e.nome===d.tipo?"selected":""}>${esc(e.nome)} · ${taxaTxt(e)}</option>`).join("");
+  ["End","Cep"].forEach(k=>{const el=$("#cli"+k);if(el&&!el.value&&d[k.toLowerCase()])el.value=d[k.toLowerCase()]});totalBag();
 }
 function msgPedido(p,L,d){
   let m=`Olá! Fiz o pedido *#${p.num}* pelo catálogo da ${NEGD.nome} 💛\n\n*Nome:* ${d.nome}\n*WhatsApp:* ${d.tel}\n*E-mail:* ${d.email}\n`;
   if(d.entrega)m+=`*Preciso para:* ${d.entrega.split("-").reverse().join("/")}\n`;
-  m+=`*Receber por:* ${d.tipo}\n\n*Meu pedido:*\n`;
+  m+=`*Receber por:* ${d.tipo}\n`;if(p.endereco)m+=`*Endereço:* ${p.endereco}${p.cep?" · CEP "+p.cep:""}\n`;m+=`\n*Meu pedido:*\n`;
   L.forEach((i,k)=>{m+=`\n${k+1}. *${i.q}x ${i.nome}*\n`;
     if(i.texto)m+=`   • Nome/frase: ${i.texto}\n`;if(i.data)m+=`   • Data na peça: ${i.data}\n`;if(i.modelo)m+=`   • Celular: ${i.modelo}\n`;
     if(i.idade)m+=`   • Idade: ${i.idade} anos\n`;if(i.tema)m+=`   • Tema/estampa: ${i.tema}\n`;if(i.cor)m+=`   • Cor: ${i.cor}${i.glitter?" ("+i.glitter.toLowerCase()+")":""}\n`;
     if(i.obs)m+=`   • Detalhes: ${i.obs}\n`;if(i.foto)m+=`   • Foto: enviada pelo catálogo ✅\n`;m+=`   • Valor estimado: ${brl(i.total)}\n`});
-  m+=`\n*Total estimado:* ${brl(p.total)}`;const nb=brindes(p.total);if(nb)m+=`\n🎁 *Brinde:* ${nb>1?nb+" "+BRINDE.txtPl:"1 "+BRINDE.txt}`;
+  if(!p.endereco&&p.taxa==null);else m+=`\n*${p.tipo}:* ${p.taxa==null?"a combinar":brl(p.taxa)}`;
+  m+=`\n*Total estimado:* ${brl(p.total)}${p.taxa==null&&p.endereco?" + frete":""}`;const nb=brindes(p.total-(p.taxa||0));if(nb)m+=`\n🎁 *Brinde:* ${nb>1?nb+" "+BRINDE.txtPl:"1 "+BRINDE.txt}`;
   if(d.obs)m+=`\n\n*Recado:* ${d.obs}`;return m+`\n\nAguardo a confirmação do valor e do prazo. Obrigada!`;
 }
 function enviarPedido(){
-  const L=bagItens(),g=id=>$(id).value.trim(),d={nome:g("#cliNome"),tel:g("#cliTel"),email:g("#cliEmail"),aniv:g("#cliAniv"),tipo:$("#cliTipo").value,entrega:$("#cliData").value,obs:g("#cliObs")};
+  const L=bagItens(),g=id=>$(id).value.trim(),d={nome:g("#cliNome"),tel:g("#cliTel"),email:g("#cliEmail"),aniv:g("#cliAniv"),tipo:$("#cliTipo").value,endereco:g("#cliEnd"),cep:g("#cliCep"),entrega:$("#cliData").value,obs:g("#cliObs")};
   const erro=(msg,el)=>{$("#cliErr").textContent=msg;$("#cliErr").style.display="block";if(el)$(el).focus()};
   if(!d.nome)return erro("Coloque seu nome para enviar o pedido.","#cliNome");
   if(soNum(d.tel).length<10)return erro("Coloque seu WhatsApp com DDD.","#cliTel");
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email))return erro("Coloque um e-mail válido para receber a confirmação.","#cliEmail");
-  C.dados={nome:d.nome,tel:d.tel,email:d.email,aniv:d.aniv,tipo:d.tipo};ls("cf-cli",C.dados);
+  const en=entSel();
+  if(!en.retira&&d.endereco.length<8)return erro("Coloque o endereço para a entrega (rua, número e bairro).","#cliEnd");
+  if(!en.retira&&soNum(d.cep).length!==8)return erro("Coloque o CEP com 8 números.","#cliCep");
+  C.dados={nome:d.nome,tel:d.tel,email:d.email,aniv:d.aniv,tipo:d.tipo,end:d.endereco,cep:d.cep};ls("cf-cli",C.dados);
   const b=$("#sendPed");b.disabled=true;b.textContent="Enviando…";$("#cliErr").style.display="none";
   const itens=L.map(i=>({id:i.id,q:i.q,texto:i.texto,idade:i.idade,tema:i.tema,data:i.data,modelo:i.modelo,cor:i.cor,glitter:i.glitter,obs:i.obs,foto:i.foto||undefined}));
   api("pedir",{dados:Object.assign({},d,{itens}),base:linkBase()}).then(j=>{
@@ -944,9 +969,22 @@ function sucesso(p,m){
 /* acompanhar */
 const ST=[["novo","Novo"],["sinal","Sinal pago"],["producao","Produzindo"],["acabamento","Finalizando"],["pronto","Pronto"],["entregue","Entregue"],["cancelado","Cancelado"]];
 const stNome=k=>(ST.find(s=>s[0]===k)||["",k])[1];
+const ehLink=r=>/^https?:\/\//i.test(String(r||""));
+const rastUrl=r=>ehLink(r)?r:"https://rastreamento.correios.com.br/app/index.php";
+function rastHtml(r){if(!r)return"";return `<div class="rast"><div><small>🚚 Código de rastreio</small><b>${esc(ehLink(r)?"Link da transportadora":r)}</b></div><div class="rast-bt">${ehLink(r)?"":`<button type="button" class="mini" data-copiar="${esc(r)}">📋 Copiar</button>`}<a class="mini" target="_blank" rel="noopener" href="${esc(rastUrl(r))}" ${ehLink(r)?"":`data-copiar="${esc(r)}"`}>🔎 Rastrear</a></div></div>`}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-copiar]");if(!b)return;const t=b.dataset.copiar;try{navigator.clipboard.writeText(t)}catch(x){}if(b.tagName==="BUTTON")toast("Código copiado: "+t);else toast("Código copiado. Cole no site para rastrear.")});
 const STCLI={novo:"Recebido",sinal:"Confirmado",producao:"Produzindo",acabamento:"Finalizando",pronto:"Pronto",entregue:"Entregue",cancelado:"Cancelado"};
 const PASSOS=["novo","sinal","producao","acabamento","pronto","entregue"];
 const MEUS={sig:ls("cf-sig-"+NEG)||{}};
+function arrep(p){if(p.status!=="entregue")return"";const e=(p.historico||[]).filter(x=>x.s==="entregue").pop();if(!e)return"";const fim=e.t+7*864e5;if(Date.now()>fim)return"";
+  return `<p class="tiny left" style="margin-top:8px">Comprou pela internet? Pelo Código de Defesa do Consumidor, você pode desistir em até 7 dias depois de receber (até ${new Date(fim).toLocaleDateString("pt-BR")}).</p><a class="btn ghost" style="width:100%;margin:6px 0 0" target="_blank" rel="noopener" href="${esc(wa(NEGD.whats,`Olá! Recebi o pedido #${p.num} e quero desistir da compra (direito de arrependimento, até 7 dias). Como fazemos a devolução?`))}">↩️ Quero desistir (até 7 dias)</a>`}
+function cancelarPedido(p){if(!p)return;const x=meus().find(m=>m.id===p.id);if(!x)return;
+  const f=folha(`<div class="inner"><h2>Cancelar o pedido #${p.num}?</h2><p class="left">Você pode cancelar sozinha enquanto a loja ainda não confirmou. Conte o motivo (opcional):</p>
+  <select id="cMot"><option value="">Prefiro não dizer</option><option>Pedi errado</option><option>Desisti da compra</option><option>Vou fazer outro pedido</option><option>Achei o prazo longo</option><option>Outro motivo</option></select>
+  <p class="err" id="cErr"></p></div><button class="btn" id="cSim" type="button" style="background:#B3261E">Sim, cancelar pedido</button><button class="btn ghost" data-close type="button">Não, manter o pedido</button>`);
+  $("#cSim",f).onclick=()=>{const b=$("#cSim",f);b.disabled=true;b.textContent="Cancelando…";
+    api("cancelar",{id:p.id,chave:x.chave,motivo:$("#cMot",f).value}).then(()=>{fechar();toast("Pedido #"+p.num+" cancelado. A loja foi avisada.");abrirMeus(p.id)})
+    .catch(e=>{b.disabled=false;b.textContent="Sim, cancelar pedido";const r=$("#cErr",f);r.textContent=e.message||"Não deu para cancelar agora.";r.style.display="block"})}}
 function abrirMeus(foco){
   const l=meus();if(!l.length){toast("Você ainda não fez pedidos por aqui.");return}
   const f=folha(`<div class="inner"><h2>Meus pedidos</h2><div id="mL"><p class="empty">Carregando…</p></div><div id="mAv"></div></div><button class="btn ghost" data-close type="button">Voltar ao catálogo</button>`);
@@ -955,13 +993,15 @@ function abrirMeus(foco){
     if(!ps.length){$("#mL",f).innerHTML='<p class="empty">Nenhum pedido encontrado.</p>';return}
     $("#mL",f).innerHTML=ps.map((p,ix)=>{const at=PASSOS.indexOf(p.status);
       let h=`<div class="mped"><div class="cab"><b>Pedido #${p.num}</b><span class="pill st-${p.status}">${STCLI[p.status]||p.status}</span></div><p class="tiny left">Feito em ${new Date(p.criado).toLocaleDateString("pt-BR")} · ${esc(p.tipo)}${p.entrega?" · para "+dBR(p.entrega):""}</p>`;
-      if(p.status==="cancelado")h+='<p class="err" style="display:block">Este pedido foi cancelado. Fale com a loja pelo WhatsApp.</p>';
+      if(p.status==="cancelado")h+='<p class="err" style="display:block">Este pedido foi cancelado.'+((p.historico||[]).some(x=>x.s==="cancelado"&&x.por==="cliente")?" Você cancelou.":" Dúvidas? Fale com a loja pelo WhatsApp.")+'</p>';
       else if(ix===0)h+='<ul class="tl">'+PASSOS.map((s,k)=>`<li class="${k<at||(k===at&&s==="entregue")?"ok":k===at?"at":""}"><i>${k<at||(k===at&&s==="entregue")?"✓":k+1}</i>${STCLI[s]}</li>`).join("")+"</ul>";
-      h+='<div style="margin-top:8px">'+p.itens.map(i=>`<div class="lin"><span>${i.q}× ${esc(i.nome)}<small>${esc(detItem(i))}</small></span><b>${brl(i.total)}</b></div>`).join("")+`<div class="lin"><b>Total</b><b>${brl(p.total)}</b></div></div>`;
+      if(p.rastreio&&p.status!=="cancelado")h+=rastHtml(p.rastreio);
+      h+='<div style="margin-top:8px">'+p.itens.map(i=>`<div class="lin"><span>${i.q}× ${esc(i.nome)}<small>${esc(detItem(i))}</small></span><b>${brl(i.total)}</b></div>`).join("")+(p.endereco||p.taxa?`<div class="lin"><span>${esc(p.tipo)}<small>${esc(p.endereco||"")}${p.cep?" · CEP "+esc(p.cep):""}</small></span><b>${p.taxa==null?"a combinar":brl(p.taxa)}</b></div>`:"")+`<div class="lin"><b>Total</b><b>${brl(p.total)}</b></div></div>`;
       const dt=new Date(p.criado).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
-      return h+`<a class="btn wa" style="width:100%;margin:10px 0 0" target="_blank" rel="noopener" href="${esc(wa(NEGD.whats,`Olá! É sobre o meu pedido #${p.num} de ${dt} (${p.cliente}):\n`))}">💬 Falar sobre este pedido</a></div>`}).join("");
+      return h+`<a class="btn wa" style="width:100%;margin:10px 0 0" target="_blank" rel="noopener" href="${esc(wa(NEGD.whats,`Olá! É sobre o meu pedido #${p.num} de ${dt} (${p.cliente}):\n`))}">💬 Falar sobre este pedido</a>${p.status==="novo"?`<button type="button" class="btn ghost" style="width:100%;margin:8px 0 0" data-cancelar="${p.id}">Cancelar este pedido</button>`:p.status!=="cancelado"&&p.status!=="entregue"?'<p class="tiny">Precisa cancelar? A loja já confirmou, então combine pelo WhatsApp.</p>':arrep(p)}</div>`}).join("");
+    $$("[data-cancelar]",f).forEach(b=>b.onclick=()=>cancelarPedido(ps.find(p=>p.id===+b.dataset.cancelar)));
     botaoAvisos($("#mAv",f),"🔔 Me avise aqui quando o pedido andar");
-    j.pedidos.forEach(p=>{MEUS.sig[p.id]=p.status});ls("cf-sig-"+NEG,MEUS.sig);
+    j.pedidos.forEach(p=>{MEUS.sig[p.id]=p.status+(p.rastreio?"|"+p.rastreio:"")});ls("cf-sig-"+NEG,MEUS.sig);
   }).catch(e=>{$("#mL",f).innerHTML=`<p class="err" style="display:block">${esc(e.message)}</p>`});
 }
 let VG=null;
@@ -969,14 +1009,15 @@ function vigiar(){
   clearTimeout(VG);if(location.hash==="#painel")return;
   const l=meus().slice(-5);
   if(l.length)api("meus",{lista:l}).then(j=>{
-    let mud=null;j.pedidos.forEach(p=>{const a=MEUS.sig[p.id];if(a&&a!==p.status&&!mud)mud=p;MEUS.sig[p.id]=p.status});ls("cf-sig-"+NEG,MEUS.sig);
+    let mud=null,rast=null;j.pedidos.forEach(p=>{const a=MEUS.sig[p.id],sg=p.status+(p.rastreio?"|"+p.rastreio:"");if(a&&a!==sg&&!mud){if(a.split("|")[0]===p.status&&p.rastreio)rast=p;else mud=p}MEUS.sig[p.id]=sg});ls("cf-sig-"+NEG,MEUS.sig);
     if(mud){const txt={sinal:"✅ Sua encomenda #"+mud.num+" foi confirmada",producao:"✂️ Sua encomenda #"+mud.num+" está sendo produzida",acabamento:"✨ Sua encomenda #"+mud.num+" está nos detalhes finais",pronto:"🎁 Sua encomenda #"+mud.num+" está pronta!",entregue:"💛 Encomenda #"+mud.num+" entregue. Obrigada!",cancelado:"❌ Sua encomenda #"+mud.num+" foi cancelada"}[mud.status]||"Sua encomenda foi atualizada";
       bip();vibrar();notificar(NEGD.nome,txt,"cf-"+mud.id);alerta(txt,"Toque em Ver para acompanhar",()=>abrirMeus(mud.id));if($(".sheet.dyn #mL"))abrirMeus(mud.id)}
+    else if(rast){const txt="🚚 Sua encomenda #"+rast.num+" foi enviada!";bip();vibrar();notificar(NEGD.nome,txt+" Rastreio: "+rast.rastreio,"cf-r-"+rast.id);alerta(txt,"Toque em Ver para pegar o código de rastreio",()=>abrirMeus(rast.id));if($(".sheet.dyn #mL"))abrirMeus(rast.id)}
   }).catch(()=>{});
   updMeusBt();
   VG=setTimeout(vigiar,document.hidden?45000:(DEMO?4000:20000));
 }
-function updMeusBt(){if(location.hash==="#painel")return;$("#hAcoes").innerHTML=meus().length?'<button class="hbt" id="hMeus" type="button" aria-label="Meus pedidos">📦 Pedidos</button>':"";const b=$("#hMeus");if(b)b.onclick=()=>abrirMeus()}
+function updMeusBt(){if(location.hash==="#painel")return;$("#hAcoes").innerHTML='<button class="hbt" id="hLupa" type="button" aria-label="Procurar peça" title="Procurar peça">🔍</button>'+(meus().length?'<button class="hbt" id="hMeus" type="button" aria-label="Meus pedidos">📦 Pedidos</button>':"");const b=$("#hMeus");if(b)b.onclick=()=>abrirMeus();$("#hLupa").onclick=()=>{const i=$("#busca");if(!i)return;const f=i.closest(".filters")||i;window.scrollTo({top:Math.max(0,f.getBoundingClientRect().top+scrollY-70),behavior:"smooth"});setTimeout(()=>i.focus(),350)}}
 
 /* folhas */
 function folha(html,cls){fechar();const f=document.createElement("div");f.className="sheet open dyn "+(cls||"");f.setAttribute("role","dialog");f.setAttribute("aria-modal","true");
@@ -1016,11 +1057,13 @@ document.addEventListener("input",e=>{
   if(e.target.id==="fQtd"){e.target.value=e.target.value.replace(/\D/g,"");atualiza()}
   if(e.target.id==="fNome")$("#fErr").style.display="none";
   if(/^cli/.test(e.target.id))$("#cliErr").style.display="none";
+  if(e.target.id==="cliCep"){const v=soNum(e.target.value).slice(0,8);e.target.value=v.length>5?v.slice(0,5)+"-"+v.slice(5):v}
 });
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){if($("#lb").classList.contains("open"))fecharLb();else fechar()}});
 document.addEventListener("dblclick",e=>{const s=e.target.closest(".lb-sl");if(!s||!s.querySelector("img"))return;
   const z=s.classList.toggle("z");if(z){const r=s.getBoundingClientRect();requestAnimationFrame(()=>{s.scrollLeft=(s.scrollWidth-r.width)*((e.clientX-r.left)/r.width);s.scrollTop=(s.scrollHeight-r.height)*((e.clientY-r.top)/r.height)})}});
 document.addEventListener("change",async e=>{
+  if(e.target.id==="cliTipo"){totalBag();return}
   if(e.target.id!=="fFoto"||!e.target.files[0])return;
   try{sel.foto=await prepararImg(e.target.files[0],1400,.72);fotoPrev();$("#fErr").style.display="none"}catch(x){toast(x.message)}
 });
@@ -1028,7 +1071,7 @@ document.addEventListener("change",async e=>{
 /* ======================= PAINEL DA ARTESÃ ======================= */
 const P={tk:ls("cf-tk-"+NEG),aba:"inicio",d:null,v:0,vistos:null,t:null,encFiltro:"abertas",encBusca:"",cliBusca:"",catSub:"pecas",ed:null,pubFiltro:"compraram"};
 const ABAS=[["inicio","🏠","Início"],["encomendas","📦","Encomendas"],["clientes","👥","Clientes"],["marketing","📣","Promoções"],["catalogo","🛍️","Catálogo"],["ajustes","⚙️","Ajustes"]];
-const TIPOS=()=>P.d&&P.d.negocio.tipos&&P.d.negocio.tipos.length?P.d.negocio.tipos:["Retirada","Entrega","Correios"];
+const TIPOS=()=>entregasNorm(P.d&&(P.d.negocio.entregas||P.d.negocio.tipos)).map(e=>e.nome);
 const pCats=()=>P.d.negocio.cats||[];
 function pIniciar(){
   document.body.classList.add("painel");barra();
@@ -1047,11 +1090,11 @@ function pLogin(msg){
 function pErro(e){if(String(e.message)==="SESSAO"){P.tk=null;ls("cf-tk-"+NEG,null);pLogin("Entre de novo, por favor.");return true}return false}
 function pPuxar(desenhar){
   return api("painel",{token:P.tk}).then(j=>{
-    const novos=[];if(P.vistos)j.pedidos.forEach(p=>{if(!P.vistos[p.id])novos.push(p)});
-    P.vistos={};j.pedidos.forEach(p=>{P.vistos[p.id]=1});
+    const novos=[],canc=[];if(P.vistos)j.pedidos.forEach(p=>{if(!P.vistos[p.id])novos.push(p);else if(p.status==="cancelado"&&P.vistos[p.id]!=="cancelado"&&(p.historico||[]).some(x=>x.s==="cancelado"&&x.por==="cliente"))canc.push(p)});
+    P.vistos={};j.pedidos.forEach(p=>{P.vistos[p.id]=p.status});
     P.d=j;P.v=j.v;NEGD=j.negocio;
     if(desenhar||!$(".sheet.dyn"))pRender();
-    novos.sort((a,b)=>a.id-b.id);if(novos.length)avisarPedido(novos[novos.length-1],novos.length);
+    novos.sort((a,b)=>a.id-b.id);if(novos.length)avisarPedido(novos[novos.length-1],novos.length);else if(canc.length){const p=canc[0];bip();vibrar();notificar("❌ Pedido #"+p.num+" cancelado pela cliente",p.cliente,"cf-c-"+p.id);alerta("❌ Pedido #"+p.num+" cancelado pela cliente",p.cliente+" · "+brl(p.total),()=>{P.aba="encomendas";P.encFiltro="todas";pRender();sheetPedido(p.id)})}
     pVigiar();
   }).catch(e=>{if(!pErro(e)){$("#app").innerHTML=`<div class="cx"><h2>Não consegui abrir o painel</h2><p>${esc(e.message)}</p><button class="btn" type="button" onclick="location.reload()">Tentar de novo</button></div>`;setTimeout(()=>pPuxar(true),15000)}});
 }
@@ -1163,6 +1206,7 @@ function sheetPedido(id){
   const f=sheet(`<div class="inner"><h2>Encomenda #${p.num}</h2>
     <p class="desc">${esc(p.cliente)}${p.tel?" · "+telBR(p.tel):""}${p.email?" · "+esc(p.email):""} · feita em ${dBR(dIso(p.criado))} ${p.origem==="catalogo"?"pelo catálogo":"(anotada por você)"}</p>
     ${p.obs?`<div class="adm-info">💬 Recado da cliente: ${esc(p.obs)}</div>`:""}
+    ${p.endereco?`<div class="adm-info" style="display:block!important">🚚 ${esc(p.tipo)}: ${esc(p.endereco)}${p.cep?" · CEP "+esc(p.cep):""}</div>`:""}
     <div class="itlist">${p.itens.map((i,k)=>`<div><b>${i.q}× ${esc(i.nome)}</b><span>${esc(detItem(i))}${i.foto?` <button class="mini" type="button" data-a="verFoto" data-id="${p.id}" data-i="${k}">📷 Ver foto</button>`:""}</span><strong>${brl(i.total)}</strong></div>`).join("")}<div class="tt"><b>Total</b><strong>${brl(p.total)}</strong></div></div>
     <div id="fotoCli" class="foto-cli"></div>
     <div class="fld"><label for="pSt">Andamento</label><select id="pSt">${ST.map(([k,n])=>`<option value="${k}" ${k===p.status?"selected":""}>${n}</option>`).join("")}</select></div>
@@ -1170,6 +1214,8 @@ function sheetPedido(id){
     <div class="fld"><label for="pTipo">Como entrega</label><select id="pTipo">${[...new Set(TIPOS().concat(p.tipo))].map(t=>`<option ${t===p.tipo?"selected":""}>${esc(t)}</option>`).join("")}</select></div></div>
     <div class="two"><div class="fld"><label for="pSinal">Sinal recebido (R$)</label><input type="text" id="pSinal" inputmode="decimal" value="${String(p.sinal||0).replace(".",",")}"></div>
     <div class="fld"><label for="pTot">Valor total (R$)</label><input type="text" id="pTot" inputmode="decimal" value="${String(p.total).replace(".",",")}"></div></div>
+    ${p.endereco||p.taxa!=null?`<div class="fld"><label for="pTaxa">Taxa de entrega (R$) <span class="hint">(deixe vazio se ainda vai combinar)</span></label><input type="text" id="pTaxa" inputmode="decimal" value="${p.taxa==null?"":String(p.taxa).replace(".",",")}" placeholder="a combinar"></div>`:""}
+    ${p.endereco||p.rastreio||!/retir/i.test(p.tipo)?`<div class="fld"><label for="pRast">🚚 Código de rastreio <span class="hint">(Correios ou link da transportadora · a cliente é avisada ao salvar)</span></label><input type="text" id="pRast" value="${esc(p.rastreio||"")}" placeholder="Ex.: AB123456789BR" autocapitalize="characters" autocomplete="off"></div>${p.rastreio?`<a class="btn wa" style="width:100%;margin:0 0 10px" target="_blank" rel="noopener" href="${esc(wa(p.tel,`Olá, ${p.cliente.split(" ")[0]}! Sua encomenda #${p.num} da ${NEGD.nome} já foi enviada 🚚 Código de rastreio: ${p.rastreio}${ehLink(p.rastreio)?"":"\nRastreie em: https://rastreamento.correios.com.br"}`))}">💬 Mandar o rastreio pelo WhatsApp</a>`:""}`:""}
     <div class="chks" style="margin-top:12px"><label><input type="checkbox" id="pPago" ${p.pago?"checked":""}> Pagamento completo recebido</label></div>
     <div class="fld"><label for="pObs">Suas anotações <span class="hint">(só você vê)</span></label><textarea id="pObs" placeholder="Ex.: cliente vai mandar a foto amanhã">${esc(p.anot||"")}</textarea></div></div>
     <button class="btn" data-a="salvaPed" data-id="${p.id}" type="button">Salvar</button>
@@ -1277,7 +1323,7 @@ function rMkt(){
   $("#pc").innerHTML=`${caixaEnvios()}
     <section class="box"><div class="bh"><h4>🎉 Promoções</h4><button class="mini" data-a="novaPromo" type="button">＋ Nova</button></div>
       <p class="tiny left">A promoção ativa já aparece no catálogo com o preço novo.</p>
-      ${D.promos.length>3?lupa("promo","Procurar promoção"):""}
+      ${lupa("promo","Procurar promoção")}
       ${promos.map(p=>{const viva=p.ativa&&p.ate>=h;return `<div class="promo ${viva?"":"off"}"><div><b>${esc(p.titulo)}</b><span>${p.desc}% off em ${esc(pAlvoNome(p.alvo))} · até ${dBR(p.ate)}</span><em class="tag ${viva?"gold":"soft"}">${viva?"No ar":(p.ate<h?"Encerrada":"Pausada")}</em></div>
         <div class="pa">${viva?`<button class="mini" data-a="divulgar" data-id="${p.id}" type="button">📣 Divulgar</button>`:""}<button class="mini" data-a="editPromo" data-id="${p.id}" type="button">Editar</button><button class="mini" data-a="togPromo" data-id="${p.id}" type="button">${p.ativa?"Pausar":"Ativar"}</button></div></div>`}).join("")||'<p class="muted">Nenhuma promoção ainda.</p>'}
     </section>
@@ -1410,6 +1456,9 @@ async function subirMidias(files,video){
 }
 
 /* ---------- AJUSTES ---------- */
+function entRow(e){e=e||{nome:"",taxa:null,retira:false};return `<div class="ent-ed"><input type="text" class="en-n" value="${esc(e.nome)}" placeholder="Ex.: Entrega no bairro" aria-label="Forma de entrega">
+  <input type="text" class="en-t" inputmode="decimal" value="${e.taxa==null?"":String(e.taxa).replace(".",",")}" placeholder="a combinar" aria-label="Taxa (R$)">
+  <label class="en-r"><input type="checkbox" ${e.retira?"checked":""}> retira</label><button type="button" data-a="rmEnt" aria-label="Tirar">×</button></div>`}
 /* links de pagamento da DayIA (Mercado Pago) · preços de lançamento até 31/12 */
 const PLANOS_ATE="2026-12-31";   /* depois desse dia os botões somem até a DayIA colocar os links novos */
 const PLANOS=[
@@ -1439,7 +1488,9 @@ function rAjustes(){
       <button class="btn ghost" type="button" data-a="irRedes">Colocar ou mudar as minhas redes</button></section>
     <section class="box"><h4>🗂️ Categorias</h4><p class="tiny left" style="margin-top:0">Os botões de filtro do catálogo. Só aparecem as que têm peças.</p><div id="catEd">${pCats().map(([k,n])=>`<div class="cat-ed" data-k="${esc(k)}"><input type="text" value="${esc(n)}" aria-label="Nome da categoria"><button type="button" data-a="rmCat" aria-label="Tirar categoria">×</button></div>`).join("")}</div>
       <button class="mini" style="margin-top:10px" type="button" data-a="addCat">＋ Nova categoria</button></section>
-    <section class="box"><h4>🚚 Como a cliente pode receber</h4><div class="chks">${[...new Set(["Retirada","Entrega","Correios"].concat(tps))].map(t=>`<label><input type="checkbox" data-tipo="${esc(t)}" ${tps.includes(t)?"checked":""}> ${esc(t)}</label>`).join("")}</div></section>
+    <section class="box"><h4>🚚 Formas de entrega e taxas</h4><p class="tiny left" style="margin-top:0">Deixe o valor vazio para "a combinar" (ex.: Correios e transportadora, que dependem do CEP). Marque "retira" quando a cliente busca a peça.</p>
+      <div id="entEd">${entregasNorm(N.entregas||N.tipos).map(e=>entRow(e)).join("")}</div>
+      <button class="mini" style="margin-top:10px" type="button" data-a="addEnt">＋ Nova forma de entrega</button></section>
     <section class="box"><h4>🎁 Brinde</h4><div class="two"><div class="fld"><label for="bCada">A cada (R$) em compras</label><input type="text" id="bCada" inputmode="numeric" value="${B.cada||0}"></div><div class="fld"><label for="bTxt">Ganha uma</label><input type="text" id="bTxt" value="${esc(B.txt||"")}" placeholder="maleta para laços"></div></div>
       <p class="tiny left">Coloque 0 para não ter brinde.</p></section>
     <section class="box"><h4>🔔 Avisos de pedido novo</h4>${c("aEmail","E-mail que recebe cada pedido novo",N.email_aviso,' inputmode="email"')}
@@ -1472,7 +1523,11 @@ async function acao(a,b){
     case "encF":P.encFiltro=b.dataset.f;rEnc();break;
     case "ped":sheetPedido(id);break;
     case "avancar":{const p=D.pedidos.find(x=>x.id===Number(id));salvar("status",{id:p.id,status:b.dataset.s},`#${p.num} agora está: ${stNome(b.dataset.s)}`).catch(()=>{});break;}
-    case "salvaPed":salvar("status",{id:Number(id),status:$("#pSt").value,entrega:$("#pEnt").value,tipo:$("#pTipo").value,sinal:num($("#pSinal").value),total:num($("#pTot").value),pago:$("#pPago").checked,anot:$("#pObs").value.trim()},"Encomenda salva").catch(()=>{});break;
+    case "salvaPed":{const dd={id:Number(id),status:$("#pSt").value,entrega:$("#pEnt").value,tipo:$("#pTipo").value,sinal:num($("#pSinal").value),total:num($("#pTot").value),pago:$("#pPago").checked,anot:$("#pObs").value.trim()};
+      if($("#pTaxa")){const old=D.pedidos.find(x=>x.id===Number(id)),tv=$("#pTaxa").value.trim(),nt=tv===""?null:num(tv);dd.taxa=nt;
+        if(dd.total===old.total)dd.total=Math.round((old.total-(old.taxa||0)+(nt||0))*100)/100}
+      if($("#pRast")){const rv=$("#pRast").value.trim();dd.rastreio=ehLink(rv)?rv:rv.toUpperCase().replace(/\s+/g,"")}
+      salvar("status",dd,"Encomenda salva").catch(()=>{});break;}
     case "verFoto":{b.disabled=true;api("verFoto",{token:P.tk,id:Number(id),i:+b.dataset.i}).then(j=>{$("#fotoCli").innerHTML=`<img src="data:${j.tipo};base64,${j.dados}" alt="Foto enviada pela cliente"><a class="mini" style="display:inline-block;margin-top:6px" download="foto-cliente.jpg" href="data:${j.tipo};base64,${j.dados}">⬇️ Baixar a foto</a>`;$("#fotoCli").scrollIntoView({block:"nearest"})}).catch(e=>{if(!pErro(e))toast(e.message)}).then(()=>{b.disabled=false});break;}
     case "avisaPed":{const p=D.pedidos.find(x=>x.id===Number(id)),n=p.cliente.split(" ")[0],loja=D.negocio.nome;
       const msgs={novo:`Olá, ${n}! Recebi seu pedido #${p.num} na ${loja} 💛 O valor fica ${brl(p.total)}. Para confirmar, o sinal é de ${brl(Math.round(p.total/2))}. Posso te passar o Pix?`,pronto:`Olá, ${n}! Sua encomenda #${p.num} da ${loja} está prontinha ✨ ${/retir/i.test(p.tipo)?"Quando fica bom para você retirar?":"Vamos combinar a entrega?"}`,entregue:`Olá, ${n}! Obrigada por comprar na ${loja} 💛 Se puder, me mande uma foto da peça, vou amar ver!`};
@@ -1530,11 +1585,14 @@ async function acao(a,b){
     case "restaurar":if(!confirm("Voltar toda a demonstração ao começo? (peças, encomendas, clientes e promoções)"))break;ls("cf-demo",null);pPuxar(true).then(()=>toast("Demonstração restaurada"));break;
     case "cpL":copiar(linkCliente(),"Link copiado!");break;
     case "cpM":copiar(`Olá! 💛 Agora você pode ver todas as peças da ${D.negocio.nome}, com fotos e preços, e fazer o seu pedido direto pelo nosso catálogo:\n${linkCliente()}\n\nObrigada!`,"Mensagem copiada!");break;
+    case "addEnt":document.getElementById("entEd").insertAdjacentHTML("beforeend",entRow());$("#entEd .ent-ed:last-child .en-n").focus();break;
+    case "rmEnt":b.closest(".ent-ed").remove();break;
     case "addCat":document.getElementById("catEd").insertAdjacentHTML("beforeend",'<div class="cat-ed" data-k=""><input type="text" value="" placeholder="Nome da categoria" aria-label="Nome da categoria"><button type="button" data-a="rmCat" aria-label="Tirar categoria">×</button></div>');$("#catEd .cat-ed:last-child input").focus();break;
     case "rmCat":{const r=b.closest(".cat-ed"),k=r.dataset.k,n=D.pecas.filter(p=>p.cat===k).length;if(n&&!confirm(`Essa categoria tem ${n} peça(s). Elas ficam sem categoria até você escolher outra. Tirar mesmo?`))break;r.remove();break;}
     case "salvaAjustes":{
       const v=id=>$(id).value,cats=$$("#catEd .cat-ed").map(r=>{const n=r.querySelector("input").value.trim();return [r.dataset.k||norm(n).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||uid(),n]}).filter(c=>c[1]);
-      const tipos=$$("[data-tipo]").filter(x=>x.checked).map(x=>x.dataset.tipo);if(!tipos.length){toast("Deixe pelo menos um jeito de receber.");break}
+      const tipos=$$("#entEd .ent-ed").map(r=>{const tv=r.querySelector(".en-t").value.trim();return {nome:r.querySelector(".en-n").value.trim(),taxa:tv===""?null:num(tv),retira:r.querySelector(".en-r input").checked}}).filter(e=>e.nome);
+      if(!tipos.length){toast("Deixe pelo menos uma forma de entrega.");break}
       if(!cats.length){toast("Deixe pelo menos uma categoria.");break}
       const B=D.negocio.brinde||{},cada=num(v("#bCada")),bt=v("#bTxt").trim();
       const a={nome:v("#aNome").trim(),titulo:v("#aTit").trim(),subtitulo:v("#aSub").trim(),aviso:v("#aAviso").trim(),whatsapp:soNum(v("#aWa")),telefone:v("#aTel").trim(),email_aviso:v("#aEmail").trim(),

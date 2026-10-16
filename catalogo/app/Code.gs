@@ -24,10 +24,10 @@
 var VERSAO_SISTEMA = "1.0";
 var ABAS = {
   Negocios:  ["n","nome","situacao","teste_ate","criado","dono","whatsapp","email_aviso","senha","telefone","logo","titulo","subtitulo","aviso",
-              "cats","faixas","brinde","redes","tipos","mkt","plano","valor","vence","link_pagto","trocas"],
+              "cats","faixas","brinde","redes","tipos","mkt","plano","valor","vence","link_pagto","trocas","pix_chave","pix_nome","pix_banco","pix_modo","pix_pct","pagtos"],
   Pecas:     ["negocio","id","ordem","nome","cat","preco","desc","fotos","videos","campos","ativo","shopee","tiktok","criado"],
   Pedidos:   ["negocio","id","num","criado","quando","cliente_id","cliente","tel","email","aniv","tipo","entrega","itens","resumo","total","sinal","pago",
-              "status","obs","anot","origem","chave","historico","push","endereco","cep","taxa","rastreio","troca"],
+              "status","obs","anot","origem","chave","historico","push","endereco","cep","taxa","rastreio","troca","cobrar","comprovante","comp_em","pagamento","link_pag"],
   Clientes:  ["negocio","id","nome","tel","email","aniv","obs","origem","criado"],
   Promocoes: ["negocio","id","titulo","desc","alvo","ate","ativa"],
   Envios:    ["negocio","chave","cliente","dia"],
@@ -37,6 +37,7 @@ var MIN = 60000, DIA = 86400000;
 var STATUS = { novo: "Recebido", sinal: "Sinal pago", producao: "Produzindo", acabamento: "Finalizando", pronto: "Pronto", entregue: "Entregue", troca: "Troca/devolução", cancelado: "Cancelado" };
 var ABERTOS = ["novo", "sinal", "producao", "acabamento", "pronto", "troca"];
 var TROCAS_PADRAO = "Se a peça chegar com defeito, me avise pelo app (botão Pedir troca ou devolução) com uma foto, que eu resolvo: conserto, troca ou devolução do valor.\nCompras pelo catálogo: você pode desistir em até 7 dias depois de receber, com devolução do valor.\nTroca por gosto, tamanho ou cor: só em peças sem personalização, em até 7 dias depois de receber e sem uso.";
+var FORMAS_PAG = { pix: "Pix", credito: "Cartão de crédito", debito: "Cartão de débito", boleto: "Boleto", dinheiro: "Dinheiro na retirada ou entrega" };
 var MOTIVOS_TROCA = { defeito: "Veio com defeito", errado: "Veio diferente do que pedi", tamanho: "Tamanho ou cor", desisti: "Desisti da compra", outro: "Outro motivo" };
 var ENTREGAS_PADRAO = [{ nome: "Retirada", taxa: 0, retira: true }, { nome: "Entrega na cidade", taxa: null, retira: false }, { nome: "Correios", taxa: null, retira: false }, { nome: "Transportadora", taxa: null, retira: false }];
 var FAIXAS_PADRAO = [{ min: 1, desc: 0 }, { min: 30, desc: 0.10 }, { min: 50, desc: 0.15 }, { min: 100, desc: 0.20 }];
@@ -99,7 +100,7 @@ function criarBab_() {
 function doGet(e) { var p = (e && e.parameter) || {}; if (p.acao) return responder_(executar_(p)); return ContentService.createTextOutput("Catálogo Fácil by DayIA · servidor funcionando (versão " + VERSAO_SISTEMA + ")."); }
 function doPost(e) { var d = {}; try { d = JSON.parse(e.postData.contents || "{}"); } catch (x) { return responder_({ erro: "Pedido inválido." }); } return responder_(executar_(d)); }
 function responder_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
-var TRAVADAS = ["status","novaEncomenda","verFoto","subirMidia","salvarPeca","esconderPeca","excluirPeca","salvarCliente","excluirCliente","importarClientes","salvarPromo","excluirPromo","envio","salvarAjustes"];
+var TRAVADAS = ["status","novaEncomenda","verFoto","verComprovante","subirMidia","salvarPeca","esconderPeca","excluirPeca","salvarCliente","excluirCliente","importarClientes","salvarPromo","excluirPromo","envio","salvarAjustes"];
 function executar_(d) {
   try {
     var f = ACOES[d.acao]; if (!f) return { erro: "Ação desconhecida." };
@@ -130,14 +131,16 @@ var ACOES = {
     var endereco = en.retira ? "" : lim_(c.endereco, 200), cep = en.retira ? "" : soDig_(c.cep).slice(0, 8);
     if (!en.retira && endereco.length < 8) throw new Error("Coloque o endereço para a entrega (rua, número e bairro).");
     if (!en.retira && cep.length !== 8) throw new Error("Coloque o CEP com 8 números.");
-    var taxa = en.taxa === null ? "" : en.taxa;
+    var taxa = en.taxa === null ? "" : en.taxa, pg = pagNeg_(N), forma = String(c.pagamento || "");
+    if (pg.formas.length && pg.formas.indexOf(forma) < 0) { if (pg.formas.length === 1) forma = pg.formas[0]; else throw new Error("Escolha como você quer pagar."); }
+    if (!pg.formas.length) forma = "";
     return comTrava_(function () {
       var id = proximoId_(), agora = Date.now();
       calc.itens.forEach(function (it, i) { var orig = (c.itens || [])[it._i] || {}; if (orig.foto && orig.foto.dados) it.foto_id = salvarArquivo_(N, orig.foto, "pedido" + id + "_" + (i + 1), false); delete it._i; });
       var cli = clienteUpsert_(N.n, { nome: c.nome, tel: c.tel, email: c.email, aniv: anivDe_(c.aniv) }, "pedido");
       var p = { negocio: N.n, id: id, num: proximoNum_(N.n), criado: agora, quando: legivel_(agora), cliente_id: cli.id, cliente: lim_(c.nome, 80), tel: lim_(c.tel, 30), email: lim_(c.email, 120),
         aniv: anivDe_(c.aniv), tipo: en.nome, endereco: endereco, cep: cep, taxa: taxa, entrega: dataIso_(c.entrega), itens: JSON.stringify(calc.itens), resumo: calc.resumo, total: Math.round((calc.total + (taxa === "" ? 0 : taxa)) * 100) / 100, sinal: 0, pago: "",
-        status: "novo", obs: lim_(c.obs, 400), anot: "", origem: "catalogo", chave: Utilities.getUuid().replace(/-/g, "").slice(0, 10), historico: JSON.stringify([{ s: "novo", t: agora }]) };
+        pagamento: forma, link_pag: "", cobrar: cobrarDe_(N, Math.round((calc.total + (taxa === "" ? 0 : taxa)) * 100) / 100, forma), status: "novo", obs: lim_(c.obs, 400), anot: "", origem: "catalogo", chave: Utilities.getUuid().replace(/-/g, "").slice(0, 10), historico: JSON.stringify([{ s: "novo", t: agora }]) };
       inserir_("Pedidos", p);
       if (d.base) setCfg_("link_base", String(d.base).split("?")[0].split("#")[0]);
       mudou_(N.n);
@@ -192,6 +195,25 @@ var ACOES = {
         "<h2 style='margin:0 0 8px'>Troca/devolução · pedido #" + p.num + "</h2><p><b>" + esc_(p.cliente) + "</b> · WhatsApp " + esc_(p.tel) + "<br>Motivo: " + esc_(MOTIVOS_TROCA[mot]) + (txt ? "<br>O que ela contou: " + esc_(txt) : "") + (foto ? "<br>📷 Ela mandou foto: veja no painel." : "") + "</p>" + itensHtml_(p) +
         "<p>Depois de resolver, mude o andamento no painel para <b>Entregue</b> (troca feita) ou <b>Cancelado</b> (valor devolvido).</p>", String(N.nome));
       emailCliente_(N, p, "troca");
+      return { ok: true, pedido: publico_(p) };
+    });
+  },
+  comprovante: function (d) {
+    var N = negocio_(d.n), a = d.arquivo || {};
+    if (!a.dados) throw new Error("Escolha a foto ou o PDF do comprovante.");
+    var tipo = String(a.tipo || ""); if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(tipo)) throw new Error("Mande o comprovante em foto ou PDF.");
+    return comTrava_(function () {
+      var p = doCliente_(N, d);
+      if (p.status === "cancelado") throw new Error("Este pedido foi cancelado.");
+      var bytes = Utilities.base64Decode(String(a.dados).replace(/^data:[^,]+,/, ""));
+      if (bytes.length > 6 * 1024 * 1024) throw new Error("Arquivo grande demais. Mande uma foto (print) do comprovante.");
+      var f = pasta_().createFile(Utilities.newBlob(bytes, tipo, N.n + "_comprovante" + p.id + (tipo === "application/pdf" ? ".pdf" : ".jpg")));
+      var agora = Date.now();
+      atualizar_("Pedidos", function (o) { return String(o.negocio).toLowerCase() === N.n && Number(o.id) === p.id; }, { comprovante: f.getId(), comp_em: agora }); mudou_(N.n);
+      p.comprovante = f.getId(); p.comp_em = agora;
+      push_(["N_" + N.n], "🧾 Comprovante do pedido #" + p.num, p.cliente + " mandou o comprovante" + (p.cobrar !== "" ? " · " + brl_(p.cobrar) : ""), linkPainel_(N));
+      if (/@/.test(N.email_aviso || "")) enviar_(String(N.email_aviso), "🧾 Comprovante do pedido #" + p.num + " · " + p.cliente,
+        "<h2 style='margin:0 0 8px'>Comprovante recebido · pedido #" + p.num + "</h2><p><b>" + esc_(p.cliente) + "</b> mandou o comprovante do Pix" + (p.cobrar !== "" ? " de " + brl_(p.cobrar) : "") + ".</p><p>Confira no seu banco se o valor caiu e toque em <b>Confirmar pagamento</b> no painel. A cliente é avisada sozinha.</p>", String(N.nome));
       return { ok: true, pedido: publico_(p) };
     });
   },
@@ -292,9 +314,16 @@ var ACOES = {
       if (d.endereco !== undefined) campos.endereco = lim_(d.endereco, 200);
       if (d.taxa !== undefined) campos.taxa = d.taxa === null || d.taxa === "" ? "" : Math.max(0, num_(d.taxa));
       if (d.rastreio !== undefined) campos.rastreio = lim_(d.rastreio, 300);
+      if (d.link_pag !== undefined) campos.link_pag = url_(d.link_pag);
+      var linkNovo = campos.link_pag && campos.link_pag !== String(p.link_pag || "");
       var rastNovo = campos.rastreio && campos.rastreio !== String(p.rastreio || "");
       if (d.anot !== undefined) campos.anot = lim_(d.anot, 600);
       atualizar_("Pedidos", function (o) { return Number(o.id) === p.id; }, campos); mudou_(n);
+      if (linkNovo && !campos.status) {
+        p.link_pag = campos.link_pag;
+        pushSubs_(j_(p.push, []), String(N.nome), "💳 O link para pagar o pedido #" + p.num + " chegou. Toque para pagar.", linkCli_(N, p));
+        emailCliente_(N, p, "pagar");
+      }
       if (rastNovo && !campos.status) {
         p.rastreio = campos.rastreio;
         pushSubs_(j_(p.push, []), String(N.nome), "🚚 Sua encomenda #" + p.num + " foi enviada! Rastreio: " + p.rastreio, linkCli_(N, p));
@@ -321,6 +350,12 @@ var ACOES = {
       inserir_("Pedidos", p); mudou_(n);
       return { ok: true, id: p.id };
     });
+  },
+  verComprovante: function (d) {
+    var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
+    if (!p || !p.comprovante) throw new Error("Este pedido não tem comprovante.");
+    var f = DriveApp.getFileById(String(p.comprovante)), b = f.getBlob();
+    return { ok: true, tipo: b.getContentType(), dados: Utilities.base64Encode(b.getBytes()), nome: f.getName() };
   },
   verFoto: function (d) {
     var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
@@ -438,6 +473,10 @@ var ACOES = {
       o.limite = Math.min(30, Math.max(5, Math.round(num_(x.limite)) || 20)); o.hIni = Math.min(12, Math.max(6, Math.round(num_(x.hIni)) || 9)); o.hFim = Math.min(22, Math.max(14, Math.round(num_(x.hFim)) || 19));
       o.descAniv = Math.min(90, Math.max(0, Math.round(num_(x.descAniv)))); o.msgAniv = lim_(x.msgAniv, 500) || MKT_PADRAO.msgAniv; m.mkt = JSON.stringify(o); }
     if (a.trocas !== undefined) m.trocas = lim_(a.trocas, 1000);
+    if (a.pix !== undefined) { var px = a.pix || {}; m.pix_chave = lim_(px.chave, 120); m.pix_nome = lim_(px.nome, 80); m.pix_banco = lim_(px.banco, 60);
+      if (px.formas !== undefined) m.pagtos = JSON.stringify((px.formas || []).filter(function (f) { return FORMAS_PAG[f]; }));
+      if ((px.formas || []).indexOf("pix") >= 0 && !m.pix_chave) throw new Error("Coloque a chave Pix ou desmarque o Pix.");
+      m.pix_modo = ["sinal", "total", "depois"].indexOf(String(px.modo)) >= 0 ? String(px.modo) : "sinal"; m.pix_pct = Math.min(100, Math.max(10, Math.round(num_(px.pct)) || 50)); }
     if (a.logo !== undefined) { if (String(a.logo).length > 45000) throw new Error("Logo grande demais."); m.logo = String(a.logo); }
     if (a.senha) { if (String(a.senha).length < 4) throw new Error("A senha precisa ter pelo menos 4 caracteres."); m.senha = hash_(a.senha); }
     atualizar_("Negocios", function (r) { return String(r.n).toLowerCase() === n; }, m); mudou_(n);
@@ -534,14 +573,17 @@ function avisarNegocio_(N, p) {
   if (!/@/.test(N.email_aviso || "")) return;
   var lk = linkPainel_(N);
   enviar_(String(N.email_aviso), "🛎️ Pedido novo #" + p.num + " · " + p.cliente + " · " + brl_(p.total),
-    "<h2 style='margin:0 0 8px'>Pedido novo #" + p.num + "</h2><p><b>" + esc_(p.cliente) + "</b> · WhatsApp " + esc_(p.tel) + "<br>E-mail: " + esc_(p.email) + "<br>Receber por: " + esc_(p.tipo) + (p.endereco ? "<br>Endereço: " + esc_(p.endereco) + (p.cep ? " · CEP " + esc_(p.cep) : "") : "") +
+    "<h2 style='margin:0 0 8px'>Pedido novo #" + p.num + "</h2><p><b>" + esc_(p.cliente) + "</b> · WhatsApp " + esc_(p.tel) + "<br>E-mail: " + esc_(p.email) + (p.pagamento ? "<br>Pagamento: " + esc_(FORMAS_PAG[p.pagamento] || p.pagamento) + (p.cobrar !== "" && p.cobrar !== undefined ? " · " + brl_(p.cobrar) + " na hora do pedido" : "") : "") + "<br>Receber por: " + esc_(p.tipo) + (p.endereco ? "<br>Endereço: " + esc_(p.endereco) + (p.cep ? " · CEP " + esc_(p.cep) : "") : "") +
     (p.entrega ? "<br>Precisa para: " + dataBr_(p.entrega) : "") + (p.obs ? "<br>Recado: " + esc_(p.obs) : "") + "</p>" + itensHtml_(p) +
     (lk ? "<p><a href='" + lk + "' style='background:#4E3D31;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold'>Abrir o painel</a></p>" : ""), String(N.nome));
 }
 function emailCliente_(N, p, tipo) {
   if (!/@/.test(p.email || "")) return;
-  var tit = { novo: "Recebemos seu pedido #" + p.num + " 💛", sinal: "Sua encomenda #" + p.num + " foi confirmada", pronto: "Sua encomenda #" + p.num + " está pronta!", entregue: "Obrigada pela compra!", cancelado: "Encomenda #" + p.num + " cancelada", rastreio: "🚚 Sua encomenda #" + p.num + " foi enviada!", troca: "Recebemos seu pedido de troca/devolução #" + p.num }[tipo] || "Encomenda #" + p.num;
+  var tit = { novo: "Recebemos seu pedido #" + p.num + " 💛", sinal: "Sua encomenda #" + p.num + " foi confirmada", pronto: "Sua encomenda #" + p.num + " está pronta!", entregue: "Obrigada pela compra!", cancelado: "Encomenda #" + p.num + " cancelada", rastreio: "🚚 Sua encomenda #" + p.num + " foi enviada!", troca: "Recebemos seu pedido de troca/devolução #" + p.num, pagar: "💳 Link para pagar o pedido #" + p.num }[tipo] || "Encomenda #" + p.num;
   var txt = { novo: "A " + N.nome + " recebeu o seu pedido. Em breve ela confirma o valor final e o prazo pelo WhatsApp.", pronto: "Sua encomenda está prontinha. Combine a " + (/retir/i.test(p.tipo) ? "retirada" : "entrega") + " pelo WhatsApp.", rastreio: "Ela já está a caminho por " + p.tipo + ".", troca: "A " + N.nome + " vai analisar e te responder pelo WhatsApp." }[tipo] || "";
+  var px = pixNeg_(N); if (tipo === "novo" && px && (p.pagamento === "pix" || !p.pagamento) && p.cobrar !== "" && p.cobrar !== undefined && p.cobrar !== null) txt = "Para confirmar, faça o Pix de " + brl_(p.cobrar) + (px.modo === "sinal" ? " (sinal)" : "") + " para a chave " + px.chave + (px.nome ? " (" + px.nome + ")" : "") + " e mande o comprovante pelo botão abaixo. A loja confere e confirma.";
+  if (tipo === "novo" && /^(credito|debito|boleto)$/.test(String(p.pagamento))) txt = "Você escolheu pagar com " + FORMAS_PAG[p.pagamento].toLowerCase() + ". A loja vai te mandar o link de pagamento pelo app, e você recebe o aviso.";
+  if (tipo === "pagar") txt = "Toque no botão abaixo, abra o seu pedido e toque em Pagar agora. Depois, mande o comprovante por lá." + (p.link_pag ? " Link: " + p.link_pag : "");
   if (p.rastreio && (tipo === "rastreio" || tipo === "pronto" || tipo === "entregue")) txt += (txt ? " " : "") + "Código de rastreio: " + p.rastreio + (/^https?:/i.test(p.rastreio) ? "" : " (acompanhe no site dos Correios: rastreamento.correios.com.br ou da transportadora).");
   var lk = linkCli_(N, p);
   enviar_(p.email, tit + " · " + N.nome,
@@ -584,11 +626,19 @@ function entregas_(N) {
   else l = (t || "Retirada,Entrega,Correios").split(",").map(function (s) { s = s.trim(); var r = /retir/i.test(s); return { nome: s, taxa: r ? 0 : null, retira: r }; });
   return l.map(function (e) { return { nome: lim_(e.nome, 40), taxa: e.taxa === null || e.taxa === "" || e.taxa === undefined ? null : Math.max(0, num_(e.taxa)), retira: !!e.retira }; }).filter(function (e) { return e.nome; });
 }
+function pixNeg_(N) { var ch = String(N.pix_chave || "").trim(); if (!ch) return null; var m = ["sinal", "total", "depois"].indexOf(String(N.pix_modo)) >= 0 ? String(N.pix_modo) : "sinal";
+  return { chave: ch, nome: String(N.pix_nome || ""), banco: String(N.pix_banco || ""), modo: m, pct: Math.min(100, Math.max(10, Math.round(num_(N.pix_pct)) || 50)) }; }
+function pagNeg_(N) { var l = j_(N.pagtos, null), temPix = !!String(N.pix_chave || "").trim();
+  if (!Array.isArray(l)) l = temPix ? ["pix"] : [];
+  l = l.filter(function (f) { return FORMAS_PAG[f] && (f !== "pix" || temPix); });
+  var m = ["sinal", "total", "depois"].indexOf(String(N.pix_modo)) >= 0 ? String(N.pix_modo) : "sinal";
+  return { formas: l, nomes: l.map(function (f) { return FORMAS_PAG[f]; }), modo: m, pct: Math.min(100, Math.max(10, Math.round(num_(N.pix_pct)) || 50)) }; }
+function cobrarDe_(N, total, forma) { var g = pagNeg_(N); if (!forma || forma === "dinheiro" || g.formas.indexOf(forma) < 0 || g.modo === "depois") return ""; return g.modo === "total" ? total : Math.round(total * g.pct) / 100; }
 function mkt_(N) { var m = j_(N.mkt, {}), o = {}; Object.keys(MKT_PADRAO).forEach(function (k) { o[k] = m[k] !== undefined && m[k] !== "" ? m[k] : MKT_PADRAO[k]; }); return o; }
 function publicoNeg_(N) {
   return { n: N.n, nome: String(N.nome), whats: soDig_(N.whatsapp), tel: String(N.telefone || ""), logo: String(N.logo || ""), titulo: String(N.titulo || ""), subtitulo: String(N.subtitulo || ""),
     aviso: String(N.aviso || ""), cats: j_(N.cats, []), faixas: j_(N.faixas, FAIXAS_PADRAO), brinde: j_(N.brinde, {}), redes: j_(N.redes, {}),
-    trocas: String(N.trocas || "") || TROCAS_PADRAO, entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
+    trocas: String(N.trocas || "") || TROCAS_PADRAO, pix: pixNeg_(N), pag: pagNeg_(N), entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
 }
 function completoNeg_(N) {
   var o = publicoNeg_(N); o.email_aviso = String(N.email_aviso || ""); o.whatsapp = String(N.whatsapp || ""); o.mkt = mkt_(N);
@@ -653,7 +703,7 @@ function publico_(p, painel) {
   var its = itens_(p).map(function (i) { var o = JSON.parse(JSON.stringify(i)); o.foto = !!o.foto_id; delete o.foto_id; return o; });
   var o = { id: p.id, num: p.num, criado: p.criado, cliente: String(p.cliente), tipo: String(p.tipo), entrega: dataIso_(p.entrega), itens: its, total: p.total, sinal: p.sinal,
     pago: sim_(p.pago), status: p.status, obs: String(p.obs || ""), historico: hist_(p), origem: String(p.origem || ""),
-    endereco: String(p.endereco || ""), cep: String(p.cep || ""), rastreio: String(p.rastreio || ""), troca: trocaPub_(p), taxa: p.taxa === "" || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
+    endereco: String(p.endereco || ""), cep: String(p.cep || ""), rastreio: String(p.rastreio || ""), troca: trocaPub_(p), cobrar: p.cobrar === "" || p.cobrar === undefined || p.cobrar === null ? null : Number(p.cobrar), comprovante: !!p.comprovante, comp_em: Number(p.comp_em) || 0, pagamento: String(p.pagamento || ""), pagNome: FORMAS_PAG[p.pagamento] || "", link_pag: String(p.link_pag || ""), taxa: p.taxa === "" || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
   if (painel) { o.tel = soDig_(p.tel); o.email = String(p.email || ""); o.aniv = String(p.aniv || ""); o.anot = String(p.anot || ""); o.cliente_id = String(p.cliente_id || ""); }
   return o;
 }

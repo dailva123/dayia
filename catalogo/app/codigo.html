@@ -33,10 +33,10 @@ button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;fon
 var VERSAO_SISTEMA = &quot;1.0&quot;;
 var ABAS = {
   Negocios:  [&quot;n&quot;,&quot;nome&quot;,&quot;situacao&quot;,&quot;teste_ate&quot;,&quot;criado&quot;,&quot;dono&quot;,&quot;whatsapp&quot;,&quot;email_aviso&quot;,&quot;senha&quot;,&quot;telefone&quot;,&quot;logo&quot;,&quot;titulo&quot;,&quot;subtitulo&quot;,&quot;aviso&quot;,
-              &quot;cats&quot;,&quot;faixas&quot;,&quot;brinde&quot;,&quot;redes&quot;,&quot;tipos&quot;,&quot;mkt&quot;,&quot;plano&quot;,&quot;valor&quot;,&quot;vence&quot;,&quot;link_pagto&quot;,&quot;trocas&quot;],
+              &quot;cats&quot;,&quot;faixas&quot;,&quot;brinde&quot;,&quot;redes&quot;,&quot;tipos&quot;,&quot;mkt&quot;,&quot;plano&quot;,&quot;valor&quot;,&quot;vence&quot;,&quot;link_pagto&quot;,&quot;trocas&quot;,&quot;pix_chave&quot;,&quot;pix_nome&quot;,&quot;pix_banco&quot;,&quot;pix_modo&quot;,&quot;pix_pct&quot;,&quot;pagtos&quot;],
   Pecas:     [&quot;negocio&quot;,&quot;id&quot;,&quot;ordem&quot;,&quot;nome&quot;,&quot;cat&quot;,&quot;preco&quot;,&quot;desc&quot;,&quot;fotos&quot;,&quot;videos&quot;,&quot;campos&quot;,&quot;ativo&quot;,&quot;shopee&quot;,&quot;tiktok&quot;,&quot;criado&quot;],
   Pedidos:   [&quot;negocio&quot;,&quot;id&quot;,&quot;num&quot;,&quot;criado&quot;,&quot;quando&quot;,&quot;cliente_id&quot;,&quot;cliente&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniv&quot;,&quot;tipo&quot;,&quot;entrega&quot;,&quot;itens&quot;,&quot;resumo&quot;,&quot;total&quot;,&quot;sinal&quot;,&quot;pago&quot;,
-              &quot;status&quot;,&quot;obs&quot;,&quot;anot&quot;,&quot;origem&quot;,&quot;chave&quot;,&quot;historico&quot;,&quot;push&quot;,&quot;endereco&quot;,&quot;cep&quot;,&quot;taxa&quot;,&quot;rastreio&quot;,&quot;troca&quot;],
+              &quot;status&quot;,&quot;obs&quot;,&quot;anot&quot;,&quot;origem&quot;,&quot;chave&quot;,&quot;historico&quot;,&quot;push&quot;,&quot;endereco&quot;,&quot;cep&quot;,&quot;taxa&quot;,&quot;rastreio&quot;,&quot;troca&quot;,&quot;cobrar&quot;,&quot;comprovante&quot;,&quot;comp_em&quot;,&quot;pagamento&quot;,&quot;link_pag&quot;],
   Clientes:  [&quot;negocio&quot;,&quot;id&quot;,&quot;nome&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniv&quot;,&quot;obs&quot;,&quot;origem&quot;,&quot;criado&quot;],
   Promocoes: [&quot;negocio&quot;,&quot;id&quot;,&quot;titulo&quot;,&quot;desc&quot;,&quot;alvo&quot;,&quot;ate&quot;,&quot;ativa&quot;],
   Envios:    [&quot;negocio&quot;,&quot;chave&quot;,&quot;cliente&quot;,&quot;dia&quot;],
@@ -46,6 +46,7 @@ var MIN = 60000, DIA = 86400000;
 var STATUS = { novo: &quot;Recebido&quot;, sinal: &quot;Sinal pago&quot;, producao: &quot;Produzindo&quot;, acabamento: &quot;Finalizando&quot;, pronto: &quot;Pronto&quot;, entregue: &quot;Entregue&quot;, troca: &quot;Troca/devolução&quot;, cancelado: &quot;Cancelado&quot; };
 var ABERTOS = [&quot;novo&quot;, &quot;sinal&quot;, &quot;producao&quot;, &quot;acabamento&quot;, &quot;pronto&quot;, &quot;troca&quot;];
 var TROCAS_PADRAO = &quot;Se a peça chegar com defeito, me avise pelo app (botão Pedir troca ou devolução) com uma foto, que eu resolvo: conserto, troca ou devolução do valor.\nCompras pelo catálogo: você pode desistir em até 7 dias depois de receber, com devolução do valor.\nTroca por gosto, tamanho ou cor: só em peças sem personalização, em até 7 dias depois de receber e sem uso.&quot;;
+var FORMAS_PAG = { pix: &quot;Pix&quot;, credito: &quot;Cartão de crédito&quot;, debito: &quot;Cartão de débito&quot;, boleto: &quot;Boleto&quot;, dinheiro: &quot;Dinheiro na retirada ou entrega&quot; };
 var MOTIVOS_TROCA = { defeito: &quot;Veio com defeito&quot;, errado: &quot;Veio diferente do que pedi&quot;, tamanho: &quot;Tamanho ou cor&quot;, desisti: &quot;Desisti da compra&quot;, outro: &quot;Outro motivo&quot; };
 var ENTREGAS_PADRAO = [{ nome: &quot;Retirada&quot;, taxa: 0, retira: true }, { nome: &quot;Entrega na cidade&quot;, taxa: null, retira: false }, { nome: &quot;Correios&quot;, taxa: null, retira: false }, { nome: &quot;Transportadora&quot;, taxa: null, retira: false }];
 var FAIXAS_PADRAO = [{ min: 1, desc: 0 }, { min: 30, desc: 0.10 }, { min: 50, desc: 0.15 }, { min: 100, desc: 0.20 }];
@@ -108,7 +109,7 @@ function criarBab_() {
 function doGet(e) { var p = (e &amp;&amp; e.parameter) || {}; if (p.acao) return responder_(executar_(p)); return ContentService.createTextOutput(&quot;Catálogo Fácil by DayIA · servidor funcionando (versão &quot; + VERSAO_SISTEMA + &quot;).&quot;); }
 function doPost(e) { var d = {}; try { d = JSON.parse(e.postData.contents || &quot;{}&quot;); } catch (x) { return responder_({ erro: &quot;Pedido inválido.&quot; }); } return responder_(executar_(d)); }
 function responder_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
-var TRAVADAS = [&quot;status&quot;,&quot;novaEncomenda&quot;,&quot;verFoto&quot;,&quot;subirMidia&quot;,&quot;salvarPeca&quot;,&quot;esconderPeca&quot;,&quot;excluirPeca&quot;,&quot;salvarCliente&quot;,&quot;excluirCliente&quot;,&quot;importarClientes&quot;,&quot;salvarPromo&quot;,&quot;excluirPromo&quot;,&quot;envio&quot;,&quot;salvarAjustes&quot;];
+var TRAVADAS = [&quot;status&quot;,&quot;novaEncomenda&quot;,&quot;verFoto&quot;,&quot;verComprovante&quot;,&quot;subirMidia&quot;,&quot;salvarPeca&quot;,&quot;esconderPeca&quot;,&quot;excluirPeca&quot;,&quot;salvarCliente&quot;,&quot;excluirCliente&quot;,&quot;importarClientes&quot;,&quot;salvarPromo&quot;,&quot;excluirPromo&quot;,&quot;envio&quot;,&quot;salvarAjustes&quot;];
 function executar_(d) {
   try {
     var f = ACOES[d.acao]; if (!f) return { erro: &quot;Ação desconhecida.&quot; };
@@ -139,14 +140,16 @@ var ACOES = {
     var endereco = en.retira ? &quot;&quot; : lim_(c.endereco, 200), cep = en.retira ? &quot;&quot; : soDig_(c.cep).slice(0, 8);
     if (!en.retira &amp;&amp; endereco.length &lt; 8) throw new Error(&quot;Coloque o endereço para a entrega (rua, número e bairro).&quot;);
     if (!en.retira &amp;&amp; cep.length !== 8) throw new Error(&quot;Coloque o CEP com 8 números.&quot;);
-    var taxa = en.taxa === null ? &quot;&quot; : en.taxa;
+    var taxa = en.taxa === null ? &quot;&quot; : en.taxa, pg = pagNeg_(N), forma = String(c.pagamento || &quot;&quot;);
+    if (pg.formas.length &amp;&amp; pg.formas.indexOf(forma) &lt; 0) { if (pg.formas.length === 1) forma = pg.formas[0]; else throw new Error(&quot;Escolha como você quer pagar.&quot;); }
+    if (!pg.formas.length) forma = &quot;&quot;;
     return comTrava_(function () {
       var id = proximoId_(), agora = Date.now();
       calc.itens.forEach(function (it, i) { var orig = (c.itens || [])[it._i] || {}; if (orig.foto &amp;&amp; orig.foto.dados) it.foto_id = salvarArquivo_(N, orig.foto, &quot;pedido&quot; + id + &quot;_&quot; + (i + 1), false); delete it._i; });
       var cli = clienteUpsert_(N.n, { nome: c.nome, tel: c.tel, email: c.email, aniv: anivDe_(c.aniv) }, &quot;pedido&quot;);
       var p = { negocio: N.n, id: id, num: proximoNum_(N.n), criado: agora, quando: legivel_(agora), cliente_id: cli.id, cliente: lim_(c.nome, 80), tel: lim_(c.tel, 30), email: lim_(c.email, 120),
         aniv: anivDe_(c.aniv), tipo: en.nome, endereco: endereco, cep: cep, taxa: taxa, entrega: dataIso_(c.entrega), itens: JSON.stringify(calc.itens), resumo: calc.resumo, total: Math.round((calc.total + (taxa === &quot;&quot; ? 0 : taxa)) * 100) / 100, sinal: 0, pago: &quot;&quot;,
-        status: &quot;novo&quot;, obs: lim_(c.obs, 400), anot: &quot;&quot;, origem: &quot;catalogo&quot;, chave: Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 10), historico: JSON.stringify([{ s: &quot;novo&quot;, t: agora }]) };
+        pagamento: forma, link_pag: &quot;&quot;, cobrar: cobrarDe_(N, Math.round((calc.total + (taxa === &quot;&quot; ? 0 : taxa)) * 100) / 100, forma), status: &quot;novo&quot;, obs: lim_(c.obs, 400), anot: &quot;&quot;, origem: &quot;catalogo&quot;, chave: Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 10), historico: JSON.stringify([{ s: &quot;novo&quot;, t: agora }]) };
       inserir_(&quot;Pedidos&quot;, p);
       if (d.base) setCfg_(&quot;link_base&quot;, String(d.base).split(&quot;?&quot;)[0].split(&quot;#&quot;)[0]);
       mudou_(N.n);
@@ -201,6 +204,25 @@ var ACOES = {
         &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Troca/devolução · pedido #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; · WhatsApp &quot; + esc_(p.tel) + &quot;&lt;br&gt;Motivo: &quot; + esc_(MOTIVOS_TROCA[mot]) + (txt ? &quot;&lt;br&gt;O que ela contou: &quot; + esc_(txt) : &quot;&quot;) + (foto ? &quot;&lt;br&gt;📷 Ela mandou foto: veja no painel.&quot; : &quot;&quot;) + &quot;&lt;/p&gt;&quot; + itensHtml_(p) +
         &quot;&lt;p&gt;Depois de resolver, mude o andamento no painel para &lt;b&gt;Entregue&lt;/b&gt; (troca feita) ou &lt;b&gt;Cancelado&lt;/b&gt; (valor devolvido).&lt;/p&gt;&quot;, String(N.nome));
       emailCliente_(N, p, &quot;troca&quot;);
+      return { ok: true, pedido: publico_(p) };
+    });
+  },
+  comprovante: function (d) {
+    var N = negocio_(d.n), a = d.arquivo || {};
+    if (!a.dados) throw new Error(&quot;Escolha a foto ou o PDF do comprovante.&quot;);
+    var tipo = String(a.tipo || &quot;&quot;); if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(tipo)) throw new Error(&quot;Mande o comprovante em foto ou PDF.&quot;);
+    return comTrava_(function () {
+      var p = doCliente_(N, d);
+      if (p.status === &quot;cancelado&quot;) throw new Error(&quot;Este pedido foi cancelado.&quot;);
+      var bytes = Utilities.base64Decode(String(a.dados).replace(/^data:[^,]+,/, &quot;&quot;));
+      if (bytes.length &gt; 6 * 1024 * 1024) throw new Error(&quot;Arquivo grande demais. Mande uma foto (print) do comprovante.&quot;);
+      var f = pasta_().createFile(Utilities.newBlob(bytes, tipo, N.n + &quot;_comprovante&quot; + p.id + (tipo === &quot;application/pdf&quot; ? &quot;.pdf&quot; : &quot;.jpg&quot;)));
+      var agora = Date.now();
+      atualizar_(&quot;Pedidos&quot;, function (o) { return String(o.negocio).toLowerCase() === N.n &amp;&amp; Number(o.id) === p.id; }, { comprovante: f.getId(), comp_em: agora }); mudou_(N.n);
+      p.comprovante = f.getId(); p.comp_em = agora;
+      push_([&quot;N_&quot; + N.n], &quot;🧾 Comprovante do pedido #&quot; + p.num, p.cliente + &quot; mandou o comprovante&quot; + (p.cobrar !== &quot;&quot; ? &quot; · &quot; + brl_(p.cobrar) : &quot;&quot;), linkPainel_(N));
+      if (/@/.test(N.email_aviso || &quot;&quot;)) enviar_(String(N.email_aviso), &quot;🧾 Comprovante do pedido #&quot; + p.num + &quot; · &quot; + p.cliente,
+        &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Comprovante recebido · pedido #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; mandou o comprovante do Pix&quot; + (p.cobrar !== &quot;&quot; ? &quot; de &quot; + brl_(p.cobrar) : &quot;&quot;) + &quot;.&lt;/p&gt;&lt;p&gt;Confira no seu banco se o valor caiu e toque em &lt;b&gt;Confirmar pagamento&lt;/b&gt; no painel. A cliente é avisada sozinha.&lt;/p&gt;&quot;, String(N.nome));
       return { ok: true, pedido: publico_(p) };
     });
   },
@@ -301,9 +323,16 @@ var ACOES = {
       if (d.endereco !== undefined) campos.endereco = lim_(d.endereco, 200);
       if (d.taxa !== undefined) campos.taxa = d.taxa === null || d.taxa === &quot;&quot; ? &quot;&quot; : Math.max(0, num_(d.taxa));
       if (d.rastreio !== undefined) campos.rastreio = lim_(d.rastreio, 300);
+      if (d.link_pag !== undefined) campos.link_pag = url_(d.link_pag);
+      var linkNovo = campos.link_pag &amp;&amp; campos.link_pag !== String(p.link_pag || &quot;&quot;);
       var rastNovo = campos.rastreio &amp;&amp; campos.rastreio !== String(p.rastreio || &quot;&quot;);
       if (d.anot !== undefined) campos.anot = lim_(d.anot, 600);
       atualizar_(&quot;Pedidos&quot;, function (o) { return Number(o.id) === p.id; }, campos); mudou_(n);
+      if (linkNovo &amp;&amp; !campos.status) {
+        p.link_pag = campos.link_pag;
+        pushSubs_(j_(p.push, []), String(N.nome), &quot;💳 O link para pagar o pedido #&quot; + p.num + &quot; chegou. Toque para pagar.&quot;, linkCli_(N, p));
+        emailCliente_(N, p, &quot;pagar&quot;);
+      }
       if (rastNovo &amp;&amp; !campos.status) {
         p.rastreio = campos.rastreio;
         pushSubs_(j_(p.push, []), String(N.nome), &quot;🚚 Sua encomenda #&quot; + p.num + &quot; foi enviada! Rastreio: &quot; + p.rastreio, linkCli_(N, p));
@@ -330,6 +359,12 @@ var ACOES = {
       inserir_(&quot;Pedidos&quot;, p); mudou_(n);
       return { ok: true, id: p.id };
     });
+  },
+  verComprovante: function (d) {
+    var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
+    if (!p || !p.comprovante) throw new Error(&quot;Este pedido não tem comprovante.&quot;);
+    var f = DriveApp.getFileById(String(p.comprovante)), b = f.getBlob();
+    return { ok: true, tipo: b.getContentType(), dados: Utilities.base64Encode(b.getBytes()), nome: f.getName() };
   },
   verFoto: function (d) {
     var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
@@ -447,6 +482,10 @@ var ACOES = {
       o.limite = Math.min(30, Math.max(5, Math.round(num_(x.limite)) || 20)); o.hIni = Math.min(12, Math.max(6, Math.round(num_(x.hIni)) || 9)); o.hFim = Math.min(22, Math.max(14, Math.round(num_(x.hFim)) || 19));
       o.descAniv = Math.min(90, Math.max(0, Math.round(num_(x.descAniv)))); o.msgAniv = lim_(x.msgAniv, 500) || MKT_PADRAO.msgAniv; m.mkt = JSON.stringify(o); }
     if (a.trocas !== undefined) m.trocas = lim_(a.trocas, 1000);
+    if (a.pix !== undefined) { var px = a.pix || {}; m.pix_chave = lim_(px.chave, 120); m.pix_nome = lim_(px.nome, 80); m.pix_banco = lim_(px.banco, 60);
+      if (px.formas !== undefined) m.pagtos = JSON.stringify((px.formas || []).filter(function (f) { return FORMAS_PAG[f]; }));
+      if ((px.formas || []).indexOf(&quot;pix&quot;) &gt;= 0 &amp;&amp; !m.pix_chave) throw new Error(&quot;Coloque a chave Pix ou desmarque o Pix.&quot;);
+      m.pix_modo = [&quot;sinal&quot;, &quot;total&quot;, &quot;depois&quot;].indexOf(String(px.modo)) &gt;= 0 ? String(px.modo) : &quot;sinal&quot;; m.pix_pct = Math.min(100, Math.max(10, Math.round(num_(px.pct)) || 50)); }
     if (a.logo !== undefined) { if (String(a.logo).length &gt; 45000) throw new Error(&quot;Logo grande demais.&quot;); m.logo = String(a.logo); }
     if (a.senha) { if (String(a.senha).length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;); m.senha = hash_(a.senha); }
     atualizar_(&quot;Negocios&quot;, function (r) { return String(r.n).toLowerCase() === n; }, m); mudou_(n);
@@ -543,14 +582,17 @@ function avisarNegocio_(N, p) {
   if (!/@/.test(N.email_aviso || &quot;&quot;)) return;
   var lk = linkPainel_(N);
   enviar_(String(N.email_aviso), &quot;🛎️ Pedido novo #&quot; + p.num + &quot; · &quot; + p.cliente + &quot; · &quot; + brl_(p.total),
-    &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Pedido novo #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; · WhatsApp &quot; + esc_(p.tel) + &quot;&lt;br&gt;E-mail: &quot; + esc_(p.email) + &quot;&lt;br&gt;Receber por: &quot; + esc_(p.tipo) + (p.endereco ? &quot;&lt;br&gt;Endereço: &quot; + esc_(p.endereco) + (p.cep ? &quot; · CEP &quot; + esc_(p.cep) : &quot;&quot;) : &quot;&quot;) +
+    &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Pedido novo #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; · WhatsApp &quot; + esc_(p.tel) + &quot;&lt;br&gt;E-mail: &quot; + esc_(p.email) + (p.pagamento ? &quot;&lt;br&gt;Pagamento: &quot; + esc_(FORMAS_PAG[p.pagamento] || p.pagamento) + (p.cobrar !== &quot;&quot; &amp;&amp; p.cobrar !== undefined ? &quot; · &quot; + brl_(p.cobrar) + &quot; na hora do pedido&quot; : &quot;&quot;) : &quot;&quot;) + &quot;&lt;br&gt;Receber por: &quot; + esc_(p.tipo) + (p.endereco ? &quot;&lt;br&gt;Endereço: &quot; + esc_(p.endereco) + (p.cep ? &quot; · CEP &quot; + esc_(p.cep) : &quot;&quot;) : &quot;&quot;) +
     (p.entrega ? &quot;&lt;br&gt;Precisa para: &quot; + dataBr_(p.entrega) : &quot;&quot;) + (p.obs ? &quot;&lt;br&gt;Recado: &quot; + esc_(p.obs) : &quot;&quot;) + &quot;&lt;/p&gt;&quot; + itensHtml_(p) +
     (lk ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + lk + &quot;&#x27; style=&#x27;background:#4E3D31;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Abrir o painel&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;), String(N.nome));
 }
 function emailCliente_(N, p, tipo) {
   if (!/@/.test(p.email || &quot;&quot;)) return;
-  var tit = { novo: &quot;Recebemos seu pedido #&quot; + p.num + &quot; 💛&quot;, sinal: &quot;Sua encomenda #&quot; + p.num + &quot; foi confirmada&quot;, pronto: &quot;Sua encomenda #&quot; + p.num + &quot; está pronta!&quot;, entregue: &quot;Obrigada pela compra!&quot;, cancelado: &quot;Encomenda #&quot; + p.num + &quot; cancelada&quot;, rastreio: &quot;🚚 Sua encomenda #&quot; + p.num + &quot; foi enviada!&quot;, troca: &quot;Recebemos seu pedido de troca/devolução #&quot; + p.num }[tipo] || &quot;Encomenda #&quot; + p.num;
+  var tit = { novo: &quot;Recebemos seu pedido #&quot; + p.num + &quot; 💛&quot;, sinal: &quot;Sua encomenda #&quot; + p.num + &quot; foi confirmada&quot;, pronto: &quot;Sua encomenda #&quot; + p.num + &quot; está pronta!&quot;, entregue: &quot;Obrigada pela compra!&quot;, cancelado: &quot;Encomenda #&quot; + p.num + &quot; cancelada&quot;, rastreio: &quot;🚚 Sua encomenda #&quot; + p.num + &quot; foi enviada!&quot;, troca: &quot;Recebemos seu pedido de troca/devolução #&quot; + p.num, pagar: &quot;💳 Link para pagar o pedido #&quot; + p.num }[tipo] || &quot;Encomenda #&quot; + p.num;
   var txt = { novo: &quot;A &quot; + N.nome + &quot; recebeu o seu pedido. Em breve ela confirma o valor final e o prazo pelo WhatsApp.&quot;, pronto: &quot;Sua encomenda está prontinha. Combine a &quot; + (/retir/i.test(p.tipo) ? &quot;retirada&quot; : &quot;entrega&quot;) + &quot; pelo WhatsApp.&quot;, rastreio: &quot;Ela já está a caminho por &quot; + p.tipo + &quot;.&quot;, troca: &quot;A &quot; + N.nome + &quot; vai analisar e te responder pelo WhatsApp.&quot; }[tipo] || &quot;&quot;;
+  var px = pixNeg_(N); if (tipo === &quot;novo&quot; &amp;&amp; px &amp;&amp; (p.pagamento === &quot;pix&quot; || !p.pagamento) &amp;&amp; p.cobrar !== &quot;&quot; &amp;&amp; p.cobrar !== undefined &amp;&amp; p.cobrar !== null) txt = &quot;Para confirmar, faça o Pix de &quot; + brl_(p.cobrar) + (px.modo === &quot;sinal&quot; ? &quot; (sinal)&quot; : &quot;&quot;) + &quot; para a chave &quot; + px.chave + (px.nome ? &quot; (&quot; + px.nome + &quot;)&quot; : &quot;&quot;) + &quot; e mande o comprovante pelo botão abaixo. A loja confere e confirma.&quot;;
+  if (tipo === &quot;novo&quot; &amp;&amp; /^(credito|debito|boleto)$/.test(String(p.pagamento))) txt = &quot;Você escolheu pagar com &quot; + FORMAS_PAG[p.pagamento].toLowerCase() + &quot;. A loja vai te mandar o link de pagamento pelo app, e você recebe o aviso.&quot;;
+  if (tipo === &quot;pagar&quot;) txt = &quot;Toque no botão abaixo, abra o seu pedido e toque em Pagar agora. Depois, mande o comprovante por lá.&quot; + (p.link_pag ? &quot; Link: &quot; + p.link_pag : &quot;&quot;);
   if (p.rastreio &amp;&amp; (tipo === &quot;rastreio&quot; || tipo === &quot;pronto&quot; || tipo === &quot;entregue&quot;)) txt += (txt ? &quot; &quot; : &quot;&quot;) + &quot;Código de rastreio: &quot; + p.rastreio + (/^https?:/i.test(p.rastreio) ? &quot;&quot; : &quot; (acompanhe no site dos Correios: rastreamento.correios.com.br ou da transportadora).&quot;);
   var lk = linkCli_(N, p);
   enviar_(p.email, tit + &quot; · &quot; + N.nome,
@@ -593,11 +635,19 @@ function entregas_(N) {
   else l = (t || &quot;Retirada,Entrega,Correios&quot;).split(&quot;,&quot;).map(function (s) { s = s.trim(); var r = /retir/i.test(s); return { nome: s, taxa: r ? 0 : null, retira: r }; });
   return l.map(function (e) { return { nome: lim_(e.nome, 40), taxa: e.taxa === null || e.taxa === &quot;&quot; || e.taxa === undefined ? null : Math.max(0, num_(e.taxa)), retira: !!e.retira }; }).filter(function (e) { return e.nome; });
 }
+function pixNeg_(N) { var ch = String(N.pix_chave || &quot;&quot;).trim(); if (!ch) return null; var m = [&quot;sinal&quot;, &quot;total&quot;, &quot;depois&quot;].indexOf(String(N.pix_modo)) &gt;= 0 ? String(N.pix_modo) : &quot;sinal&quot;;
+  return { chave: ch, nome: String(N.pix_nome || &quot;&quot;), banco: String(N.pix_banco || &quot;&quot;), modo: m, pct: Math.min(100, Math.max(10, Math.round(num_(N.pix_pct)) || 50)) }; }
+function pagNeg_(N) { var l = j_(N.pagtos, null), temPix = !!String(N.pix_chave || &quot;&quot;).trim();
+  if (!Array.isArray(l)) l = temPix ? [&quot;pix&quot;] : [];
+  l = l.filter(function (f) { return FORMAS_PAG[f] &amp;&amp; (f !== &quot;pix&quot; || temPix); });
+  var m = [&quot;sinal&quot;, &quot;total&quot;, &quot;depois&quot;].indexOf(String(N.pix_modo)) &gt;= 0 ? String(N.pix_modo) : &quot;sinal&quot;;
+  return { formas: l, nomes: l.map(function (f) { return FORMAS_PAG[f]; }), modo: m, pct: Math.min(100, Math.max(10, Math.round(num_(N.pix_pct)) || 50)) }; }
+function cobrarDe_(N, total, forma) { var g = pagNeg_(N); if (!forma || forma === &quot;dinheiro&quot; || g.formas.indexOf(forma) &lt; 0 || g.modo === &quot;depois&quot;) return &quot;&quot;; return g.modo === &quot;total&quot; ? total : Math.round(total * g.pct) / 100; }
 function mkt_(N) { var m = j_(N.mkt, {}), o = {}; Object.keys(MKT_PADRAO).forEach(function (k) { o[k] = m[k] !== undefined &amp;&amp; m[k] !== &quot;&quot; ? m[k] : MKT_PADRAO[k]; }); return o; }
 function publicoNeg_(N) {
   return { n: N.n, nome: String(N.nome), whats: soDig_(N.whatsapp), tel: String(N.telefone || &quot;&quot;), logo: String(N.logo || &quot;&quot;), titulo: String(N.titulo || &quot;&quot;), subtitulo: String(N.subtitulo || &quot;&quot;),
     aviso: String(N.aviso || &quot;&quot;), cats: j_(N.cats, []), faixas: j_(N.faixas, FAIXAS_PADRAO), brinde: j_(N.brinde, {}), redes: j_(N.redes, {}),
-    trocas: String(N.trocas || &quot;&quot;) || TROCAS_PADRAO, entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
+    trocas: String(N.trocas || &quot;&quot;) || TROCAS_PADRAO, pix: pixNeg_(N), pag: pagNeg_(N), entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
 }
 function completoNeg_(N) {
   var o = publicoNeg_(N); o.email_aviso = String(N.email_aviso || &quot;&quot;); o.whatsapp = String(N.whatsapp || &quot;&quot;); o.mkt = mkt_(N);
@@ -662,7 +712,7 @@ function publico_(p, painel) {
   var its = itens_(p).map(function (i) { var o = JSON.parse(JSON.stringify(i)); o.foto = !!o.foto_id; delete o.foto_id; return o; });
   var o = { id: p.id, num: p.num, criado: p.criado, cliente: String(p.cliente), tipo: String(p.tipo), entrega: dataIso_(p.entrega), itens: its, total: p.total, sinal: p.sinal,
     pago: sim_(p.pago), status: p.status, obs: String(p.obs || &quot;&quot;), historico: hist_(p), origem: String(p.origem || &quot;&quot;),
-    endereco: String(p.endereco || &quot;&quot;), cep: String(p.cep || &quot;&quot;), rastreio: String(p.rastreio || &quot;&quot;), troca: trocaPub_(p), taxa: p.taxa === &quot;&quot; || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
+    endereco: String(p.endereco || &quot;&quot;), cep: String(p.cep || &quot;&quot;), rastreio: String(p.rastreio || &quot;&quot;), troca: trocaPub_(p), cobrar: p.cobrar === &quot;&quot; || p.cobrar === undefined || p.cobrar === null ? null : Number(p.cobrar), comprovante: !!p.comprovante, comp_em: Number(p.comp_em) || 0, pagamento: String(p.pagamento || &quot;&quot;), pagNome: FORMAS_PAG[p.pagamento] || &quot;&quot;, link_pag: String(p.link_pag || &quot;&quot;), taxa: p.taxa === &quot;&quot; || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
   if (painel) { o.tel = soDig_(p.tel); o.email = String(p.email || &quot;&quot;); o.aniv = String(p.aniv || &quot;&quot;); o.anot = String(p.anot || &quot;&quot;); o.cliente_id = String(p.cliente_id || &quot;&quot;); }
   return o;
 }

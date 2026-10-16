@@ -1309,7 +1309,7 @@ function sheetCfgAniv(){
 
 /* ---------- CATÁLOGO ---------- */
 function rCat(){
-  const D=P.d,N=D.negocio,cats=pCats(),tabs=`<div class="adm-tabs" style="margin-top:0"><button type="button" data-a="catSub" data-s="pecas" class="${P.catSub==="pecas"?"on":""}">Minhas peças</button><button type="button" data-a="catSub" data-s="descontos" class="${P.catSub==="descontos"?"on":""}">Descontos</button><button type="button" data-a="catSub" data-s="redes" class="${P.catSub==="redes"?"on":""}">Redes e lojas</button></div>`;
+  const D=P.d,N=D.negocio,cats=pCats(),tabs=`<div class="adm-tabs" style="margin-top:0"><button type="button" data-a="catSub" data-s="pecas" class="${P.catSub==="pecas"?"on":""}">Minhas peças</button><button type="button" data-a="catSub" data-s="descontos" class="${P.catSub==="descontos"?"on":""}">Descontos</button><button type="button" data-a="catSub" data-s="redes" class="${P.catSub==="redes"?"on":""}">🌐 Redes e lojas</button></div>`;
   if(P.catSub==="pecas"){
     $("#pc").innerHTML=`${tabs}
       <section class="box"><h4>📲 Mandar fotos para a cliente</h4><p class="tiny left" style="margin-top:0">Cliente pediu foto no WhatsApp? Em vez de procurar e mandar foto por foto, mande o link: ela abre direto na peça, com todas as fotos e os preços.</p>
@@ -1415,6 +1415,8 @@ function rAjustes(){
       ${c("aAviso","Recado no topo do catálogo (opcional)",N.aviso,' placeholder="Ex.: Encomendas de Natal até 10/12!"')}
       ${c("aWa","WhatsApp que recebe os pedidos",telBR(N.whatsapp),' inputmode="tel"')}${c("aTel","Telefone que aparece nos e-mails",N.tel)}
       <div class="fld"><span class="lb">Logo</span><label class="logo-ed"><img id="aLogoImg" src="${esc(src(logoDe(N))||"icon-192.png")}" alt=""><span><b>Trocar a logo</b><br><small>Foto quadrada</small></span><input type="file" id="aLogo" accept="image/*"></label></div></section>
+    <section class="box"><h4>🌐 Redes sociais e lojas</h4><p class="tiny left" style="margin-top:0">Instagram, TikTok, Facebook, Shopee, TikTok Shop... Cada link vira um botão no seu catálogo.</p>
+      <button class="btn ghost" type="button" data-a="irRedes">Colocar ou mudar as minhas redes</button></section>
     <section class="box"><h4>🗂️ Categorias</h4><p class="tiny left" style="margin-top:0">Os botões de filtro do catálogo. Só aparecem as que têm peças.</p><div id="catEd">${pCats().map(([k,n])=>`<div class="cat-ed" data-k="${esc(k)}"><input type="text" value="${esc(n)}" aria-label="Nome da categoria"><button type="button" data-a="rmCat" aria-label="Tirar categoria">×</button></div>`).join("")}</div>
       <button class="mini" style="margin-top:10px" type="button" data-a="addCat">＋ Nova categoria</button></section>
     <section class="box"><h4>🚚 Como a cliente pode receber</h4><div class="chks">${[...new Set(["Retirada","Entrega","Correios"].concat(tps))].map(t=>`<label><input type="checkbox" data-tipo="${esc(t)}" ${tps.includes(t)?"checked":""}> ${esc(t)}</label>`).join("")}</div></section>
@@ -1443,6 +1445,7 @@ async function acao(a,b){
   switch(a){
     case "tab":ir(b.dataset.t);break;
     case "verCli":location.hash="";break;
+    case "irRedes":P.aba="catalogo";P.catSub="redes";pRender();scrollTo(0,0);break;
     case "irPlano":P.aba="ajustes";pRender();setTimeout(()=>{const x=$(".plano");if(x)x.scrollIntoView({behavior:"smooth"})},60);break;
     case "simular":{const ps=D.pecas.filter(p=>p.ativo!==false&&!p.campos.foto&&!p.campos.nome),p=ps[Math.floor(Math.random()*ps.length)],nm=["Aline Duarte","Carla Mendes","Priscila Rocha","Joana Lima"][Math.floor(Math.random()*4)];
       DEMOAPI({acao:"pedir",n:NEG,dados:{nome:nm,tel:"19 98877-6655",email:"cliente@exemplo.com",tipo:"Retirada",itens:[{id:p.id,q:p.campos.lembr?30:1,cor:p.campos.cor?"Rosa":""}]}});toast("Pedido de teste enviado. Espere o aviso…");break;}

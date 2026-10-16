@@ -27,9 +27,10 @@ var ABAS = {
               "cats","faixas","brinde","redes","tipos","mkt","plano","valor","vence","link_pagto"],
   Pecas:     ["negocio","id","ordem","nome","cat","preco","desc","fotos","videos","campos","ativo","shopee","tiktok","criado"],
   Pedidos:   ["negocio","id","num","criado","quando","cliente_id","cliente","tel","email","aniv","tipo","entrega","itens","resumo","total","sinal","pago",
-              "status","obs","anot","origem","chave","historico"],
+              "status","obs","anot","origem","chave","historico","push"],
   Clientes:  ["negocio","id","nome","tel","email","aniv","obs","origem","criado"],
   Promocoes: ["negocio","id","titulo","desc","alvo","ate","ativa"],
+  Envios:    ["negocio","chave","cliente","dia"],
   Config:    ["chave","valor","explicacao"]
 };
 var MIN = 60000, DIA = 86400000;
@@ -134,7 +135,8 @@ var ACOES = {
   },
   pushReg: function (d) {
     if (d.token) pushGuardar_("N_" + sessao_(d), d.sub);
-    else { var N = negocio_(d.n); (d.lista || []).slice(0, 10).forEach(function (x) { try { var p = doCliente_(N, x); pushGuardar_("C_" + N.n + "_" + p.id, d.sub); } catch (e) {} }); }
+    else { var N = negocio_(d.n), sub = subOk_(d.sub); (d.lista || []).slice(0, 10).forEach(function (x) { try { var p = doCliente_(N, x), l = j_(p.push, []).filter(function (s) { return s !== sub; }); l.push(sub);
+      atualizar_("Pedidos", function (r) { return String(r.negocio).toLowerCase() === N.n && Number(r.id) === p.id; }, { push: JSON.stringify(l.slice(-3)) }); } catch (e) {} }); }
     return { ok: true, ativo: !!pushChave_() };
   },
 
@@ -142,6 +144,7 @@ var ACOES = {
   entrar: function (d) {
     var N = negocio_(d.n);
     if (!confereSenha_(N, String(d.senha || ""))) throw new Error("Senha incorreta.");
+    limparSessoes_();
     return { ok: true, token: novoToken_(N.n) };
   },
   sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
@@ -168,7 +171,7 @@ var ACOES = {
       atualizar_("Pedidos", function (o) { return Number(o.id) === p.id; }, campos); mudou_(n);
       if (campos.status) {
         Object.keys(campos).forEach(function (k) { p[k] = campos[k]; });
-        push_(["C_" + n + "_" + p.id], String(N.nome), avisoCli_(p), linkCli_(N, p));
+        pushSubs_(j_(p.push, []), String(N.nome), avisoCli_(p), linkCli_(N, p));
         if (["sinal", "pronto", "entregue", "cancelado"].indexOf(campos.status) >= 0) emailCliente_(N, p, campos.status);
       }
       return { ok: true };
@@ -282,11 +285,11 @@ var ACOES = {
       if (e.n >= m.limite) throw new Error("Você chegou ao limite de " + m.limite + " mensagens de hoje. Continue amanhã: isso protege o seu WhatsApp.");
       if (hr < m.hIni || hr >= m.hFim) throw new Error("Fora do horário de envio (" + m.hIni + "h às " + m.hFim + "h).");
       if (Date.now() - (e.ultimo || 0) < 15000) throw new Error("Aguarde alguns segundos antes do próximo envio.");
-      var k = lim_(d.chave, 40) + "|" + lim_(d.cliente, 20);
-      if (e.env[k]) throw new Error("Essa mensagem já foi enviada para essa cliente.");
-      e.n++; e.ultimo = Date.now(); e.env[k] = hoje;
-      var ks = Object.keys(e.env); if (ks.length > 800) ks.slice(0, ks.length - 800).forEach(function (x) { delete e.env[x]; });
-      P.setProperty("EV_" + n, JSON.stringify(e));
+      var ch = lim_(d.chave, 40), cl = lim_(d.cliente, 20);
+      if (enviados_(n)[ch + "|" + cl]) throw new Error("Essa mensagem já foi enviada para essa cliente.");
+      inserir_("Envios", { negocio: n, chave: ch, cliente: cl, dia: hoje });
+      e.n++; e.ultimo = Date.now();
+      P.setProperty("EV_" + n, JSON.stringify({ dia: e.dia, n: e.n, ultimo: e.ultimo }));
       return { ok: true, envios: envioEstado_(n, N) };
     });
   },
@@ -458,10 +461,11 @@ function promos_(n) {
   });
 }
 function promosAtivas_(n) { var h = hojeIso_(); return promos_(n).filter(function (r) { return r.ativa && r.ate >= h; }); }
-function envioRaw_(n) { var e = {}; try { e = JSON.parse(PropertiesService.getScriptProperties().getProperty("EV_" + n) || "{}"); } catch (x) {} e.env = e.env || {}; e.n = e.n || 0; return e; }
+function envioRaw_(n) { var e = {}; try { e = JSON.parse(PropertiesService.getScriptProperties().getProperty("EV_" + n) || "{}"); } catch (x) {} e.n = e.n || 0; return e; }
+function enviados_(n) { var o = {}; linhas_("Envios").forEach(function (r) { if (String(r.negocio).toLowerCase() === n) o[String(r.chave) + "|" + String(r.cliente)] = dataIso_(r.dia) || String(r.dia); }); return o; }
 function envioEstado_(n, N) {
   var e = envioRaw_(n), m = mkt_(N), hoje = hojeIso_(), hr = Math.floor(minutosHoje_(Date.now()) / 60);
-  return { n: e.dia === hoje ? e.n : 0, limite: m.limite, hIni: m.hIni, hFim: m.hFim, noHorario: hr >= m.hIni && hr < m.hFim, ultimo: e.ultimo || 0, env: e.env };
+  return { n: e.dia === hoje ? e.n : 0, limite: m.limite, hIni: m.hIni, hFim: m.hFim, noHorario: hr >= m.hIni && hr < m.hFim, ultimo: e.ultimo || 0, env: enviados_(n) };
 }
 
 /* ---------------- pedidos ---------------- */
@@ -554,6 +558,10 @@ function sessao_(d) {
   var o = JSON.parse(raw); if (!(o.exp > Date.now())) throw new Error("SESSAO");
   return o.v;
 }
+function limparSessoes_() {
+  var P = PropertiesService.getScriptProperties(), all = P.getProperties(), agora = Date.now();
+  Object.keys(all).forEach(function (k) { if (k.indexOf("SS_") === 0) { try { if (!(JSON.parse(all[k]).exp > agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); } } });
+}
 function encerrarSessao_(t) { if (t) PropertiesService.getScriptProperties().deleteProperty("SS_" + t); }
 function versao_(n) { return Number(PropertiesService.getScriptProperties().getProperty("V_" + n) || 1); }
 function mudou_(n) { PropertiesService.getScriptProperties().setProperty("V_" + n, String(Date.now())); }
@@ -561,8 +569,9 @@ function comTrava_(fn) { var l = LockService.getScriptLock(); if (!l.tryLock(200
 
 /* ---------------- avisos no celular (OneSignal, o mesmo app da Agenda Fácil) ---------------- */
 var ONESIGNAL_APP = "7a1178de-2e8b-4205-aeb9-8171f97fb614";
+function subOk_(sub) { sub = String(sub || "").trim(); if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error("Aparelho inválido."); return sub; }
 function pushGuardar_(chave, sub) {
-  sub = String(sub || "").trim(); if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error("Aparelho inválido.");
+  sub = subOk_(sub);
   var P = PropertiesService.getScriptProperties(), k = "PS_" + chave, o = { s: [] };
   try { o = JSON.parse(P.getProperty(k) || '{"s":[]}'); } catch (x) {}
   var l = (o.s || []).filter(function (s) { return s !== sub; }); l.push(sub);
@@ -573,7 +582,12 @@ function push_(chaves, titulo, texto, url) {
   try {
     var key = pushChave_(); if (!key) return;
     var subs = []; chaves.forEach(function (c) { try { (JSON.parse(PropertiesService.getScriptProperties().getProperty("PS_" + c) || '{"s":[]}').s || []).forEach(function (s) { if (subs.indexOf(s) < 0) subs.push(s); }); } catch (x) {} });
-    if (!subs.length) return;
+    pushSubs_(subs, titulo, texto, url);
+  } catch (x) { console.log("aviso push não enviado: " + x); }
+}
+function pushSubs_(subs, titulo, texto, url) {
+  try {
+    var key = pushChave_(); if (!key || !subs || !subs.length) return;
     var corpo = { app_id: ONESIGNAL_APP, target_channel: "push", include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
       chrome_web_icon: FOTOS_BASE + "icon-192.png", ttl: 86400 };
     if (url) corpo.url = url;

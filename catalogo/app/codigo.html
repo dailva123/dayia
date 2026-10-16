@@ -36,9 +36,10 @@ var ABAS = {
               &quot;cats&quot;,&quot;faixas&quot;,&quot;brinde&quot;,&quot;redes&quot;,&quot;tipos&quot;,&quot;mkt&quot;,&quot;plano&quot;,&quot;valor&quot;,&quot;vence&quot;,&quot;link_pagto&quot;],
   Pecas:     [&quot;negocio&quot;,&quot;id&quot;,&quot;ordem&quot;,&quot;nome&quot;,&quot;cat&quot;,&quot;preco&quot;,&quot;desc&quot;,&quot;fotos&quot;,&quot;videos&quot;,&quot;campos&quot;,&quot;ativo&quot;,&quot;shopee&quot;,&quot;tiktok&quot;,&quot;criado&quot;],
   Pedidos:   [&quot;negocio&quot;,&quot;id&quot;,&quot;num&quot;,&quot;criado&quot;,&quot;quando&quot;,&quot;cliente_id&quot;,&quot;cliente&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniv&quot;,&quot;tipo&quot;,&quot;entrega&quot;,&quot;itens&quot;,&quot;resumo&quot;,&quot;total&quot;,&quot;sinal&quot;,&quot;pago&quot;,
-              &quot;status&quot;,&quot;obs&quot;,&quot;anot&quot;,&quot;origem&quot;,&quot;chave&quot;,&quot;historico&quot;],
+              &quot;status&quot;,&quot;obs&quot;,&quot;anot&quot;,&quot;origem&quot;,&quot;chave&quot;,&quot;historico&quot;,&quot;push&quot;],
   Clientes:  [&quot;negocio&quot;,&quot;id&quot;,&quot;nome&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniv&quot;,&quot;obs&quot;,&quot;origem&quot;,&quot;criado&quot;],
   Promocoes: [&quot;negocio&quot;,&quot;id&quot;,&quot;titulo&quot;,&quot;desc&quot;,&quot;alvo&quot;,&quot;ate&quot;,&quot;ativa&quot;],
+  Envios:    [&quot;negocio&quot;,&quot;chave&quot;,&quot;cliente&quot;,&quot;dia&quot;],
   Config:    [&quot;chave&quot;,&quot;valor&quot;,&quot;explicacao&quot;]
 };
 var MIN = 60000, DIA = 86400000;
@@ -143,7 +144,8 @@ var ACOES = {
   },
   pushReg: function (d) {
     if (d.token) pushGuardar_(&quot;N_&quot; + sessao_(d), d.sub);
-    else { var N = negocio_(d.n); (d.lista || []).slice(0, 10).forEach(function (x) { try { var p = doCliente_(N, x); pushGuardar_(&quot;C_&quot; + N.n + &quot;_&quot; + p.id, d.sub); } catch (e) {} }); }
+    else { var N = negocio_(d.n), sub = subOk_(d.sub); (d.lista || []).slice(0, 10).forEach(function (x) { try { var p = doCliente_(N, x), l = j_(p.push, []).filter(function (s) { return s !== sub; }); l.push(sub);
+      atualizar_(&quot;Pedidos&quot;, function (r) { return String(r.negocio).toLowerCase() === N.n &amp;&amp; Number(r.id) === p.id; }, { push: JSON.stringify(l.slice(-3)) }); } catch (e) {} }); }
     return { ok: true, ativo: !!pushChave_() };
   },
 
@@ -151,6 +153,7 @@ var ACOES = {
   entrar: function (d) {
     var N = negocio_(d.n);
     if (!confereSenha_(N, String(d.senha || &quot;&quot;))) throw new Error(&quot;Senha incorreta.&quot;);
+    limparSessoes_();
     return { ok: true, token: novoToken_(N.n) };
   },
   sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
@@ -177,7 +180,7 @@ var ACOES = {
       atualizar_(&quot;Pedidos&quot;, function (o) { return Number(o.id) === p.id; }, campos); mudou_(n);
       if (campos.status) {
         Object.keys(campos).forEach(function (k) { p[k] = campos[k]; });
-        push_([&quot;C_&quot; + n + &quot;_&quot; + p.id], String(N.nome), avisoCli_(p), linkCli_(N, p));
+        pushSubs_(j_(p.push, []), String(N.nome), avisoCli_(p), linkCli_(N, p));
         if ([&quot;sinal&quot;, &quot;pronto&quot;, &quot;entregue&quot;, &quot;cancelado&quot;].indexOf(campos.status) &gt;= 0) emailCliente_(N, p, campos.status);
       }
       return { ok: true };
@@ -291,11 +294,11 @@ var ACOES = {
       if (e.n &gt;= m.limite) throw new Error(&quot;Você chegou ao limite de &quot; + m.limite + &quot; mensagens de hoje. Continue amanhã: isso protege o seu WhatsApp.&quot;);
       if (hr &lt; m.hIni || hr &gt;= m.hFim) throw new Error(&quot;Fora do horário de envio (&quot; + m.hIni + &quot;h às &quot; + m.hFim + &quot;h).&quot;);
       if (Date.now() - (e.ultimo || 0) &lt; 15000) throw new Error(&quot;Aguarde alguns segundos antes do próximo envio.&quot;);
-      var k = lim_(d.chave, 40) + &quot;|&quot; + lim_(d.cliente, 20);
-      if (e.env[k]) throw new Error(&quot;Essa mensagem já foi enviada para essa cliente.&quot;);
-      e.n++; e.ultimo = Date.now(); e.env[k] = hoje;
-      var ks = Object.keys(e.env); if (ks.length &gt; 800) ks.slice(0, ks.length - 800).forEach(function (x) { delete e.env[x]; });
-      P.setProperty(&quot;EV_&quot; + n, JSON.stringify(e));
+      var ch = lim_(d.chave, 40), cl = lim_(d.cliente, 20);
+      if (enviados_(n)[ch + &quot;|&quot; + cl]) throw new Error(&quot;Essa mensagem já foi enviada para essa cliente.&quot;);
+      inserir_(&quot;Envios&quot;, { negocio: n, chave: ch, cliente: cl, dia: hoje });
+      e.n++; e.ultimo = Date.now();
+      P.setProperty(&quot;EV_&quot; + n, JSON.stringify({ dia: e.dia, n: e.n, ultimo: e.ultimo }));
       return { ok: true, envios: envioEstado_(n, N) };
     });
   },
@@ -467,10 +470,11 @@ function promos_(n) {
   });
 }
 function promosAtivas_(n) { var h = hojeIso_(); return promos_(n).filter(function (r) { return r.ativa &amp;&amp; r.ate &gt;= h; }); }
-function envioRaw_(n) { var e = {}; try { e = JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;EV_&quot; + n) || &quot;{}&quot;); } catch (x) {} e.env = e.env || {}; e.n = e.n || 0; return e; }
+function envioRaw_(n) { var e = {}; try { e = JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;EV_&quot; + n) || &quot;{}&quot;); } catch (x) {} e.n = e.n || 0; return e; }
+function enviados_(n) { var o = {}; linhas_(&quot;Envios&quot;).forEach(function (r) { if (String(r.negocio).toLowerCase() === n) o[String(r.chave) + &quot;|&quot; + String(r.cliente)] = dataIso_(r.dia) || String(r.dia); }); return o; }
 function envioEstado_(n, N) {
   var e = envioRaw_(n), m = mkt_(N), hoje = hojeIso_(), hr = Math.floor(minutosHoje_(Date.now()) / 60);
-  return { n: e.dia === hoje ? e.n : 0, limite: m.limite, hIni: m.hIni, hFim: m.hFim, noHorario: hr &gt;= m.hIni &amp;&amp; hr &lt; m.hFim, ultimo: e.ultimo || 0, env: e.env };
+  return { n: e.dia === hoje ? e.n : 0, limite: m.limite, hIni: m.hIni, hFim: m.hFim, noHorario: hr &gt;= m.hIni &amp;&amp; hr &lt; m.hFim, ultimo: e.ultimo || 0, env: enviados_(n) };
 }
 
 /* ---------------- pedidos ---------------- */
@@ -563,6 +567,10 @@ function sessao_(d) {
   var o = JSON.parse(raw); if (!(o.exp &gt; Date.now())) throw new Error(&quot;SESSAO&quot;);
   return o.v;
 }
+function limparSessoes_() {
+  var P = PropertiesService.getScriptProperties(), all = P.getProperties(), agora = Date.now();
+  Object.keys(all).forEach(function (k) { if (k.indexOf(&quot;SS_&quot;) === 0) { try { if (!(JSON.parse(all[k]).exp &gt; agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); } } });
+}
 function encerrarSessao_(t) { if (t) PropertiesService.getScriptProperties().deleteProperty(&quot;SS_&quot; + t); }
 function versao_(n) { return Number(PropertiesService.getScriptProperties().getProperty(&quot;V_&quot; + n) || 1); }
 function mudou_(n) { PropertiesService.getScriptProperties().setProperty(&quot;V_&quot; + n, String(Date.now())); }
@@ -570,8 +578,9 @@ function comTrava_(fn) { var l = LockService.getScriptLock(); if (!l.tryLock(200
 
 /* ---------------- avisos no celular (OneSignal, o mesmo app da Agenda Fácil) ---------------- */
 var ONESIGNAL_APP = &quot;7a1178de-2e8b-4205-aeb9-8171f97fb614&quot;;
+function subOk_(sub) { sub = String(sub || &quot;&quot;).trim(); if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error(&quot;Aparelho inválido.&quot;); return sub; }
 function pushGuardar_(chave, sub) {
-  sub = String(sub || &quot;&quot;).trim(); if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error(&quot;Aparelho inválido.&quot;);
+  sub = subOk_(sub);
   var P = PropertiesService.getScriptProperties(), k = &quot;PS_&quot; + chave, o = { s: [] };
   try { o = JSON.parse(P.getProperty(k) || &#x27;{&quot;s&quot;:[]}&#x27;); } catch (x) {}
   var l = (o.s || []).filter(function (s) { return s !== sub; }); l.push(sub);
@@ -582,7 +591,12 @@ function push_(chaves, titulo, texto, url) {
   try {
     var key = pushChave_(); if (!key) return;
     var subs = []; chaves.forEach(function (c) { try { (JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;PS_&quot; + c) || &#x27;{&quot;s&quot;:[]}&#x27;).s || []).forEach(function (s) { if (subs.indexOf(s) &lt; 0) subs.push(s); }); } catch (x) {} });
-    if (!subs.length) return;
+    pushSubs_(subs, titulo, texto, url);
+  } catch (x) { console.log(&quot;aviso push não enviado: &quot; + x); }
+}
+function pushSubs_(subs, titulo, texto, url) {
+  try {
+    var key = pushChave_(); if (!key || !subs || !subs.length) return;
     var corpo = { app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
       chrome_web_icon: FOTOS_BASE + &quot;icon-192.png&quot;, ttl: 86400 };
     if (url) corpo.url = url;

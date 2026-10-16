@@ -635,7 +635,7 @@ function pushSubs_(subs, titulo, texto, url) {
   } catch (x) { console.log("aviso push não enviado: " + x); }
 }
 function testarAviso() {
-  var key = pushChave_(); if (!key) return "Falta colar a chave do OneSignal na aba Config (linha push_chave).";
+  var key = pushChave_(); if (!key) { console.log("❌ Falta colar a chave do OneSignal na aba Config (linha push_chave, coluna valor)."); return "falta a chave"; }
   var r = UrlFetchApp.fetch("https://api.onesignal.com/notifications?c=push", { method: "post", contentType: "application/json", muteHttpExceptions: true,
     headers: { Authorization: (/^os_v2_/.test(key) ? "Key " : "Basic ") + key }, payload: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: "push", include_subscription_ids: ["00000000-0000-0000-0000-000000000000"], contents: { en: "teste" } }) });
   var c = r.getResponseCode(), msg = (c === 401 || c === 403) ? "❌ A chave não foi aceita (" + c + "). Confira se copiou inteira." : "✅ Chave do OneSignal funcionando!";

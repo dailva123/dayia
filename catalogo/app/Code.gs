@@ -51,7 +51,8 @@ function configurar() {
   });
   var cfg = ss.getSheetByName("Config"), tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
   [["dias_teste", "30", "Dias de teste grátis para loja nova"],
-   ["email_admin", "", "Seu e-mail (opcional): recebe aviso de problemas"],
+   ["email_admin", "dayaraujoia@gmail.com", "E-mail da DayIA: recebe todo dia de manhã quem está vencendo e o lembrete dos links de pagamento"],
+   ["dias_tolerancia", "3", "Dias que o catálogo continua no ar depois do vencimento, esperando o pagamento"],
    ["whatsapp_dayia", "5519999389118", "WhatsApp que aparece quando o teste vence ou a loja está suspensa"],
    ["fuso_minutos", "-180", "Fuso horário (Brasília = -180). Não mexa."],
    ["proximo_id", "1", "Uso interno (não mexa)"],
@@ -64,6 +65,8 @@ function configurar() {
   var sobra = ss.getSheetByName("Página1") || ss.getSheetByName("Sheet1");
   if (sobra && sobra.getLastRow() === 0 && ss.getSheets().length > 3) ss.deleteSheet(sobra);
   pasta_();
+  if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === "avisoDiario"; }))
+    ScriptApp.newTrigger("avisoDiario").timeBased().everyDays(1).atHour(8).create();
   MailApp.getRemainingDailyQuota();
   return "Pronto! Agora faça a implantação como App da Web.";
 }
@@ -92,7 +95,14 @@ function criarBab_() {
 function doGet(e) { var p = (e && e.parameter) || {}; if (p.acao) return responder_(executar_(p)); return ContentService.createTextOutput("Catálogo Fácil by DayIA · servidor funcionando (versão " + VERSAO_SISTEMA + ")."); }
 function doPost(e) { var d = {}; try { d = JSON.parse(e.postData.contents || "{}"); } catch (x) { return responder_({ erro: "Pedido inválido." }); } return responder_(executar_(d)); }
 function responder_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
-function executar_(d) { try { var f = ACOES[d.acao]; if (!f) return { erro: "Ação desconhecida." }; return f(d); } catch (x) { return { erro: String(x && x.message || x) }; } }
+var TRAVADAS = ["status","novaEncomenda","verFoto","subirMidia","salvarPeca","esconderPeca","excluirPeca","salvarCliente","excluirCliente","importarClientes","salvarPromo","excluirPromo","envio","salvarAjustes"];
+function executar_(d) {
+  try {
+    var f = ACOES[d.acao]; if (!f) return { erro: "Ação desconhecida." };
+    if (TRAVADAS.indexOf(d.acao) >= 0) { var L = liberado_(negocio_(sessao_(d))); if (!L.ok) throw new Error(L.situacao === "suspenso" ? "Seu catálogo está pausado. Fale com a DayIA." : "Seu plano venceu. Para continuar usando, faça o pagamento em Ajustes › Meu plano."); }
+    return f(d);
+  } catch (x) { return { erro: String(x && x.message || x) }; }
+}
 
 var ACOES = {
   ping: function () { return { ok: true, versao: VERSAO_SISTEMA }; },
@@ -366,6 +376,27 @@ function salvarArquivo_(N, arq, nome, publico) {
   return f.getId();
 }
 
+/* ---------------- aviso diário para a DayIA (roda sozinho às 8h) ---------------- */
+var LINKS_ATE = "2026-12-31";   // validade dos links de pagamento que estão no app (preço de lançamento)
+function avisoDiario() {
+  var para = cfgVal_("email_admin"); if (!/@/.test(para)) return;
+  var hoje = hojeIso_(), linhas = [];
+  linhas_("Negocios").forEach(function (r) {
+    var N = negocio_(r.n, true); if (!N) return;
+    var L = liberado_(N), nome = esc_(N.nome) + " (" + esc_(N.n) + ")";
+    if (L.situacao === "vencido") linhas.push("🔴 " + nome + ": venceu em " + L.vence + ". O catálogo está travado até pagar.");
+    else if (L.situacao === "ativo" && L.dias_restantes !== undefined && L.dias_restantes <= 3)
+      linhas.push((L.dias_restantes < 0 ? "🟠 " + nome + ": venceu em " + L.vence + ", trava em " + (L.tolerancia + L.dias_restantes + 1) + " dia(s)" : "🟡 " + nome + ": vence em " + L.vence) + ". Confira o pagamento e atualize a coluna vence.");
+    else if (L.situacao === "teste_vencido") linhas.push("⚪ " + nome + ": o teste grátis acabou e ela ainda não pagou.");
+    else if (L.situacao === "teste" && L.dias_restantes !== null && L.dias_restantes <= 3) linhas.push("🟢 " + nome + ": o teste grátis acaba em " + L.dias_restantes + " dia(s).");
+  });
+  var faltam = Math.round((Date.UTC(+LINKS_ATE.slice(0, 4), +LINKS_ATE.slice(5, 7) - 1, +LINKS_ATE.slice(8, 10)) - Date.UTC(+hoje.slice(0, 4), +hoje.slice(5, 7) - 1, +hoje.slice(8, 10))) / DIA);
+  if (faltam <= 10) linhas.unshift(faltam < 0 ? "🔗 Os links de pagamento venceram em " + dataBr_(LINKS_ATE) + ". As clientes não estão vendo nenhum botão de pagar. Crie os links novos no Mercado Pago e mande para o Claude atualizar o app."
+    : "🔗 Os links de pagamento de lançamento valem até " + dataBr_(LINKS_ATE) + " (faltam " + faltam + " dias). Crie os links novos no Mercado Pago e mande para o Claude atualizar o app. Depois, desative os links antigos no Mercado Pago.");
+  if (!linhas.length) return;
+  enviar_(para, "Catálogo Fácil · avisos de hoje (" + dataBr_(hoje) + ")", "<p>Olá, Day!</p><p>" + linhas.join("<br>") + "</p><p style='color:#8A7A6E'>Aviso automático do Catálogo Fácil.</p>", "Catálogo Fácil");
+}
+
 /* ---------------- e-mails ---------------- */
 function itemDet_(i) { return [i.texto && "Nome: " + i.texto, i.idade && "Idade: " + i.idade, i.tema && "Tema: " + i.tema, i.data && "Data: " + i.data, i.cor && "Cor: " + i.cor + (i.glitter ? " (" + i.glitter + ")" : ""), i.modelo && "Celular: " + i.modelo, i.foto_id && "Foto enviada ✅", i.obs].filter(Boolean); }
 function itensHtml_(p) {
@@ -407,7 +438,14 @@ function negocio_(n, semErro) {
 }
 function liberado_(N) {
   var s = String(N.situacao || "").toLowerCase().trim();
-  if (s === "cortesia" || s === "ativo") return { ok: true, situacao: s };
+  if (s === "cortesia") return { ok: true, situacao: s };
+  if (s === "ativo") {
+    var v = dataDe_(N.vence), tol = Number(cfgVal_("dias_tolerancia") || 3);
+    if (!v) return { ok: true, situacao: "ativo", vence: "" };               // pagamento único: sem vencimento
+    var dias = Math.floor((v + DIA - Date.now()) / DIA);                       // dias até o vencimento (negativo = atrasado)
+    if (dias < -tol) return { ok: false, situacao: "vencido", vence: dataBr_(dataIso_(N.vence)), whatsapp: cfgVal_("whatsapp_dayia") };
+    return { ok: true, situacao: "ativo", vence: dataBr_(dataIso_(N.vence)), dias_restantes: dias, tolerancia: tol, whatsapp: cfgVal_("whatsapp_dayia") };
+  }
   if (s === "suspenso") return { ok: false, situacao: s, whatsapp: cfgVal_("whatsapp_dayia") };
   var ate = dataDe_(N.teste_ate);
   if (ate && Date.now() > ate + DIA) return { ok: false, situacao: "teste_vencido", whatsapp: cfgVal_("whatsapp_dayia") };

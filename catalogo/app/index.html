@@ -1037,11 +1037,14 @@ function pRender(){
   const j=P.d,n=j.negocio;cabecalho(n,true);
   $("#hAcoes").innerHTML=(window.Notification&&Notification.permission!=="granted"?'<button class="hbt" id="hSino" type="button" aria-label="Ativar avisos de pedido novo" title="Ativar avisos">🔔</button>':"");
   if($("#hSino"))$("#hSino").onclick=()=>pedirPermissao().then(p=>{if(p==="granted"){toast("Pronto! Os pedidos novos vão avisar no celular.");pRender();pushRegistrar()}else toast("Os avisos foram bloqueados no navegador.")});
-  const novos=j.pedidos.filter(p=>p.status==="novo").length,L=j.licenca||{},nome=(ABAS.find(a=>a[0]===P.aba)||ABAS[0])[2];
-  const lic=!L.ok?`<div class="lic"><div class="v">⚠️ ${L.situacao==="suspenso"?"Seu catálogo está pausado.":"O seu teste grátis terminou."} As clientes não conseguem fazer pedidos. <a href="${esc(wa(L.whatsapp||WHATS_DAYIA,"Olá! Quero continuar com o Catálogo Fácil da "+n.nome+"."))}" target="_blank" rel="noopener">Falar com a DayIA</a></div></div>`
-    :L.situacao==="teste"&&L.dias_restantes!=null?`<div class="lic"><div class="t">🎁 Teste grátis: ${L.dias_restantes===0?"termina hoje":"faltam "+L.dias_restantes+" dia"+(L.dias_restantes>1?"s":"")}.</div></div>`:"";
+  const L=j.licenca||{};if(!L.ok)P.aba="ajustes";
+  const novos=j.pedidos.filter(p=>p.status==="novo").length,nome=(ABAS.find(a=>a[0]===P.aba)||ABAS[0])[2];
+  const pagar=` <a href="#" data-a="irPlano">Ver como pagar</a>`;
+  const lic=!L.ok?`<div class="lic"><div class="v">⚠️ ${L.situacao==="suspenso"?"Seu catálogo está pausado.":L.situacao==="vencido"?`Seu plano venceu em ${esc(L.vence)}.`:"O seu teste grátis terminou."} As clientes não conseguem ver o catálogo nem fazer pedidos.${L.situacao==="suspenso"?"":pagar}</div></div>`
+    :L.situacao==="teste"&&L.dias_restantes!=null?`<div class="lic"><div class="t">🎁 Teste grátis: ${L.dias_restantes===0?"termina hoje":"faltam "+L.dias_restantes+" dia"+(L.dias_restantes>1?"s":"")}.${L.dias_restantes<=5?pagar:""}</div></div>`
+    :L.situacao==="ativo"&&L.vence&&L.dias_restantes<=5?`<div class="lic"><div class="${L.dias_restantes<0?"v":"t"}">${L.dias_restantes<0?`⚠️ Seu plano venceu em ${esc(L.vence)}. O catálogo sai do ar em ${L.tolerancia+L.dias_restantes+1} dia(s) se o pagamento não chegar.`:`📅 Seu plano vence em ${esc(L.vence)}.`}${pagar}</div></div>`:"";
   $("#app").innerHTML=`${lic}<div class="adm-titulo"><b>${nome}</b>${P.aba==="inicio"?'<button class="mini" type="button" data-a="verCli">👩 Ver como cliente</button>':""}</div><div class="adm-main" id="pc"></div>
-    <nav class="adm-nav" id="admNav">${ABAS.map(a=>`<button type="button" data-tab="${a[0]}" class="${P.aba===a[0]?"on":""}"><span>${a[1]}</span>${a[2]}${a[0]==="encomendas"&&novos?`<i class="nbadge">${novos}</i>`:""}</button>`).join("")}</nav>`;
+    <nav class="adm-nav" id="admNav">${ABAS.filter(a=>L.ok||a[0]==="ajustes").map(a=>`<button type="button" data-tab="${a[0]}" class="${P.aba===a[0]?"on":""}"><span>${a[1]}</span>${a[2]}${a[0]==="encomendas"&&novos?`<i class="nbadge">${novos}</i>`:""}</button>`).join("")}</nav>`;
   ({inicio:rInicio,encomendas:rEnc,clientes:rCli,marketing:rMkt,catalogo:rCat,ajustes:rAjustes})[P.aba]();
 }
 function ir(t){P.aba=t;P.ed=null;pRender();scrollTo(0,0)}
@@ -1355,6 +1358,7 @@ async function subirMidias(files,video){
 
 /* ---------- AJUSTES ---------- */
 /* links de pagamento da DayIA (Mercado Pago) · preços de lançamento até 31/12 */
+const PLANOS_ATE="2026-12-31";   /* depois desse dia os botões somem até a DayIA colocar os links novos */
 const PLANOS=[
   ["Mensal","R$ 9,90 por mês enquanto você for cliente, com suporte","https://mpago.la/2w1o7x5","R$ 9,90"],
   ["Anual","1 ano, com suporte (Pix, cartão até 3x ou boleto)","https://mpago.li/1UMuHDZ","R$ 99"],
@@ -1387,12 +1391,13 @@ function rAjustes(){
     <section class="box"><h4>🔒 Senha do painel</h4><div class="fld"><label for="aSenha">Nova senha <span class="hint">(deixe em branco para não mudar)</span></label><input type="password" id="aSenha" autocomplete="new-password" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit"></div></section>
     <button class="btn" style="width:100%;margin:14px 0 0" data-a="salvaAjustes" type="button">💾 Salvar ajustes</button>
     <section class="box plano"><h4>💳 Meu plano</h4><dl>
-      <dt>Situação</dt><dd>${L.situacao==="teste"?"Teste grátis"+(L.dias_restantes!=null?` (faltam ${L.dias_restantes} dias)`:""):L.situacao==="ativo"?"Ativo ✅":L.situacao==="cortesia"?"Cortesia 💛":L.ok?"Ativo":"Pausado"}</dd>
+      <dt>Situação</dt><dd>${L.situacao==="teste"?"Teste grátis"+(L.dias_restantes!=null?` (faltam ${L.dias_restantes} dias)`:""):L.situacao==="ativo"?(L.vence?(L.dias_restantes<0?"Vencido, aguardando pagamento":"Ativo ✅"):"Ativo ✅ (pagamento único)"):L.situacao==="cortesia"?"Cortesia 💛":L.situacao==="vencido"?"Vencido 🔴":L.situacao==="teste_vencido"?"Teste grátis encerrado":"Pausado"}</dd>
+      ${L.vence?`<dt>Vence em</dt><dd>${esc(L.vence)}</dd>`:""}
       ${pl.plano?`<dt>Plano</dt><dd>${esc(pl.plano)}</dd>`:""}${pl.valor?`<dt>Valor</dt><dd>${esc(pl.valor)}</dd>`:""}${pl.vence?`<dt>Próximo vencimento</dt><dd>${esc(pl.vence)}</dd>`:""}</dl>
       ${pl.link?`<div class="btns"><a class="mini wa" target="_blank" rel="noopener" href="${esc(pl.link)}">Pagar o meu plano</a></div>`:""}
-      <p class="rd-h">Planos de lançamento (até 31/12)</p>
+      ${hojeISO()>PLANOS_ATE?`<div class="adm-info">Os valores dos planos estão sendo atualizados. Para pagar, fale com a DayIA pelo botão abaixo. Obrigada!</div>`:`<p class="rd-h">Planos de lançamento (até ${dBR(PLANOS_ATE)})</p>
       ${PLANOS.map(x=>`<div class="row static"><span><b>${x[0]}</b>${x[1]}</span><a class="mini wa" style="text-decoration:none" target="_blank" rel="noopener" href="${x[2]}">Pagar ${x[3]}</a></div>`).join("")}
-      <p class="tiny left">Depois de pagar, mande o comprovante para a DayIA pelo WhatsApp. Obrigada!</p>
+      <p class="tiny left">Depois de pagar, mande o comprovante para a DayIA pelo WhatsApp. Obrigada!</p>`}
       <div class="btns"><a class="mini" target="_blank" rel="noopener" href="${esc(wa(WHATS_DAYIA,"Olá! Sou da "+N.nome+" e tenho uma dúvida sobre o meu Catálogo Fácil."))}">Falar com a DayIA</a></div></section>
     <button class="btn ghost" style="width:100%;margin:14px 0 0" data-a="sairPainel" type="button">Sair do painel</button>
     <p class="tiny">Catálogo Fácil by DayIA</p>`;
@@ -1404,6 +1409,7 @@ async function acao(a,b){
   switch(a){
     case "tab":ir(b.dataset.t);break;
     case "verCli":location.hash="";break;
+    case "irPlano":P.aba="ajustes";pRender();setTimeout(()=>{const x=$(".plano");if(x)x.scrollIntoView({behavior:"smooth"})},60);break;
     case "simular":{const ps=D.pecas.filter(p=>p.ativo!==false&&!p.campos.foto&&!p.campos.nome),p=ps[Math.floor(Math.random()*ps.length)],nm=["Aline Duarte","Carla Mendes","Priscila Rocha","Joana Lima"][Math.floor(Math.random()*4)];
       DEMOAPI({acao:"pedir",n:NEG,dados:{nome:nm,tel:"19 98877-6655",email:"cliente@exemplo.com",tipo:"Retirada",itens:[{id:p.id,q:p.campos.lembr?30:1,cor:p.campos.cor?"Rosa":""}]}});toast("Pedido de teste enviado. Espere o aviso…");break;}
     case "encF":P.encFiltro=b.dataset.f;rEnc();break;
@@ -1485,7 +1491,7 @@ async function acao(a,b){
 document.addEventListener("click",e=>{
   if(location.hash!=="#painel")return;
   const nb=e.target.closest("#admNav [data-tab]");if(nb){ir(nb.dataset.tab);return}
-  const b=e.target.closest("[data-a]");if(b&&!b.disabled)acao(b.dataset.a,b);
+  const b=e.target.closest("[data-a]");if(b&&!b.disabled){if(b.tagName==="A")e.preventDefault();acao(b.dataset.a,b)}
 });
 document.addEventListener("input",e=>{
   if(e.target.id==="encBusca"){P.encBusca=e.target.value;const pos=e.target.selectionStart;rEnc();const i=$("#encBusca");i.focus();i.setSelectionRange(pos,pos)}

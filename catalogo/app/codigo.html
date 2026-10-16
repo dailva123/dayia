@@ -60,7 +60,8 @@ function configurar() {
   });
   var cfg = ss.getSheetByName(&quot;Config&quot;), tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
   [[&quot;dias_teste&quot;, &quot;30&quot;, &quot;Dias de teste grátis para loja nova&quot;],
-   [&quot;email_admin&quot;, &quot;&quot;, &quot;Seu e-mail (opcional): recebe aviso de problemas&quot;],
+   [&quot;email_admin&quot;, &quot;dayaraujoia@gmail.com&quot;, &quot;E-mail da DayIA: recebe todo dia de manhã quem está vencendo e o lembrete dos links de pagamento&quot;],
+   [&quot;dias_tolerancia&quot;, &quot;3&quot;, &quot;Dias que o catálogo continua no ar depois do vencimento, esperando o pagamento&quot;],
    [&quot;whatsapp_dayia&quot;, &quot;5519999389118&quot;, &quot;WhatsApp que aparece quando o teste vence ou a loja está suspensa&quot;],
    [&quot;fuso_minutos&quot;, &quot;-180&quot;, &quot;Fuso horário (Brasília = -180). Não mexa.&quot;],
    [&quot;proximo_id&quot;, &quot;1&quot;, &quot;Uso interno (não mexa)&quot;],
@@ -73,6 +74,8 @@ function configurar() {
   var sobra = ss.getSheetByName(&quot;Página1&quot;) || ss.getSheetByName(&quot;Sheet1&quot;);
   if (sobra &amp;&amp; sobra.getLastRow() === 0 &amp;&amp; ss.getSheets().length &gt; 3) ss.deleteSheet(sobra);
   pasta_();
+  if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === &quot;avisoDiario&quot;; }))
+    ScriptApp.newTrigger(&quot;avisoDiario&quot;).timeBased().everyDays(1).atHour(8).create();
   MailApp.getRemainingDailyQuota();
   return &quot;Pronto! Agora faça a implantação como App da Web.&quot;;
 }
@@ -101,7 +104,14 @@ function criarBab_() {
 function doGet(e) { var p = (e &amp;&amp; e.parameter) || {}; if (p.acao) return responder_(executar_(p)); return ContentService.createTextOutput(&quot;Catálogo Fácil by DayIA · servidor funcionando (versão &quot; + VERSAO_SISTEMA + &quot;).&quot;); }
 function doPost(e) { var d = {}; try { d = JSON.parse(e.postData.contents || &quot;{}&quot;); } catch (x) { return responder_({ erro: &quot;Pedido inválido.&quot; }); } return responder_(executar_(d)); }
 function responder_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
-function executar_(d) { try { var f = ACOES[d.acao]; if (!f) return { erro: &quot;Ação desconhecida.&quot; }; return f(d); } catch (x) { return { erro: String(x &amp;&amp; x.message || x) }; } }
+var TRAVADAS = [&quot;status&quot;,&quot;novaEncomenda&quot;,&quot;verFoto&quot;,&quot;subirMidia&quot;,&quot;salvarPeca&quot;,&quot;esconderPeca&quot;,&quot;excluirPeca&quot;,&quot;salvarCliente&quot;,&quot;excluirCliente&quot;,&quot;importarClientes&quot;,&quot;salvarPromo&quot;,&quot;excluirPromo&quot;,&quot;envio&quot;,&quot;salvarAjustes&quot;];
+function executar_(d) {
+  try {
+    var f = ACOES[d.acao]; if (!f) return { erro: &quot;Ação desconhecida.&quot; };
+    if (TRAVADAS.indexOf(d.acao) &gt;= 0) { var L = liberado_(negocio_(sessao_(d))); if (!L.ok) throw new Error(L.situacao === &quot;suspenso&quot; ? &quot;Seu catálogo está pausado. Fale com a DayIA.&quot; : &quot;Seu plano venceu. Para continuar usando, faça o pagamento em Ajustes › Meu plano.&quot;); }
+    return f(d);
+  } catch (x) { return { erro: String(x &amp;&amp; x.message || x) }; }
+}
 
 var ACOES = {
   ping: function () { return { ok: true, versao: VERSAO_SISTEMA }; },
@@ -375,6 +385,27 @@ function salvarArquivo_(N, arq, nome, publico) {
   return f.getId();
 }
 
+/* ---------------- aviso diário para a DayIA (roda sozinho às 8h) ---------------- */
+var LINKS_ATE = &quot;2026-12-31&quot;;   // validade dos links de pagamento que estão no app (preço de lançamento)
+function avisoDiario() {
+  var para = cfgVal_(&quot;email_admin&quot;); if (!/@/.test(para)) return;
+  var hoje = hojeIso_(), linhas = [];
+  linhas_(&quot;Negocios&quot;).forEach(function (r) {
+    var N = negocio_(r.n, true); if (!N) return;
+    var L = liberado_(N), nome = esc_(N.nome) + &quot; (&quot; + esc_(N.n) + &quot;)&quot;;
+    if (L.situacao === &quot;vencido&quot;) linhas.push(&quot;🔴 &quot; + nome + &quot;: venceu em &quot; + L.vence + &quot;. O catálogo está travado até pagar.&quot;);
+    else if (L.situacao === &quot;ativo&quot; &amp;&amp; L.dias_restantes !== undefined &amp;&amp; L.dias_restantes &lt;= 3)
+      linhas.push((L.dias_restantes &lt; 0 ? &quot;🟠 &quot; + nome + &quot;: venceu em &quot; + L.vence + &quot;, trava em &quot; + (L.tolerancia + L.dias_restantes + 1) + &quot; dia(s)&quot; : &quot;🟡 &quot; + nome + &quot;: vence em &quot; + L.vence) + &quot;. Confira o pagamento e atualize a coluna vence.&quot;);
+    else if (L.situacao === &quot;teste_vencido&quot;) linhas.push(&quot;⚪ &quot; + nome + &quot;: o teste grátis acabou e ela ainda não pagou.&quot;);
+    else if (L.situacao === &quot;teste&quot; &amp;&amp; L.dias_restantes !== null &amp;&amp; L.dias_restantes &lt;= 3) linhas.push(&quot;🟢 &quot; + nome + &quot;: o teste grátis acaba em &quot; + L.dias_restantes + &quot; dia(s).&quot;);
+  });
+  var faltam = Math.round((Date.UTC(+LINKS_ATE.slice(0, 4), +LINKS_ATE.slice(5, 7) - 1, +LINKS_ATE.slice(8, 10)) - Date.UTC(+hoje.slice(0, 4), +hoje.slice(5, 7) - 1, +hoje.slice(8, 10))) / DIA);
+  if (faltam &lt;= 10) linhas.unshift(faltam &lt; 0 ? &quot;🔗 Os links de pagamento venceram em &quot; + dataBr_(LINKS_ATE) + &quot;. As clientes não estão vendo nenhum botão de pagar. Crie os links novos no Mercado Pago e mande para o Claude atualizar o app.&quot;
+    : &quot;🔗 Os links de pagamento de lançamento valem até &quot; + dataBr_(LINKS_ATE) + &quot; (faltam &quot; + faltam + &quot; dias). Crie os links novos no Mercado Pago e mande para o Claude atualizar o app. Depois, desative os links antigos no Mercado Pago.&quot;);
+  if (!linhas.length) return;
+  enviar_(para, &quot;Catálogo Fácil · avisos de hoje (&quot; + dataBr_(hoje) + &quot;)&quot;, &quot;&lt;p&gt;Olá, Day!&lt;/p&gt;&lt;p&gt;&quot; + linhas.join(&quot;&lt;br&gt;&quot;) + &quot;&lt;/p&gt;&lt;p style=&#x27;color:#8A7A6E&#x27;&gt;Aviso automático do Catálogo Fácil.&lt;/p&gt;&quot;, &quot;Catálogo Fácil&quot;);
+}
+
 /* ---------------- e-mails ---------------- */
 function itemDet_(i) { return [i.texto &amp;&amp; &quot;Nome: &quot; + i.texto, i.idade &amp;&amp; &quot;Idade: &quot; + i.idade, i.tema &amp;&amp; &quot;Tema: &quot; + i.tema, i.data &amp;&amp; &quot;Data: &quot; + i.data, i.cor &amp;&amp; &quot;Cor: &quot; + i.cor + (i.glitter ? &quot; (&quot; + i.glitter + &quot;)&quot; : &quot;&quot;), i.modelo &amp;&amp; &quot;Celular: &quot; + i.modelo, i.foto_id &amp;&amp; &quot;Foto enviada ✅&quot;, i.obs].filter(Boolean); }
 function itensHtml_(p) {
@@ -416,7 +447,14 @@ function negocio_(n, semErro) {
 }
 function liberado_(N) {
   var s = String(N.situacao || &quot;&quot;).toLowerCase().trim();
-  if (s === &quot;cortesia&quot; || s === &quot;ativo&quot;) return { ok: true, situacao: s };
+  if (s === &quot;cortesia&quot;) return { ok: true, situacao: s };
+  if (s === &quot;ativo&quot;) {
+    var v = dataDe_(N.vence), tol = Number(cfgVal_(&quot;dias_tolerancia&quot;) || 3);
+    if (!v) return { ok: true, situacao: &quot;ativo&quot;, vence: &quot;&quot; };               // pagamento único: sem vencimento
+    var dias = Math.floor((v + DIA - Date.now()) / DIA);                       // dias até o vencimento (negativo = atrasado)
+    if (dias &lt; -tol) return { ok: false, situacao: &quot;vencido&quot;, vence: dataBr_(dataIso_(N.vence)), whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+    return { ok: true, situacao: &quot;ativo&quot;, vence: dataBr_(dataIso_(N.vence)), dias_restantes: dias, tolerancia: tol, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+  }
   if (s === &quot;suspenso&quot;) return { ok: false, situacao: s, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
   var ate = dataDe_(N.teste_ate);
   if (ate &amp;&amp; Date.now() &gt; ate + DIA) return { ok: false, situacao: &quot;teste_vencido&quot;, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };

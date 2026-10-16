@@ -58,7 +58,8 @@ function configurar() {
    ["proximo_id", "1", "Uso interno (não mexa)"],
    ["link_base", "", "Preenchido sozinho"],
    ["pasta_midia", "", "Preenchido sozinho (pasta do Drive com as fotos e vídeos)"],
-   ["push_chave", "", "Chave do OneSignal (a mesma da Agenda Fácil, começa com os_v2_)"]
+   ["push_chave", "", "Chave do OneSignal (a mesma da Agenda Fácil, começa com os_v2_)"],
+   ["senha_dayia", "", "Senha da Central da DayIA (criada no primeiro acesso, fica guardada em código)"]
   ].forEach(function (p) { if (tem.indexOf(p[0]) < 0) cfg.appendRow([p[0], txt_(p[1]), p[2]]); });
   cfg.autoResizeColumns(1, 3);
   if (!negocio_("bab-atelie", true)) criarBab_();
@@ -158,6 +159,66 @@ var ACOES = {
     return { ok: true, token: novoToken_(N.n) };
   },
   sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
+
+  /* ======== CENTRAL DA DayIA (só a dona do sistema) ======== */
+  admEstado: function () { return { ok: true, temSenha: !!cfgVal_("senha_dayia") }; },
+  admEntrar: function (d) {
+    var atual = cfgVal_("senha_dayia"), senha = String(d.senha || "");
+    if (!atual) { if (senha.length < 6) throw new Error("Crie uma senha com pelo menos 6 caracteres."); setCfg_("senha_dayia", hash_("dayia:" + senha)); }
+    else if (hash_("dayia:" + senha) !== atual) throw new Error("Senha incorreta.");
+    limparSessoes_();
+    return { ok: true, token: novoToken_("#dayia") };
+  },
+  admLista: function (d) {
+    admin_(d);
+    var peds = {}, pecs = {};
+    linhas_("Pedidos").forEach(function (r) { var n = String(r.negocio).toLowerCase(); peds[n] = (peds[n] || 0) + 1; });
+    linhas_("Pecas").forEach(function (r) { var n = String(r.negocio).toLowerCase(); pecs[n] = (pecs[n] || 0) + 1; });
+    var lista = linhas_("Negocios").map(function (r) {
+      var N = negocio_(r.n, true); if (!N) return null; var L = liberado_(N);
+      return { n: N.n, nome: String(N.nome), whatsapp: soDig_(N.whatsapp), situacao: String(N.situacao || ""), licenca: L, teste_ate: N.teste_ate ? dataBr_(dataIso_(N.teste_ate) || "") || String(N.teste_ate) : "",
+        vence: N.vence ? dataBr_(dataIso_(N.vence)) : "", plano: String(N.plano || ""), valor: String(N.valor || ""), criado: String(N.criado || ""), pecas: pecs[N.n] || 0, pedidos: peds[N.n] || 0 };
+    }).filter(Boolean);
+    return { ok: true, lojas: lista, base: cfgVal_("link_base"), hoje: hojeIso_() };
+  },
+  admCriar: function (d) {
+    admin_(d); var x = d.loja || {};
+    var nome = lim_(x.nome, 60); if (!nome) throw new Error("Coloque o nome da loja.");
+    var wa = telNorm_(x.whatsapp); if (wa.length < 12) throw new Error("Coloque o WhatsApp da loja com DDD.");
+    var senha = String(x.senha || ""); if (senha.length < 4) throw new Error("A senha precisa ter pelo menos 4 caracteres.");
+    return comTrava_(function () {
+      var base = String(x.n || nome).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30) || "loja", n = base, k = 2;
+      while (negocio_(n, true)) n = base + "-" + (k++);
+      inserir_("Negocios", { n: n, nome: nome, situacao: "teste", teste_ate: legivel_(Date.now() + (Number(cfgVal_("dias_teste")) || 30) * DIA).slice(0, 10), criado: legivel_(Date.now()),
+        dono: lim_(x.dono, 60) || nome, whatsapp: wa, email_aviso: lim_(x.email, 120), senha: hash_(senha), telefone: lim_(x.telefone, 30) || "", logo: "",
+        titulo: nome, subtitulo: "Escolha, personalize do seu jeito e envie o pedido prontinho.", aviso: "", cats: JSON.stringify([["pecas", "Peças"]]), faixas: JSON.stringify(FAIXAS_PADRAO),
+        brinde: JSON.stringify({ cada: 0, txt: "", txtPl: "", img: "" }), redes: JSON.stringify({}), tipos: "Retirada,Entrega,Correios", mkt: JSON.stringify(MKT_PADRAO), plano: "", valor: "", vence: "", link_pagto: "" });
+      return { ok: true, n: n };
+    });
+  },
+  admPagou: function (d) {
+    admin_(d); var N = negocio_(d.n), tipo = String(d.tipo || ""), m = {}, hoje = hojeIso_();
+    var deData = function (iso, meses) { var y = +iso.slice(0, 4), mo = +iso.slice(5, 7) - 1 + meses, dd = +iso.slice(8, 10), dt = new Date(Date.UTC(y, mo, dd)); if (dt.getUTCDate() !== dd) dt = new Date(Date.UTC(y, mo + 1, 0)); return dt.toISOString().slice(0, 10); };
+    var atual = dataIso_(N.vence), inicio = atual && atual > hoje ? atual : hoje;
+    if (tipo === "mensal" || tipo === "anual") { m.situacao = "ativo"; m.vence = dataBr_(deData(inicio, tipo === "anual" ? 12 : 1)); m.plano = tipo === "anual" ? "Anual" : "Mensal"; if (d.valor) m.valor = lim_(d.valor, 30); }
+    else if (tipo === "unico") { m.situacao = "ativo"; m.vence = ""; m.plano = "Pagamento único"; if (d.valor) m.valor = lim_(d.valor, 30); }
+    else if (tipo === "cortesia") { m.situacao = "cortesia"; m.vence = ""; m.plano = "Cortesia"; }
+    else if (tipo === "pausar") { m.situacao = "suspenso"; }
+    else if (tipo === "teste") { m.situacao = "teste"; m.teste_ate = legivel_(Date.now() + (Number(d.dias) || 7) * DIA).slice(0, 10); }
+    else if (tipo === "data") { var v = dataIso_(d.vence); if (!v) throw new Error("Escolha a data."); m.situacao = "ativo"; m.vence = dataBr_(v); }
+    else throw new Error("Escolha uma opção.");
+    atualizar_("Negocios", function (r) { return String(r.n).toLowerCase() === N.n; }, m); mudou_(N.n);
+    return { ok: true, vence: m.vence || "" };
+  },
+  admSenhaLoja: function (d) {
+    admin_(d); var N = negocio_(d.n), senha = String(d.senha || ""); if (senha.length < 4) throw new Error("A senha precisa ter pelo menos 4 caracteres.");
+    atualizar_("Negocios", function (r) { return String(r.n).toLowerCase() === N.n; }, { senha: hash_(senha) });
+    return { ok: true };
+  },
+  admSenhaDayia: function (d) {
+    admin_(d); var s = String(d.senha || ""); if (s.length < 6) throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+    setCfg_("senha_dayia", hash_("dayia:" + s)); return { ok: true };
+  },
   versao: function (d) { var n = sessao_(d); return { ok: true, v: versao_(n) }; },
   painel: function (d) {
     var n = sessao_(d), N = negocio_(n), desde = Date.now() - 400 * DIA;
@@ -600,6 +661,7 @@ function limparSessoes_() {
   var P = PropertiesService.getScriptProperties(), all = P.getProperties(), agora = Date.now();
   Object.keys(all).forEach(function (k) { if (k.indexOf("SS_") === 0) { try { if (!(JSON.parse(all[k]).exp > agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); } } });
 }
+function admin_(d) { if (sessao_(d) !== "#dayia") throw new Error("SESSAO"); }
 function encerrarSessao_(t) { if (t) PropertiesService.getScriptProperties().deleteProperty("SS_" + t); }
 function versao_(n) { return Number(PropertiesService.getScriptProperties().getProperty("V_" + n) || 1); }
 function mudou_(n) { PropertiesService.getScriptProperties().setProperty("V_" + n, String(Date.now())); }

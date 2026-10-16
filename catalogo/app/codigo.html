@@ -67,7 +67,8 @@ function configurar() {
    [&quot;proximo_id&quot;, &quot;1&quot;, &quot;Uso interno (não mexa)&quot;],
    [&quot;link_base&quot;, &quot;&quot;, &quot;Preenchido sozinho&quot;],
    [&quot;pasta_midia&quot;, &quot;&quot;, &quot;Preenchido sozinho (pasta do Drive com as fotos e vídeos)&quot;],
-   [&quot;push_chave&quot;, &quot;&quot;, &quot;Chave do OneSignal (a mesma da Agenda Fácil, começa com os_v2_)&quot;]
+   [&quot;push_chave&quot;, &quot;&quot;, &quot;Chave do OneSignal (a mesma da Agenda Fácil, começa com os_v2_)&quot;],
+   [&quot;senha_dayia&quot;, &quot;&quot;, &quot;Senha da Central da DayIA (criada no primeiro acesso, fica guardada em código)&quot;]
   ].forEach(function (p) { if (tem.indexOf(p[0]) &lt; 0) cfg.appendRow([p[0], txt_(p[1]), p[2]]); });
   cfg.autoResizeColumns(1, 3);
   if (!negocio_(&quot;bab-atelie&quot;, true)) criarBab_();
@@ -167,6 +168,66 @@ var ACOES = {
     return { ok: true, token: novoToken_(N.n) };
   },
   sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
+
+  /* ======== CENTRAL DA DayIA (só a dona do sistema) ======== */
+  admEstado: function () { return { ok: true, temSenha: !!cfgVal_(&quot;senha_dayia&quot;) }; },
+  admEntrar: function (d) {
+    var atual = cfgVal_(&quot;senha_dayia&quot;), senha = String(d.senha || &quot;&quot;);
+    if (!atual) { if (senha.length &lt; 6) throw new Error(&quot;Crie uma senha com pelo menos 6 caracteres.&quot;); setCfg_(&quot;senha_dayia&quot;, hash_(&quot;dayia:&quot; + senha)); }
+    else if (hash_(&quot;dayia:&quot; + senha) !== atual) throw new Error(&quot;Senha incorreta.&quot;);
+    limparSessoes_();
+    return { ok: true, token: novoToken_(&quot;#dayia&quot;) };
+  },
+  admLista: function (d) {
+    admin_(d);
+    var peds = {}, pecs = {};
+    linhas_(&quot;Pedidos&quot;).forEach(function (r) { var n = String(r.negocio).toLowerCase(); peds[n] = (peds[n] || 0) + 1; });
+    linhas_(&quot;Pecas&quot;).forEach(function (r) { var n = String(r.negocio).toLowerCase(); pecs[n] = (pecs[n] || 0) + 1; });
+    var lista = linhas_(&quot;Negocios&quot;).map(function (r) {
+      var N = negocio_(r.n, true); if (!N) return null; var L = liberado_(N);
+      return { n: N.n, nome: String(N.nome), whatsapp: soDig_(N.whatsapp), situacao: String(N.situacao || &quot;&quot;), licenca: L, teste_ate: N.teste_ate ? dataBr_(dataIso_(N.teste_ate) || &quot;&quot;) || String(N.teste_ate) : &quot;&quot;,
+        vence: N.vence ? dataBr_(dataIso_(N.vence)) : &quot;&quot;, plano: String(N.plano || &quot;&quot;), valor: String(N.valor || &quot;&quot;), criado: String(N.criado || &quot;&quot;), pecas: pecs[N.n] || 0, pedidos: peds[N.n] || 0 };
+    }).filter(Boolean);
+    return { ok: true, lojas: lista, base: cfgVal_(&quot;link_base&quot;), hoje: hojeIso_() };
+  },
+  admCriar: function (d) {
+    admin_(d); var x = d.loja || {};
+    var nome = lim_(x.nome, 60); if (!nome) throw new Error(&quot;Coloque o nome da loja.&quot;);
+    var wa = telNorm_(x.whatsapp); if (wa.length &lt; 12) throw new Error(&quot;Coloque o WhatsApp da loja com DDD.&quot;);
+    var senha = String(x.senha || &quot;&quot;); if (senha.length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;);
+    return comTrava_(function () {
+      var base = String(x.n || nome).normalize(&quot;NFD&quot;).replace(/[\u0300-\u036f]/g, &quot;&quot;).toLowerCase().replace(/[^a-z0-9]+/g, &quot;-&quot;).replace(/^-+|-+$/g, &quot;&quot;).slice(0, 30) || &quot;loja&quot;, n = base, k = 2;
+      while (negocio_(n, true)) n = base + &quot;-&quot; + (k++);
+      inserir_(&quot;Negocios&quot;, { n: n, nome: nome, situacao: &quot;teste&quot;, teste_ate: legivel_(Date.now() + (Number(cfgVal_(&quot;dias_teste&quot;)) || 30) * DIA).slice(0, 10), criado: legivel_(Date.now()),
+        dono: lim_(x.dono, 60) || nome, whatsapp: wa, email_aviso: lim_(x.email, 120), senha: hash_(senha), telefone: lim_(x.telefone, 30) || &quot;&quot;, logo: &quot;&quot;,
+        titulo: nome, subtitulo: &quot;Escolha, personalize do seu jeito e envie o pedido prontinho.&quot;, aviso: &quot;&quot;, cats: JSON.stringify([[&quot;pecas&quot;, &quot;Peças&quot;]]), faixas: JSON.stringify(FAIXAS_PADRAO),
+        brinde: JSON.stringify({ cada: 0, txt: &quot;&quot;, txtPl: &quot;&quot;, img: &quot;&quot; }), redes: JSON.stringify({}), tipos: &quot;Retirada,Entrega,Correios&quot;, mkt: JSON.stringify(MKT_PADRAO), plano: &quot;&quot;, valor: &quot;&quot;, vence: &quot;&quot;, link_pagto: &quot;&quot; });
+      return { ok: true, n: n };
+    });
+  },
+  admPagou: function (d) {
+    admin_(d); var N = negocio_(d.n), tipo = String(d.tipo || &quot;&quot;), m = {}, hoje = hojeIso_();
+    var deData = function (iso, meses) { var y = +iso.slice(0, 4), mo = +iso.slice(5, 7) - 1 + meses, dd = +iso.slice(8, 10), dt = new Date(Date.UTC(y, mo, dd)); if (dt.getUTCDate() !== dd) dt = new Date(Date.UTC(y, mo + 1, 0)); return dt.toISOString().slice(0, 10); };
+    var atual = dataIso_(N.vence), inicio = atual &amp;&amp; atual &gt; hoje ? atual : hoje;
+    if (tipo === &quot;mensal&quot; || tipo === &quot;anual&quot;) { m.situacao = &quot;ativo&quot;; m.vence = dataBr_(deData(inicio, tipo === &quot;anual&quot; ? 12 : 1)); m.plano = tipo === &quot;anual&quot; ? &quot;Anual&quot; : &quot;Mensal&quot;; if (d.valor) m.valor = lim_(d.valor, 30); }
+    else if (tipo === &quot;unico&quot;) { m.situacao = &quot;ativo&quot;; m.vence = &quot;&quot;; m.plano = &quot;Pagamento único&quot;; if (d.valor) m.valor = lim_(d.valor, 30); }
+    else if (tipo === &quot;cortesia&quot;) { m.situacao = &quot;cortesia&quot;; m.vence = &quot;&quot;; m.plano = &quot;Cortesia&quot;; }
+    else if (tipo === &quot;pausar&quot;) { m.situacao = &quot;suspenso&quot;; }
+    else if (tipo === &quot;teste&quot;) { m.situacao = &quot;teste&quot;; m.teste_ate = legivel_(Date.now() + (Number(d.dias) || 7) * DIA).slice(0, 10); }
+    else if (tipo === &quot;data&quot;) { var v = dataIso_(d.vence); if (!v) throw new Error(&quot;Escolha a data.&quot;); m.situacao = &quot;ativo&quot;; m.vence = dataBr_(v); }
+    else throw new Error(&quot;Escolha uma opção.&quot;);
+    atualizar_(&quot;Negocios&quot;, function (r) { return String(r.n).toLowerCase() === N.n; }, m); mudou_(N.n);
+    return { ok: true, vence: m.vence || &quot;&quot; };
+  },
+  admSenhaLoja: function (d) {
+    admin_(d); var N = negocio_(d.n), senha = String(d.senha || &quot;&quot;); if (senha.length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;);
+    atualizar_(&quot;Negocios&quot;, function (r) { return String(r.n).toLowerCase() === N.n; }, { senha: hash_(senha) });
+    return { ok: true };
+  },
+  admSenhaDayia: function (d) {
+    admin_(d); var s = String(d.senha || &quot;&quot;); if (s.length &lt; 6) throw new Error(&quot;A senha precisa ter pelo menos 6 caracteres.&quot;);
+    setCfg_(&quot;senha_dayia&quot;, hash_(&quot;dayia:&quot; + s)); return { ok: true };
+  },
   versao: function (d) { var n = sessao_(d); return { ok: true, v: versao_(n) }; },
   painel: function (d) {
     var n = sessao_(d), N = negocio_(n), desde = Date.now() - 400 * DIA;
@@ -609,6 +670,7 @@ function limparSessoes_() {
   var P = PropertiesService.getScriptProperties(), all = P.getProperties(), agora = Date.now();
   Object.keys(all).forEach(function (k) { if (k.indexOf(&quot;SS_&quot;) === 0) { try { if (!(JSON.parse(all[k]).exp &gt; agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); } } });
 }
+function admin_(d) { if (sessao_(d) !== &quot;#dayia&quot;) throw new Error(&quot;SESSAO&quot;); }
 function encerrarSessao_(t) { if (t) PropertiesService.getScriptProperties().deleteProperty(&quot;SS_&quot; + t); }
 function versao_(n) { return Number(PropertiesService.getScriptProperties().getProperty(&quot;V_&quot; + n) || 1); }
 function mudou_(n) { PropertiesService.getScriptProperties().setProperty(&quot;V_&quot; + n, String(Date.now())); }

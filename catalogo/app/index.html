@@ -510,7 +510,7 @@ var SID=SID_FIXO||Q.get("s")||ls("cf-s")||"";
 var API=Q.get("api")||(SID?"https://script.google.com/macros/s/"+SID+"/exec":"");
 var DEMO=!API||Q.get("demo")==="1",EMBED=Q.get("embed")==="1";
 var NEG=(Q.get("n")||(DEMO?"bab-atelie":"")).toLowerCase().trim();
-var LOGO_PADRAO={"bab-atelie":"icon-192.png"};
+var LOGO_PADRAO={"bab-atelie":"demo/logo-bab.jpg"};
 var WHATS_DAYIA="5519999389118";
 const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -627,6 +627,16 @@ function DEMOAPI(d){
     s.pedidos.push(p);salva();return {ok:true,pedido:pub(p),chave:p.chave};}
   case "meus":{const out=[];(d.lista||[]).forEach(x=>{try{out.push(pub(doCli(x)))}catch(e){}});return {ok:true,pedidos:out};}
   case "pushReg":return {ok:true,ativo:false};
+  case "admEstado":return {ok:true,temSenha:true};
+  case "admEntrar":return {ok:true,token:"demo-dayia"};
+  case "admLista":{if(d.token!=="demo-dayia")throw new Error("SESSAO");const dr=Math.round((new Date(N.teste_ate+"T23:59:59")-Date.now())/864e5);
+    return {ok:true,hoje:h,base:"",lojas:[{n:N.n,nome:N.nome,whatsapp:N.whatsapp,situacao:N.situacao,licenca:{ok:N.situacao!=="suspenso",situacao:N.situacao,dias_restantes:dr,vence:N.vence?dBR(N.vence)+"/"+N.vence.slice(0,4):""},
+      teste_ate:dBR(N.teste_ate)+"/"+N.teste_ate.slice(0,4),vence:N.vence?dBR(N.vence)+"/"+N.vence.slice(0,4):"",plano:N.plano,valor:N.valor,pecas:s.pecas.length,pedidos:s.pedidos.length}]};}
+  case "admCriar":throw new Error("Na demonstração não dá para criar lojas. Na Central de verdade, a loja nova aparece aqui na hora.");
+  case "admPagou":{if(d.token!=="demo-dayia")throw new Error("SESSAO");const t=d.tipo;if(t==="mensal"||t==="anual"){N.situacao="ativo";const x=new Date(Math.max(Date.now(),N.vence?new Date(N.vence+"T12:00:00").getTime():0));x.setMonth(x.getMonth()+(t==="anual"?12:1));N.vence=dIso(x.getTime());N.plano=t==="anual"?"Anual":"Mensal"}
+    else if(t==="unico"){N.situacao="ativo";N.vence="";N.plano="Pagamento único"}else if(t==="cortesia"){N.situacao="cortesia";N.vence=""}else if(t==="pausar")N.situacao="suspenso";else if(t==="teste"){N.situacao="teste";N.teste_ate=addDias(+d.dias||7)}else if(t==="data"){N.situacao="ativo";N.vence=d.vence}
+    salva();return {ok:true};}
+  case "admSenhaLoja":case "admSenhaDayia":return {ok:true};
   case "entrar":if(String(d.senha)!==s.senha)throw new Error("Senha incorreta.");return {ok:true,token:"demo"};
   case "sair":return {ok:true};
   case "versao":sess();return {ok:true,v:s.v};
@@ -712,6 +722,7 @@ const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(
 
 function cliIniciar(){
   document.body.classList.remove("painel");
+  if(!NEG&&!Q.get("n")){cabecalho({nome:"Catálogo Fácil"});$("#app").innerHTML='<div class="cx"><h2>Catálogo Fácil</h2><p>Peça o link do catálogo para a loja.</p><p class="tiny left" style="margin-top:14px"><a href="#dayia">Central da DayIA</a></p></div>';return}
   if(!NEG){$("#app").innerHTML='<div class="cx"><h2>Link incompleto</h2><p>Peça o link do catálogo para a loja.</p></div>';return}
   if(Q.get("p")&&Q.get("k"))addMeu(Number(Q.get("p")),Q.get("k"));
   api("info").then(j=>{
@@ -855,7 +866,7 @@ function brindeBox(t){
 function barra(){
   const L=bagItens(),n=soma(L,i=>i.q),t=soma(L,i=>i.total);
   $("#bagCount").textContent=L.length;$("#bagTotal").textContent=`${n} ${n>1?"peças":"peça"} · ${brl(t)}`;
-  $("#bagBar").classList.toggle("show",L.length>0&&location.hash!=="#painel");
+  $("#bagBar").classList.toggle("show",L.length>0&&!/^#(painel|dayia)$/.test(location.hash));
 }
 function lista(){
   const L=bagItens(),t=soma(L,i=>i.total);
@@ -953,7 +964,7 @@ function prepararImg(fl,M,q){
 document.addEventListener("click",e=>{
   const t=e.target;
   if(t.closest("[data-close]")){fechar();return}
-  if(location.hash==="#painel")return;
+  if(location.hash==="#painel"||location.hash==="#dayia")return;
   const ch=t.closest(".chip");if(ch){cat=ch.dataset.c;if(busca){busca="";$("#busca").value="";$("#buscaX").hidden=true}chips();grid();return}
   if(t.closest("#buscaX")){busca="";$("#busca").value="";$("#buscaX").hidden=true;grid();$("#busca").focus();return}
   const cd=t.closest(".card[data-p]");if(cd){abrir(cd.dataset.p);return}
@@ -1364,7 +1375,7 @@ const PLANOS=[
   ["Anual","1 ano, com suporte (Pix, cartão até 3x ou boleto)","https://mpago.li/1UMuHDZ","R$ 99"],
   ["Pagamento único no Pix","Sem mensalidade e sem suporte","https://mpago.la/2gdMSWz","R$ 49"],
   ["Pagamento único no cartão","Sem mensalidade e sem suporte, até 3x","https://mpago.li/19uWe1c","R$ 55"],
-  ["Montagem do catálogo","A DayIA cadastra até 30 peças para você","https://mpago.la/26sGeRW","R$ 19,90"],
+  ["Montagem do catálogo","A DayIA cadastra até 30 peças para você","https://mpago.la/26sGeRW","R$ 29,90"],
   ["Alteração avulsa","Para quem fez o pagamento único","https://mpago.la/2oivpp4","R$ 15"]];
 function rAjustes(){
   const N=P.d.negocio,lk=linkCliente(),L=P.d.licenca||{},pl=N.plano||{};
@@ -1507,6 +1518,93 @@ document.addEventListener("change",async e=>{
     x.fillStyle="#fff";x.fillRect(0,0,s,s);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,s,s);P.logo=cv.toDataURL("image/jpeg",.84);$("#aLogoImg").src=P.logo;URL.revokeObjectURL(u);toast("Logo pronta. Toque em Salvar ajustes.")};im.src=u}
 });
 
+/* ======================= CENTRAL DA DayIA (só a dona do sistema) ======================= */
+const AD={tk:ls("cf-adm"),d:null,busca:"",filtro:"todas"};
+function dIniciar(){
+  cabecalho({nome:"Central da DayIA",logo:"icon-192.png"});$("#hAcoes").innerHTML="";
+  if(AD.tk)return dPuxar();
+  api("admEstado").then(j=>dLogin(j.temSenha)).catch(e=>{$("#app").innerHTML=`<div class="cx"><h2>Não consegui abrir</h2><p>${esc(e.message)}</p></div>`});
+}
+function dLogin(tem,msg){
+  $("#app").innerHTML=`<div class="cx"><h2>Central da DayIA</h2><p>${tem?"Entre com a sua senha.":"Primeiro acesso: crie a senha da Central (pelo menos 6 caracteres). Guarde bem: só você usa."}</p>
+    <div class="fld"><label for="dS">${tem?"Senha":"Nova senha"}</label><input type="password" id="dS" autocomplete="${tem?"current-password":"new-password"}" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit"></div>
+    <div class="err" id="dE" style="display:block">${esc(msg||"")}</div>${DEMO?'<div class="adm-info">Demonstração: qualquer senha entra.</div>':""}
+    <button class="btn" id="dB" type="button" style="width:100%;margin:14px 0 0">${tem?"Entrar":"Criar senha e entrar"}</button></div>`;
+  const go=()=>{const b=$("#dB");b.disabled=true;api("admEntrar",{senha:$("#dS").value}).then(j=>{AD.tk=j.token;ls("cf-adm",AD.tk);dPuxar()}).catch(e=>{b.disabled=false;$("#dE").textContent=e.message})};
+  $("#dB").onclick=go;$("#dS").onkeydown=e=>{if(e.key==="Enter")go()};setTimeout(()=>$("#dS").focus(),100);
+}
+function dErro(e){if(String(e.message)==="SESSAO"){AD.tk=null;ls("cf-adm",null);dLogin(true,"Entre de novo, por favor.");return true}toast(e.message);return false}
+function dPuxar(){return api("admLista",{token:AD.tk}).then(j=>{AD.d=j;dRender()}).catch(dErro)}
+function linkLoja(n,painel){const q=[];if(!SID_FIXO&&!DEMO){if(Q.get("api"))q.push("api="+encodeURIComponent(API));else q.push("s="+SID)}if(DEMO&&SID_FIXO)q.push("demo=1");q.push("n="+encodeURIComponent(n));return linkBase()+"?"+q.join("&")+(painel?"#painel":"")}
+function dSit(l){const L=l.licenca||{};
+  if(L.situacao==="cortesia")return ["Cortesia 💛","ok"];if(L.situacao==="suspenso")return ["Pausada","red"];if(L.situacao==="vencido")return ["Vencida · travada","red"];if(L.situacao==="teste_vencido")return ["Teste acabou · travada","red"];
+  if(L.situacao==="teste")return [`Teste até ${l.teste_ate}${L.dias_restantes!=null?` (${L.dias_restantes}d)`:""}`,L.dias_restantes!=null&&L.dias_restantes<=3?"gold":""];
+  if(L.situacao==="ativo")return L.vence?[L.dias_restantes<0?`Venceu ${L.vence} · tolerância`:`Ativa até ${L.vence}`,L.dias_restantes<=5?"gold":"ok"]:["Pagamento único","ok"];return [l.situacao||"?",""]}
+function dRender(){
+  const D=AD.d,L=D.lojas;let lista=L.slice().sort((a,b)=>a.nome.localeCompare(b.nome));
+  const grupo=l=>{const s=l.licenca.situacao;return !l.licenca.ok?"travadas":s==="teste"?"teste":"ativas"};
+  if(AD.filtro!=="todas")lista=lista.filter(l=>grupo(l)===AD.filtro);
+  if(AD.busca)lista=lista.filter(l=>norm(l.nome+" "+l.n).includes(norm(AD.busca)));
+  const c=k=>L.filter(l=>grupo(l)===k).length,atencao=L.filter(l=>{const x=l.licenca;return !x.ok||(x.dias_restantes!=null&&x.dias_restantes<=3)}).length;
+  $("#app").innerHTML=`<div class="adm-titulo"><b>Central da DayIA</b><button class="mini" type="button" data-d="sairD">Sair</button></div><div class="adm-main">
+    ${DEMO?'<div class="adm-info">🧪 Demonstração: aqui aparece só a loja de exemplo.</div>':""}
+    <div class="kpis"><div class="kpi"><small>Lojas</small><b>${L.length}</b><span>no sistema</span></div><div class="kpi"><small>Ativas</small><b>${c("ativas")}</b><span>pagando ou cortesia</span></div>
+      <div class="kpi"><small>Em teste</small><b>${c("teste")}</b><span>30 dias grátis</span></div><div class="kpi"><small>Precisam de atenção</small><b>${atencao}</b><span>vencendo ou travadas</span></div></div>
+    <button class="btn" style="width:100%;margin:12px 0 0" type="button" data-d="nova">＋ Criar loja nova</button>
+    <input type="text" class="search" id="dBusca" placeholder="Buscar loja" value="${esc(AD.busca)}">
+    <div class="fchips">${[["todas","Todas",L.length],["ativas","Ativas",c("ativas")],["teste","Em teste",c("teste")],["travadas","Travadas",c("travadas")]].map(([k,n,q])=>`<button type="button" data-d="filtro" data-f="${k}" class="${AD.filtro===k?"on":""}">${n} <i>${q}</i></button>`).join("")}</div>
+    ${lista.map(l=>{const [st,cl]=dSit(l);return `<div class="box"><div class="bh"><h4>${esc(l.nome)}</h4><em class="tag ${cl}">${esc(st)}</em></div>
+      <p class="tiny left" style="margin-top:2px">?n=${esc(l.n)} · ${l.pecas} peça(s) · ${l.pedidos} pedido(s)${l.plano?" · "+esc(l.plano):""}${l.valor?" "+esc(l.valor):""} · WhatsApp ${telBR(l.whatsapp)}</p>
+      <div class="btns"><button class="mini wa" type="button" data-d="pagou" data-n="${esc(l.n)}">💰 Registrar pagamento</button><button class="mini" type="button" data-d="links" data-n="${esc(l.n)}">🔗 Links</button>
+      <button class="mini" type="button" data-d="senha" data-n="${esc(l.n)}">🔒 Senha</button><a class="mini" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(wa(l.whatsapp,"Olá! Aqui é a Day, da DayIA. "))}">💬 Conversar</a></div></div>`}).join("")||'<p class="muted center">Nenhuma loja aqui.</p>'}
+    <details><summary>Trocar a senha da Central</summary><div class="copiar"><input type="password" id="dNova" placeholder="Nova senha (mín. 6)" autocomplete="new-password"><button class="mini" type="button" data-d="trocaSenha">Salvar</button></div></details>
+    <p class="tiny">Catálogo Fácil by DayIA · Central da DayIA</p></div>`;
+}
+function dMsgLoja(l,senha){return `Olá, ${l.nome}! 💛 O seu Catálogo Fácil está pronto.\n\n🛍️ Link do catálogo (para mandar para as suas clientes):\n${linkLoja(l.n)}\n\n✏️ O seu painel (só você usa):\n${linkLoja(l.n,true)}\n${senha?"🔒 Senha: "+senha+" (troque em Ajustes)\n":""}\nVocê tem 30 dias grátis para testar. No painel você coloca as fotos, os preços e as suas redes. Qualquer dúvida, é só me chamar. Obrigada!`}
+function dLinks(l,senha){
+  folha(`<div class="inner share-sheet"><h2>${esc(l.nome)}</h2><p class="desc">${senha?"Loja criada ✨ Mande a mensagem abaixo para a dona.":"Links da loja."}</p>
+    <div class="fld"><span class="lb">🛍️ Catálogo das clientes</span><div class="copiar"><input type="text" readonly value="${esc(linkLoja(l.n))}"><button class="mini" type="button" data-d="cp" data-v="${esc(linkLoja(l.n))}">Copiar</button></div></div>
+    <div class="fld"><span class="lb">✏️ Painel da artesã</span><div class="copiar"><input type="text" readonly value="${esc(linkLoja(l.n,true))}"><button class="mini" type="button" data-d="cp" data-v="${esc(linkLoja(l.n,true))}">Copiar</button></div></div>
+    <div class="fld"><label for="dMsg">Mensagem pronta</label><textarea id="dMsg" style="min-height:190px">${esc(dMsgLoja(l,senha))}</textarea></div></div>
+    <a class="btn wa" target="_blank" rel="noopener" href="${esc(wa(l.whatsapp,dMsgLoja(l,senha)))}">📲 Enviar no WhatsApp dela</a>
+    <button class="btn ghost" type="button" data-d="cpMsg">Copiar mensagem</button>`,"adm");
+}
+async function dAcao(a,b){
+  const n=b.dataset.n,l=n&&AD.d.lojas.find(x=>x.n===n);
+  switch(a){
+    case "sairD":api("sair",{token:AD.tk}).catch(()=>{});AD.tk=null;ls("cf-adm",null);dLogin(true);break;
+    case "filtro":AD.filtro=b.dataset.f;dRender();break;
+    case "cp":copiar(b.dataset.v,"Link copiado!");break;
+    case "cpMsg":copiar($("#dMsg").value,"Mensagem copiada!");break;
+    case "links":dLinks(l);break;
+    case "nova":{const sen=String(Math.floor(1000+Math.random()*9000));
+      folha(`<div class="inner"><h2>Criar loja nova</h2><p class="desc">Ela começa com 30 dias grátis. Fotos, preços e o resto ela mesma coloca pelo painel.</p>
+        <div class="fld"><label for="nlNome">Nome da loja</label><input type="text" id="nlNome" maxlength="60" placeholder="Ex.: Ateliê da Ana"></div>
+        <div class="fld"><label for="nlWa">WhatsApp da loja</label><input type="text" id="nlWa" inputmode="tel" placeholder="(19) 99999-9999"></div>
+        <div class="fld"><label for="nlEmail">E-mail para os avisos de pedido <span class="hint">(opcional)</span></label><input type="email" id="nlEmail" inputmode="email"></div>
+        <div class="fld"><label for="nlSenha">Senha inicial do painel</label><input type="text" id="nlSenha" value="${sen}"></div>
+        <div class="err" id="nlErr"></div></div><button class="btn" type="button" data-d="criar">Criar loja</button>`,"adm");break;}
+    case "criar":{const x={nome:$("#nlNome").value.trim(),whatsapp:$("#nlWa").value,email:$("#nlEmail").value.trim(),senha:$("#nlSenha").value.trim()};b.disabled=true;
+      api("admCriar",{token:AD.tk,loja:x}).then(j=>{dPuxar().then(()=>{const nl=AD.d.lojas.find(y=>y.n===j.n)||{n:j.n,nome:x.nome,whatsapp:normTel(x.whatsapp)};dLinks(nl,x.senha)})})
+        .catch(e=>{b.disabled=false;if(!dErro(e)){$("#nlErr").textContent=e.message;$("#nlErr").style.display="block"}});break;}
+    case "pagou":{const op=(t,ti,de)=>`<button class="row" type="button" data-d="pg" data-n="${esc(n)}" data-t="${t}"><span><b>${ti}</b>${de}</span><em class="tag">→</em></button>`;
+      folha(`<div class="inner"><h2>${esc(l.nome)}</h2><p class="desc">${esc(dSit(l)[0])}. O que ela pagou?</p>
+        <div class="fld"><label for="pgV">Valor recebido <span class="hint">(opcional, só para você lembrar)</span></label><input type="text" id="pgV" placeholder="Ex.: R$ 9,90"></div>
+        ${op("mensal","Mensalidade","Libera mais 1 mês")}${op("anual","Plano anual","Libera mais 12 meses")}${op("unico","Pagamento único","Libera sem vencimento")}
+        ${op("cortesia","Cortesia","Grátis, sem vencimento")}${op("teste","Mais 7 dias de teste","Para quem pediu mais tempo")}
+        <div class="fld"><label for="pgD">Ou escolha a data de vencimento</label><div class="copiar"><input type="date" id="pgD"><button class="mini" type="button" data-d="pg" data-n="${esc(n)}" data-t="data">Salvar</button></div></div>
+        <button class="btn ghost del" type="button" data-d="pg" data-n="${esc(n)}" data-t="pausar">⏸️ Pausar a loja (catálogo sai do ar)</button></div>`,"adm");break;}
+    case "pg":{const t=b.dataset.t;if(t==="pausar"&&!confirm(`Pausar ${l.nome}? O catálogo dela sai do ar na hora.`))break;b.disabled=true;
+      api("admPagou",{token:AD.tk,n,tipo:t,valor:($("#pgV")||{}).value||"",vence:($("#pgD")||{}).value||"",dias:7}).then(j=>{fechar();toast(t==="pausar"?"Loja pausada":t==="teste"?"Mais 7 dias de teste ✨":j.vence?`Liberada até ${j.vence} ✅`:"Liberada ✅");dPuxar()})
+        .catch(e=>{b.disabled=false;dErro(e)});break;}
+    case "senha":{const sn=prompt(`Nova senha do painel da ${l.nome}:`,String(Math.floor(1000+Math.random()*9000)));if(!sn)break;
+      api("admSenhaLoja",{token:AD.tk,n,senha:sn}).then(()=>{toast("Senha trocada");dLinks(l,sn)}).catch(dErro);break;}
+    case "trocaSenha":api("admSenhaDayia",{token:AD.tk,senha:$("#dNova").value}).then(()=>{toast("Senha da Central trocada");$("#dNova").value=""}).catch(dErro);break;
+  }
+}
+document.addEventListener("click",e=>{if(location.hash!=="#dayia")return;const b=e.target.closest("[data-d]");if(b&&!b.disabled)dAcao(b.dataset.d,b)});
+document.addEventListener("input",e=>{if(e.target.id==="dBusca"&&location.hash==="#dayia"){AD.busca=e.target.value;const pos=e.target.selectionStart;dRender();const i=$("#dBusca");i.focus();i.setSelectionRange(pos,pos)}});
+
 /* ======================= avisos, som, instalar ======================= */
 let actx=null;
 function somLiberar(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume()}catch(e){}}
@@ -1559,12 +1657,24 @@ function pushRegistrar(){
   }catch(e){}
 }
 setInterval(pushRegistrar,30000);
+let ICONES={k:"",i192:"",i512:""};
+function iconesDe(logo){
+  return new Promise(ok=>{if(!logo)return ok(null);if(ICONES.k===logo)return ok(ICONES);const im=new Image();im.crossOrigin="anonymous";
+    im.onload=()=>{try{const f=s=>{const c=document.createElement("canvas");c.width=c.height=s;const x=c.getContext("2d"),m=Math.min(im.width,im.height);x.fillStyle="#fff";x.fillRect(0,0,s,s);
+      const p=Math.round(s*.04);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,p,p,s-2*p,s-2*p);return c.toDataURL("image/png")};ICONES={k:logo,i192:f(192),i512:f(512)};ok(ICONES)}catch(e){ok(null)}};
+    im.onerror=()=>ok(null);im.src=src(logo)});
+}
 function fazManifesto(){
+  const logo=location.hash==="#dayia"?"":logoDe(NEGD);
+  iconesDe(logo).then(ic=>{fazManifesto2(ic);if(ic){$$('link[rel="icon"],link[rel="apple-touch-icon"]').forEach(l=>l.href=ic.i192)}});
+}
+function fazManifesto2(ic){
   try{
     const pasta=location.origin+location.pathname.replace(/[^\/]*$/,""),ini=location.href.split("&p=")[0].split("&peca=")[0].split("&cat=")[0],painel=location.hash==="#painel";
-    const nome=String((NEGD&&NEGD.nome)||"Catálogo Fácil")+(painel?" · Painel":""),curto=painel?"Painel":String((NEGD&&NEGD.nome)||"Catálogo").split(" ").slice(0,2).join(" ").slice(0,12);
+    const central=location.hash==="#dayia",nome=central?"Central da DayIA":String((NEGD&&NEGD.nome)||"Catálogo Fácil")+(painel?" · Painel":""),curto=central?"Central":painel?"Painel":String((NEGD&&NEGD.nome)||"Catálogo").split(" ").slice(0,2).join(" ").slice(0,12);
     const m={name:nome.slice(0,45),short_name:curto,id:ini,start_url:ini,scope:pasta,display:"standalone",orientation:"portrait",background_color:"#4E3D31",theme_color:"#4E3D31",lang:"pt-BR",
-      icons:[{src:pasta+"icon-192.png",sizes:"192x192",type:"image/png",purpose:"any"},{src:pasta+"icon-512.png",sizes:"512x512",type:"image/png",purpose:"any"},{src:pasta+"icon-512.png",sizes:"512x512",type:"image/png",purpose:"maskable"}]};
+      icons:ic?[{src:ic.i192,sizes:"192x192",type:"image/png",purpose:"any"},{src:ic.i512,sizes:"512x512",type:"image/png",purpose:"any"},{src:ic.i512,sizes:"512x512",type:"image/png",purpose:"maskable"}]
+        :[{src:pasta+"icon-192.png",sizes:"192x192",type:"image/png",purpose:"any"},{src:pasta+"icon-512.png",sizes:"512x512",type:"image/png",purpose:"any"},{src:pasta+"icon-512.png",sizes:"512x512",type:"image/png",purpose:"maskable"}]};
     let l=document.querySelector('link[rel="manifest"]');if(!l){l=document.createElement("link");l.rel="manifest";document.head.appendChild(l)}
     if(l.dataset.u)URL.revokeObjectURL(l.dataset.u);l.href=l.dataset.u=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:"application/manifest+json"}));
   }catch(e){}
@@ -1572,14 +1682,15 @@ function fazManifesto(){
 
 /* ======================= rotas ======================= */
 function viewas(){
-  const v=$("#viewas");if(!DEMO||EMBED){v.hidden=true;return}v.hidden=false;const pn=location.hash==="#painel";
+  const v=$("#viewas");if(!DEMO||EMBED||location.hash==="#dayia"){v.hidden=true;return}v.hidden=false;const pn=location.hash==="#painel";
   $$("#viewas [data-v]").forEach(b=>b.classList.toggle("on",(b.dataset.v==="artesa")===pn));
   $("#viewHint").innerHTML=pn?"Você está no <b>painel da artesã</b>: encomendas, clientes, vendas, promoções e o catálogo dela.":"Você está vendo o que <b>as clientes</b> veem: escolhem a peça e mandam o pedido.";
 }
 $("#viewas").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(!b)return;location.hash=b.dataset.v==="artesa"?"#painel":""});
 function rota(){
   fechar();clearTimeout(P.t);clearTimeout(VG);$$(".alerta").forEach(a=>a.remove());$("#hAcoes").innerHTML="";viewas();
-  if(location.hash==="#painel"){if(!NEGD&&NEG)api("info").then(j=>{if(!P.d){NEGD=j.negocio;cabecalho(NEGD,true)}}).catch(()=>{});cabecalho(NEGD,true);pIniciar()}
+  if(location.hash==="#dayia"){document.body.classList.add("painel");barra();dIniciar()}
+  else if(location.hash==="#painel"){if(!NEGD&&NEG)api("info").then(j=>{if(!P.d){NEGD=j.negocio;cabecalho(NEGD,true)}}).catch(()=>{});cabecalho(NEGD,true);pIniciar()}
   else cliIniciar();
   setTimeout(ajustaTopo,50);
 }

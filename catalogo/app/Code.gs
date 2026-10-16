@@ -24,18 +24,20 @@
 var VERSAO_SISTEMA = "1.0";
 var ABAS = {
   Negocios:  ["n","nome","situacao","teste_ate","criado","dono","whatsapp","email_aviso","senha","telefone","logo","titulo","subtitulo","aviso",
-              "cats","faixas","brinde","redes","tipos","mkt","plano","valor","vence","link_pagto"],
+              "cats","faixas","brinde","redes","tipos","mkt","plano","valor","vence","link_pagto","trocas"],
   Pecas:     ["negocio","id","ordem","nome","cat","preco","desc","fotos","videos","campos","ativo","shopee","tiktok","criado"],
   Pedidos:   ["negocio","id","num","criado","quando","cliente_id","cliente","tel","email","aniv","tipo","entrega","itens","resumo","total","sinal","pago",
-              "status","obs","anot","origem","chave","historico","push","endereco","cep","taxa","rastreio"],
+              "status","obs","anot","origem","chave","historico","push","endereco","cep","taxa","rastreio","troca"],
   Clientes:  ["negocio","id","nome","tel","email","aniv","obs","origem","criado"],
   Promocoes: ["negocio","id","titulo","desc","alvo","ate","ativa"],
   Envios:    ["negocio","chave","cliente","dia"],
   Config:    ["chave","valor","explicacao"]
 };
 var MIN = 60000, DIA = 86400000;
-var STATUS = { novo: "Recebido", sinal: "Sinal pago", producao: "Produzindo", acabamento: "Finalizando", pronto: "Pronto", entregue: "Entregue", cancelado: "Cancelado" };
-var ABERTOS = ["novo", "sinal", "producao", "acabamento", "pronto"];
+var STATUS = { novo: "Recebido", sinal: "Sinal pago", producao: "Produzindo", acabamento: "Finalizando", pronto: "Pronto", entregue: "Entregue", troca: "Troca/devolução", cancelado: "Cancelado" };
+var ABERTOS = ["novo", "sinal", "producao", "acabamento", "pronto", "troca"];
+var TROCAS_PADRAO = "Se a peça chegar com defeito, me avise pelo app (botão Pedir troca ou devolução) com uma foto, que eu resolvo: conserto, troca ou devolução do valor.\nCompras pelo catálogo: você pode desistir em até 7 dias depois de receber, com devolução do valor.\nTroca por gosto, tamanho ou cor: só em peças sem personalização, em até 7 dias depois de receber e sem uso.";
+var MOTIVOS_TROCA = { defeito: "Veio com defeito", errado: "Veio diferente do que pedi", tamanho: "Tamanho ou cor", desisti: "Desisti da compra", outro: "Outro motivo" };
 var ENTREGAS_PADRAO = [{ nome: "Retirada", taxa: 0, retira: true }, { nome: "Entrega na cidade", taxa: null, retira: false }, { nome: "Correios", taxa: null, retira: false }, { nome: "Transportadora", taxa: null, retira: false }];
 var FAIXAS_PADRAO = [{ min: 1, desc: 0 }, { min: 30, desc: 0.10 }, { min: 50, desc: 0.15 }, { min: 100, desc: 0.20 }];
 var MKT_PADRAO = { limite: 20, hIni: 9, hFim: 19, descAniv: 10,
@@ -168,6 +170,31 @@ var ACOES = {
       return { ok: true, pedido: publico_(p) };
     });
   },
+  pedirTroca: function (d) {
+    var N = negocio_(d.n), mot = String(d.motivo || ""), txt = lim_(d.txt, 500);
+    if (!MOTIVOS_TROCA[mot]) throw new Error("Escolha o motivo.");
+    if ((mot === "defeito" || mot === "errado") && !txt && !(d.foto && d.foto.dados)) throw new Error("Conte o que aconteceu ou mande uma foto.");
+    return comTrava_(function () {
+      var p = doCliente_(N, d);
+      if (p.status === "troca") throw new Error("Você já pediu troca ou devolução deste pedido. A loja vai te responder.");
+      if (["pronto", "entregue"].indexOf(p.status) < 0) throw new Error("A troca ou devolução fica disponível depois que você recebe a peça. Antes disso, fale com a loja pelo WhatsApp.");
+      var h = hist_(p), rec = h.filter(function (x) { return x.s === "entregue" || x.s === "pronto"; }).pop(), desde = rec ? rec.t : Number(p.criado), dias = (Date.now() - desde) / DIA;
+      if (dias > 90) throw new Error("O prazo para pedir pelo app terminou. Fale com a loja pelo WhatsApp.");
+      if (mot === "desisti" && dias > 7) throw new Error("A desistência é em até 7 dias depois de receber. Para outro caso, escolha outro motivo ou fale com a loja.");
+      var foto = d.foto && d.foto.dados ? salvarArquivo_(N, d.foto, "troca" + p.id, false) : "";
+      h.push({ s: "troca", t: Date.now(), por: "cliente" });
+      var anot = (p.anot ? p.anot + "\n" : "") + "↩️ Troca/devolução pedida em " + legivel_(Date.now()) + " · " + MOTIVOS_TROCA[mot] + (txt ? " · " + txt : "");
+      var campos = { status: "troca", historico: JSON.stringify(h), troca: JSON.stringify({ motivo: mot, txt: txt, foto_id: foto, t: Date.now() }), anot: lim_(anot, 600) };
+      atualizar_("Pedidos", function (o) { return String(o.negocio).toLowerCase() === N.n && Number(o.id) === p.id; }, campos); mudou_(N.n);
+      Object.keys(campos).forEach(function (k) { p[k] = campos[k]; });
+      push_(["N_" + N.n], "↩️ Troca/devolução #" + p.num + " · " + p.cliente, MOTIVOS_TROCA[mot] + (txt ? " · " + txt : ""), linkPainel_(N));
+      if (/@/.test(N.email_aviso || "")) enviar_(String(N.email_aviso), "↩️ Pedido de troca/devolução #" + p.num + " · " + p.cliente,
+        "<h2 style='margin:0 0 8px'>Troca/devolução · pedido #" + p.num + "</h2><p><b>" + esc_(p.cliente) + "</b> · WhatsApp " + esc_(p.tel) + "<br>Motivo: " + esc_(MOTIVOS_TROCA[mot]) + (txt ? "<br>O que ela contou: " + esc_(txt) : "") + (foto ? "<br>📷 Ela mandou foto: veja no painel." : "") + "</p>" + itensHtml_(p) +
+        "<p>Depois de resolver, mude o andamento no painel para <b>Entregue</b> (troca feita) ou <b>Cancelado</b> (valor devolvido).</p>", String(N.nome));
+      emailCliente_(N, p, "troca");
+      return { ok: true, pedido: publico_(p) };
+    });
+  },
   pushReg: function (d) {
     if (d.token) pushGuardar_("N_" + sessao_(d), d.sub);
     else { var N = negocio_(d.n), sub = subOk_(d.sub); (d.lista || []).slice(0, 10).forEach(function (x) { try { var p = doCliente_(N, x), l = j_(p.push, []).filter(function (s) { return s !== sub; }); l.push(sub);
@@ -297,7 +324,7 @@ var ACOES = {
   },
   verFoto: function (d) {
     var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
-    var it = p && itens_(p)[Number(d.i)];
+    var it = p && (d.i === "troca" ? j_(p.troca, {}) : itens_(p)[Number(d.i)]);
     if (!it || !it.foto_id) throw new Error("Esta peça não tem foto da cliente.");
     var f = DriveApp.getFileById(String(it.foto_id)), b = f.getBlob();
     return { ok: true, tipo: b.getContentType(), dados: Utilities.base64Encode(b.getBytes()), nome: f.getName() };
@@ -410,6 +437,7 @@ var ACOES = {
     if (a.mkt !== undefined) { var x = a.mkt || {}, o = mkt_({});
       o.limite = Math.min(30, Math.max(5, Math.round(num_(x.limite)) || 20)); o.hIni = Math.min(12, Math.max(6, Math.round(num_(x.hIni)) || 9)); o.hFim = Math.min(22, Math.max(14, Math.round(num_(x.hFim)) || 19));
       o.descAniv = Math.min(90, Math.max(0, Math.round(num_(x.descAniv)))); o.msgAniv = lim_(x.msgAniv, 500) || MKT_PADRAO.msgAniv; m.mkt = JSON.stringify(o); }
+    if (a.trocas !== undefined) m.trocas = lim_(a.trocas, 1000);
     if (a.logo !== undefined) { if (String(a.logo).length > 45000) throw new Error("Logo grande demais."); m.logo = String(a.logo); }
     if (a.senha) { if (String(a.senha).length < 4) throw new Error("A senha precisa ter pelo menos 4 caracteres."); m.senha = hash_(a.senha); }
     atualizar_("Negocios", function (r) { return String(r.n).toLowerCase() === n; }, m); mudou_(n);
@@ -512,8 +540,8 @@ function avisarNegocio_(N, p) {
 }
 function emailCliente_(N, p, tipo) {
   if (!/@/.test(p.email || "")) return;
-  var tit = { novo: "Recebemos seu pedido #" + p.num + " 💛", sinal: "Sua encomenda #" + p.num + " foi confirmada", pronto: "Sua encomenda #" + p.num + " está pronta!", entregue: "Obrigada pela compra!", cancelado: "Encomenda #" + p.num + " cancelada", rastreio: "🚚 Sua encomenda #" + p.num + " foi enviada!" }[tipo] || "Encomenda #" + p.num;
-  var txt = { novo: "A " + N.nome + " recebeu o seu pedido. Em breve ela confirma o valor final e o prazo pelo WhatsApp.", pronto: "Sua encomenda está prontinha. Combine a " + (/retir/i.test(p.tipo) ? "retirada" : "entrega") + " pelo WhatsApp.", rastreio: "Ela já está a caminho por " + p.tipo + "." }[tipo] || "";
+  var tit = { novo: "Recebemos seu pedido #" + p.num + " 💛", sinal: "Sua encomenda #" + p.num + " foi confirmada", pronto: "Sua encomenda #" + p.num + " está pronta!", entregue: "Obrigada pela compra!", cancelado: "Encomenda #" + p.num + " cancelada", rastreio: "🚚 Sua encomenda #" + p.num + " foi enviada!", troca: "Recebemos seu pedido de troca/devolução #" + p.num }[tipo] || "Encomenda #" + p.num;
+  var txt = { novo: "A " + N.nome + " recebeu o seu pedido. Em breve ela confirma o valor final e o prazo pelo WhatsApp.", pronto: "Sua encomenda está prontinha. Combine a " + (/retir/i.test(p.tipo) ? "retirada" : "entrega") + " pelo WhatsApp.", rastreio: "Ela já está a caminho por " + p.tipo + ".", troca: "A " + N.nome + " vai analisar e te responder pelo WhatsApp." }[tipo] || "";
   if (p.rastreio && (tipo === "rastreio" || tipo === "pronto" || tipo === "entregue")) txt += (txt ? " " : "") + "Código de rastreio: " + p.rastreio + (/^https?:/i.test(p.rastreio) ? "" : " (acompanhe no site dos Correios: rastreamento.correios.com.br ou da transportadora).");
   var lk = linkCli_(N, p);
   enviar_(p.email, tit + " · " + N.nome,
@@ -560,7 +588,7 @@ function mkt_(N) { var m = j_(N.mkt, {}), o = {}; Object.keys(MKT_PADRAO).forEac
 function publicoNeg_(N) {
   return { n: N.n, nome: String(N.nome), whats: soDig_(N.whatsapp), tel: String(N.telefone || ""), logo: String(N.logo || ""), titulo: String(N.titulo || ""), subtitulo: String(N.subtitulo || ""),
     aviso: String(N.aviso || ""), cats: j_(N.cats, []), faixas: j_(N.faixas, FAIXAS_PADRAO), brinde: j_(N.brinde, {}), redes: j_(N.redes, {}),
-    entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
+    trocas: String(N.trocas || "") || TROCAS_PADRAO, entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
 }
 function completoNeg_(N) {
   var o = publicoNeg_(N); o.email_aviso = String(N.email_aviso || ""); o.whatsapp = String(N.whatsapp || ""); o.mkt = mkt_(N);
@@ -619,12 +647,13 @@ function pedidos_(n) {
 function itens_(p) { try { return JSON.parse(p.itens || "[]"); } catch (x) { return []; } }
 function proximoNum_(n) { var mx = 100; pedidos_(n).forEach(function (p) { if (p.num > mx) mx = p.num; }); return mx + 1; }
 function doCliente_(N, x) { var p = pedidos_(N.n).filter(function (y) { return y.id === Number(x.id); })[0]; if (!p || !x.chave || String(p.chave) !== String(x.chave)) throw new Error("Pedido não encontrado."); return p; }
+function trocaPub_(p) { var t = j_(p.troca, null); if (!t || !t.motivo) return null; return { motivo: t.motivo, nome: MOTIVOS_TROCA[t.motivo] || t.motivo, txt: String(t.txt || ""), foto: !!t.foto_id, t: t.t }; }
 function hist_(p) { try { return JSON.parse(p.historico || "[]"); } catch (x) { return []; } }
 function publico_(p, painel) {
   var its = itens_(p).map(function (i) { var o = JSON.parse(JSON.stringify(i)); o.foto = !!o.foto_id; delete o.foto_id; return o; });
   var o = { id: p.id, num: p.num, criado: p.criado, cliente: String(p.cliente), tipo: String(p.tipo), entrega: dataIso_(p.entrega), itens: its, total: p.total, sinal: p.sinal,
     pago: sim_(p.pago), status: p.status, obs: String(p.obs || ""), historico: hist_(p), origem: String(p.origem || ""),
-    endereco: String(p.endereco || ""), cep: String(p.cep || ""), rastreio: String(p.rastreio || ""), taxa: p.taxa === "" || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
+    endereco: String(p.endereco || ""), cep: String(p.cep || ""), rastreio: String(p.rastreio || ""), troca: trocaPub_(p), taxa: p.taxa === "" || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
   if (painel) { o.tel = soDig_(p.tel); o.email = String(p.email || ""); o.aniv = String(p.aniv || ""); o.anot = String(p.anot || ""); o.cliente_id = String(p.cliente_id || ""); }
   return o;
 }

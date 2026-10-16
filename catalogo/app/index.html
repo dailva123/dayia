@@ -434,6 +434,7 @@ body.painel .bag{display:none!important}
 .btns .mini,.btns a.mini{text-decoration:none;display:inline-flex;align-items:center;padding:8px 11px;font-size:12px}
 .mini.wa{background:var(--wa);border-color:var(--wa);color:#fff}
 .cat-ed{display:flex;gap:6px;align-items:center;margin-top:8px}
+.pill.st-troca{background:#EEE5F7;color:#6B3FA0}.enc.st-troca{border-left-color:#B79AD8}.troca-box{background:#F7F2FC;border:1px solid #E2D5F1;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px}.troca-box b{color:#6B3FA0}details.regras{margin:8px 0 4px;font-size:13px;color:var(--muted,#7A6A5E)}details.regras summary{cursor:pointer;font-weight:700}details.regras p{margin:6px 0 0;text-align:left}
 .rast{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:#F3F7FB;border:1px solid #D6E2EE;border-radius:12px;padding:10px 12px;margin-top:10px}.rast small{display:block;color:#5A6B80;font-size:12px}.rast b{font-size:15px;letter-spacing:.5px;word-break:break-all}.rast-bt{display:flex;gap:6px}.rast .mini{text-decoration:none}
 .ent-ed{display:grid;grid-template-columns:1fr 84px auto 40px;gap:6px;align-items:center;margin-top:8px}
 .ent-ed input[type=text]{padding:10px}
@@ -523,6 +524,7 @@ body.painel .bag{display:none!important}
         <div class="err" id="cliErr"></div>
       </div>
     </div>
+    <details class="regras" id="bagRegras"><summary>↩️ Trocas e devoluções</summary><p id="bagRegrasT"></p></details>
     <div class="total" id="bagSum"><div><small>Total estimado</small><b id="bagSumV">R$ 0,00</b></div><small id="bagFrete" style="max-width:170px;text-align:right">O valor final é confirmado pela artesã</small></div>
     <button class="btn" id="sendPed" type="button">Enviar pedido</button>
     <button class="btn ghost" data-close type="button">Continuar escolhendo</button>
@@ -593,6 +595,9 @@ function precoItemL(p,q,F,promos){const d=p.campos.lembr?faixaDe(F,q).desc:0,pr=
 function faixasTxt(F){return F.map((f,i)=>Object.assign({},f,{txt:i?`${f.min}+ un.: ${Math.round(f.desc*100)}% off`:(F[1]?`1 a ${F[1].min-1} un.`:"1 un.")}))}
 function detItem(i){return [i.texto&&`"${i.texto}"`,i.idade&&`${i.idade} anos`,i.tema,i.data,i.cor&&(i.cor+(i.glitter?" ("+String(i.glitter).toLowerCase()+")":"")),i.modelo&&"Celular: "+i.modelo,i.foto&&"📷 foto enviada",i.obs].filter(Boolean).join(" · ")}
 
+const TROCAS_PADRAO="Se a peça chegar com defeito, me avise pelo app (botão Pedir troca ou devolução) com uma foto, que eu resolvo: conserto, troca ou devolução do valor.\nCompras pelo catálogo: você pode desistir em até 7 dias depois de receber, com devolução do valor.\nTroca por gosto, tamanho ou cor: só em peças sem personalização, em até 7 dias depois de receber e sem uso.";
+const MOTIVOS_TROCA={defeito:"Veio com defeito",errado:"Veio diferente do que pedi",tamanho:"Tamanho ou cor",desisti:"Desisti da compra",outro:"Outro motivo"};
+const regrasTroca=()=>esc((NEGD&&NEGD.trocas)||TROCAS_PADRAO).replace(/\n/g,"<br>");
 function entregasNorm(t){let l=Array.isArray(t)?t:String(t||"Retirada,Entrega,Correios").split(",");
   return l.map(e=>typeof e==="string"?{nome:e.trim(),taxa:/retir/i.test(e)?0:null,retira:/retir/i.test(e)}:e).map(e=>({nome:String(e.nome||"").trim().slice(0,40),taxa:e.taxa===null||e.taxa===""||e.taxa===undefined?null:Math.max(0,num(e.taxa)),retira:!!e.retira})).filter(e=>e.nome)}
 const taxaTxt=e=>e.retira&&!e.taxa?"grátis":e.taxa===null?"a combinar":e.taxa?brl(e.taxa):"grátis";
@@ -638,7 +643,7 @@ function DEMOAPI(d){
   const sess=()=>{if(d.token!=="demo")throw new Error("SESSAO")};
   const ativas=()=>s.promos.filter(r=>r.ativa&&r.ate>=h);
   const ents=()=>entregasNorm(N.tipos);
-  const pubNeg=()=>({n:N.n,nome:N.nome,whats:soNum(N.whatsapp),tel:N.telefone,logo:N.logo,titulo:N.titulo,subtitulo:N.subtitulo,aviso:N.aviso,cats:N.cats,faixas:N.faixas,brinde:N.brinde,redes:N.redes,entregas:ents(),tipos:ents().map(e=>e.nome)});
+  const pubNeg=()=>({n:N.n,nome:N.nome,whats:soNum(N.whatsapp),tel:N.telefone,logo:N.logo,titulo:N.titulo,subtitulo:N.subtitulo,aviso:N.aviso,cats:N.cats,faixas:N.faixas,brinde:N.brinde,redes:N.redes,trocas:N.trocas||TROCAS_PADRAO,entregas:ents(),tipos:ents().map(e=>e.nome)});
   const pub=(p,painel)=>{const o=JSON.parse(JSON.stringify(p));o.itens.forEach(i=>{i.foto=!!i._f;delete i._f});delete o.chave;if(!painel){delete o.tel;delete o.email;delete o.aniv;delete o.anot;delete o.cliente_id}return o};
   const doCli=x=>{const p=s.pedidos.find(y=>y.id===Number(x.id));if(!p||p.chave!==x.chave)throw new Error("Pedido não encontrado.");return p};
   const hist=(p,st)=>{p.historico.push({s:st,t:Date.now()})};
@@ -669,6 +674,15 @@ function DEMOAPI(d){
     s.pedidos.push(p);salva();return {ok:true,pedido:pub(p),chave:p.chave};}
   case "meus":{const out=[];(d.lista||[]).forEach(x=>{try{out.push(pub(doCli(x)))}catch(e){}});return {ok:true,pedidos:out};}
   case "cancelar":{const p=doCli(d);if(p.status!=="cancelado"){if(p.status!=="novo")throw new Error("A loja já confirmou este pedido. Para cancelar, fale com ela pelo WhatsApp.");p.status="cancelado";p.historico.push({s:"cancelado",t:Date.now(),por:"cliente"});p.anot=(p.anot?p.anot+"\n":"")+"❌ Cancelado pela cliente"+(d.motivo?" · Motivo: "+String(d.motivo).slice(0,200):"");salva()}return {ok:true,pedido:pub(p)};}
+  case "pedirTroca":{const p=doCli(d),mot=String(d.motivo||"");if(!MOTIVOS_TROCA[mot])throw new Error("Escolha o motivo.");
+    if((mot==="defeito"||mot==="errado")&&!String(d.txt||"").trim()&&!(d.foto&&d.foto.dados))throw new Error("Conte o que aconteceu ou mande uma foto.");
+    if(p.status==="troca")throw new Error("Você já pediu troca ou devolução deste pedido. A loja vai te responder.");
+    if(!["pronto","entregue"].includes(p.status))throw new Error("A troca ou devolução fica disponível depois que você recebe a peça. Antes disso, fale com a loja pelo WhatsApp.");
+    const rec=p.historico.filter(x=>x.s==="entregue"||x.s==="pronto").pop(),dias=(Date.now()-(rec?rec.t:p.criado))/864e5;
+    if(dias>90)throw new Error("O prazo para pedir pelo app terminou. Fale com a loja pelo WhatsApp.");if(mot==="desisti"&&dias>7)throw new Error("A desistência é em até 7 dias depois de receber. Para outro caso, escolha outro motivo ou fale com a loja.");
+    if(d.foto&&d.foto.dados){try{localStorage.setItem("cf-demo-f-"+p.id+"-troca",d.foto.dados)}catch(e){}}
+    p.status="troca";p.historico.push({s:"troca",t:Date.now(),por:"cliente"});p.troca={motivo:mot,nome:MOTIVOS_TROCA[mot],txt:String(d.txt||"").slice(0,500),foto:!!(d.foto&&d.foto.dados),t:Date.now()};
+    p.anot=(p.anot?p.anot+"\n":"")+"↩️ Troca/devolução pedida · "+MOTIVOS_TROCA[mot]+(d.txt?" · "+d.txt:"");salva();return {ok:true,pedido:pub(p)};}
   case "pushReg":return {ok:true,ativo:false};
   case "admEstado":return {ok:true,temSenha:true};
   case "admEntrar":return {ok:true,token:"demo-dayia"};
@@ -694,7 +708,7 @@ function DEMOAPI(d){
     const total=num(e.total);if(!(total>0))throw new Error("Coloque o valor da encomenda.");const cli=cliUp({nome:e.nome,tel:e.tel},"manual"),sinal=num(e.sinal),st=sinal>0?"sinal":"novo",t=Date.now(),id=s.seq++;
     s.pedidos.push({id,num:proxNum(),criado:t,cliente_id:cli.id,cliente:String(e.nome).trim(),tel:normTel(e.tel),email:"",aniv:"",tipo:e.tipo||"Retirada",entrega:e.entrega||"",itens:[{nome:String(e.itens).trim(),q:1,total}],
       resumo:String(e.itens).slice(0,120),total,sinal,pago:false,status:st,obs:"",anot:"",origem:"whatsapp",chave:uid(),historico:[{s:st,t}]});salva();return {ok:true,id};}
-  case "verFoto":{sess();let x=null;try{x=localStorage.getItem("cf-demo-f-"+d.id+"-"+d.i)}catch(e){}if(!x)throw new Error("Esta peça não tem foto da cliente.");return {ok:true,tipo:x.slice(5,x.indexOf(";")),dados:x.split(",")[1]};}
+  case "verFoto":{sess();let x=null;if(d.i==="troca"){try{x=localStorage.getItem("cf-demo-f-"+d.id+"-troca")}catch(e){}if(!x)throw new Error("Sem foto.");return {ok:true,tipo:x.slice(5,x.indexOf(";")),dados:x.split(",")[1]};}try{x=localStorage.getItem("cf-demo-f-"+d.id+"-"+d.i)}catch(e){}if(!x)throw new Error("Esta peça não tem foto da cliente.");return {ok:true,tipo:x.slice(5,x.indexOf(";")),dados:x.split(",")[1]};}
   case "subirMidia":sess();return {ok:true,ref:d.arquivo.dados};
   case "salvarPeca":{sess();const x=d.peca||{};if(!String(x.nome||"").trim())throw new Error("Coloque o nome da peça.");if(!(num(x.preco)>0))throw new Error("Coloque o preço da peça.");if(!(x.fotos||[]).length)throw new Error("Coloque pelo menos uma foto.");
     const o={nome:String(x.nome).trim(),cat:x.cat,preco:num(x.preco),desc:x.desc||"",fotos:x.fotos.slice(0,30),videos:(x.videos||[]).slice(0,6),campos:x.campos||{},ativo:x.ativo!==false,shopee:x.shopee||"",tiktok:x.tiktok||""};
@@ -713,7 +727,7 @@ function DEMOAPI(d){
     if(e.n>=m.limite)throw new Error(`Você chegou ao limite de ${m.limite} mensagens de hoje. Continue amanhã: isso protege o seu WhatsApp.`);
     if(Date.now()-(e.ultimo||0)<15000)throw new Error("Aguarde alguns segundos antes do próximo envio.");
     const k=d.chave+"|"+d.cliente;if(e.env[k])throw new Error("Essa mensagem já foi enviada para essa cliente.");e.n++;e.ultimo=Date.now();e.env[k]=h;salva();return {ok:true,envios:evEst()};}
-  case "salvarAjustes":{sess();const a=d.ajustes||{};["nome","titulo","subtitulo","aviso","telefone","email_aviso","logo"].forEach(k=>{if(a[k]!==undefined)N[k]=a[k]});
+  case "salvarAjustes":{sess();const a=d.ajustes||{};["nome","titulo","subtitulo","aviso","telefone","email_aviso","logo","trocas"].forEach(k=>{if(a[k]!==undefined)N[k]=a[k]});
     if(a.whatsapp!==undefined)N.whatsapp=soNum(a.whatsapp);["cats","faixas","brinde","redes"].forEach(k=>{if(a[k]!==undefined)N[k]=a[k]});if(a.tipos!==undefined){const en=entregasNorm(a.tipos);if(!en.length)throw new Error("Deixe pelo menos uma forma de entrega.");N.tipos=en}
     if(a.cats!==undefined&&!a.cats.length)throw new Error("Deixe pelo menos uma categoria.");if(a.mkt!==undefined)N.mkt=Object.assign({},N.mkt,a.mkt);if(a.senha)s.senha=String(a.senha);salva();return {ok:true};}
   }
@@ -919,7 +933,7 @@ function totalBag(){const L=bagItens(),t=soma(L,i=>i.total),en=entSel();
   $("#bagSumV").textContent=brl(t+(en.taxa||0));$("#cliEndBox").hidden=!!en.retira;
   $("#bagFrete").textContent=en.retira?"Retirada sem custo. O valor final é confirmado pela artesã":en.taxa===null?`${en.nome}: frete a combinar com a artesã`:`Inclui ${en.nome}: ${brl(en.taxa)}`;}
 function lista(){
-  const L=bagItens(),t=soma(L,i=>i.total);
+  const L=bagItens(),t=soma(L,i=>i.total);if($("#bagRegrasT"))$("#bagRegrasT").innerHTML=regrasTroca();
   $("#bagList").innerHTML=L.length?L.map((i,k)=>`<div class="item">${i.foto?`<img src="${i.foto.dados}" alt="">`:imgHtml(i.p.fotos[0],"")}<div class="m"><b>${i.q}× ${esc(i.nome)}</b>${esc(detItem(Object.assign({},i,{foto:false,obs:""})))}<br>${brl(i.total)}</div><button class="rm" data-rm="${k}" type="button">Tirar</button></div>`).join("")+brindeBox(t)
     :`<div class="empty">Seu pedido está vazio.</div>`;
   ["#bagForm","#bagSum","#sendPed"].forEach(s=>$(s).style.display=L.length?"":"none");
@@ -967,17 +981,28 @@ function sucesso(p,m){
   $("#sMeus",f).onclick=()=>abrirMeus(p.id,true);botaoAvisos($("#sAv",f),"🔔 Me avise aqui quando o pedido andar");
 }
 /* acompanhar */
-const ST=[["novo","Novo"],["sinal","Sinal pago"],["producao","Produzindo"],["acabamento","Finalizando"],["pronto","Pronto"],["entregue","Entregue"],["cancelado","Cancelado"]];
+const ST=[["novo","Novo"],["sinal","Sinal pago"],["producao","Produzindo"],["acabamento","Finalizando"],["pronto","Pronto"],["entregue","Entregue"],["troca","Troca/devolução"],["cancelado","Cancelado"]];
 const stNome=k=>(ST.find(s=>s[0]===k)||["",k])[1];
 const ehLink=r=>/^https?:\/\//i.test(String(r||""));
 const rastUrl=r=>ehLink(r)?r:"https://rastreamento.correios.com.br/app/index.php";
 function rastHtml(r){if(!r)return"";return `<div class="rast"><div><small>🚚 Código de rastreio</small><b>${esc(ehLink(r)?"Link da transportadora":r)}</b></div><div class="rast-bt">${ehLink(r)?"":`<button type="button" class="mini" data-copiar="${esc(r)}">📋 Copiar</button>`}<a class="mini" target="_blank" rel="noopener" href="${esc(rastUrl(r))}" ${ehLink(r)?"":`data-copiar="${esc(r)}"`}>🔎 Rastrear</a></div></div>`}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-copiar]");if(!b)return;const t=b.dataset.copiar;try{navigator.clipboard.writeText(t)}catch(x){}if(b.tagName==="BUTTON")toast("Código copiado: "+t);else toast("Código copiado. Cole no site para rastrear.")});
-const STCLI={novo:"Recebido",sinal:"Confirmado",producao:"Produzindo",acabamento:"Finalizando",pronto:"Pronto",entregue:"Entregue",cancelado:"Cancelado"};
+const STCLI={novo:"Recebido",sinal:"Confirmado",producao:"Produzindo",acabamento:"Finalizando",pronto:"Pronto",entregue:"Entregue",troca:"Troca/devolução",cancelado:"Cancelado"};
 const PASSOS=["novo","sinal","producao","acabamento","pronto","entregue"];
 const MEUS={sig:ls("cf-sig-"+NEG)||{}};
-function arrep(p){if(p.status!=="entregue")return"";const e=(p.historico||[]).filter(x=>x.s==="entregue").pop();if(!e)return"";const fim=e.t+7*864e5;if(Date.now()>fim)return"";
-  return `<p class="tiny left" style="margin-top:8px">Comprou pela internet? Pelo Código de Defesa do Consumidor, você pode desistir em até 7 dias depois de receber (até ${new Date(fim).toLocaleDateString("pt-BR")}).</p><a class="btn ghost" style="width:100%;margin:6px 0 0" target="_blank" rel="noopener" href="${esc(wa(NEGD.whats,`Olá! Recebi o pedido #${p.num} e quero desistir da compra (direito de arrependimento, até 7 dias). Como fazemos a devolução?`))}">↩️ Quero desistir (até 7 dias)</a>`}
+function arrep(p){const e=(p.historico||[]).filter(x=>x.s==="entregue"||x.s==="pronto").pop(),ini=e?e.t:p.criado;if(Date.now()-ini>90*864e5)return"";const fim=ini+7*864e5;
+  return `${p.status==="entregue"&&Date.now()<fim?`<p class="tiny left" style="margin-top:8px">Comprou pela internet? Pelo Código de Defesa do Consumidor, você pode desistir em até 7 dias depois de receber (até ${new Date(fim).toLocaleDateString("pt-BR")}).</p>`:""}<button type="button" class="btn ghost" style="width:100%;margin:8px 0 0" data-troca="${p.id}">↩️ Pedir troca ou devolução</button><details class="regras"><summary>Ver as regras de troca da loja</summary><p>${regrasTroca()}</p></details>`}
+function pedirTroca(p){if(!p)return;const x=meus().find(m=>m.id===p.id);if(!x)return;let foto=null;
+  const f=folha(`<div class="inner"><h2>Troca ou devolução · pedido #${p.num}</h2><details class="regras" open><summary>Regras da loja</summary><p>${regrasTroca()}</p></details>
+  <div class="fld"><label for="tMot">Qual o motivo?</label><select id="tMot"><option value="">Escolha…</option>${Object.entries(MOTIVOS_TROCA).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
+  <div class="fld"><label for="tTxt">Conte o que aconteceu</label><textarea id="tTxt" placeholder="Ex.: o laço veio com a fita descolando"></textarea></div>
+  <div class="fld"><span class="lb">Foto <span class="hint">(ajuda muito se for defeito)</span></span><div class="foto-up"><label class="fu-btn">📷 Escolher foto do celular<input type="file" id="tFoto" accept="image/*" hidden></label></div><div id="tFotoV"></div></div>
+  <p class="err" id="tErr"></p></div><button class="btn" id="tEnv" type="button">Enviar pedido de troca</button><button class="btn ghost" data-close type="button">Voltar</button>`);
+  $("#tFoto",f).onchange=e=>{const fl=e.target.files[0];if(!fl)return;prepararImg(fl,1280,.8).then(r=>{foto=r;$("#tFotoV",f).innerHTML=`<img src="${r.dados}" alt="" style="max-width:120px;border-radius:10px;margin-top:6px">`}).catch(er=>toast(er.message))};
+  $("#tEnv",f).onclick=()=>{const b=$("#tEnv",f),er=$("#tErr",f),mot=$("#tMot",f).value;er.style.display="none";if(!mot){er.textContent="Escolha o motivo.";er.style.display="block";return}
+    b.disabled=true;b.textContent="Enviando…";api("pedirTroca",{id:p.id,chave:x.chave,motivo:mot,txt:$("#tTxt",f).value.trim(),foto})
+    .then(()=>{fechar();toast("Pedido de troca enviado. A loja foi avisada.");abrirMeus(p.id)})
+    .catch(e=>{b.disabled=false;b.textContent="Enviar pedido de troca";er.textContent=e.message||"Não deu para enviar agora.";er.style.display="block"})}}
 function cancelarPedido(p){if(!p)return;const x=meus().find(m=>m.id===p.id);if(!x)return;
   const f=folha(`<div class="inner"><h2>Cancelar o pedido #${p.num}?</h2><p class="left">Você pode cancelar sozinha enquanto a loja ainda não confirmou. Conte o motivo (opcional):</p>
   <select id="cMot"><option value="">Prefiro não dizer</option><option>Pedi errado</option><option>Desisti da compra</option><option>Vou fazer outro pedido</option><option>Achei o prazo longo</option><option>Outro motivo</option></select>
@@ -994,12 +1019,14 @@ function abrirMeus(foco){
     $("#mL",f).innerHTML=ps.map((p,ix)=>{const at=PASSOS.indexOf(p.status);
       let h=`<div class="mped"><div class="cab"><b>Pedido #${p.num}</b><span class="pill st-${p.status}">${STCLI[p.status]||p.status}</span></div><p class="tiny left">Feito em ${new Date(p.criado).toLocaleDateString("pt-BR")} · ${esc(p.tipo)}${p.entrega?" · para "+dBR(p.entrega):""}</p>`;
       if(p.status==="cancelado")h+='<p class="err" style="display:block">Este pedido foi cancelado.'+((p.historico||[]).some(x=>x.s==="cancelado"&&x.por==="cliente")?" Você cancelou.":" Dúvidas? Fale com a loja pelo WhatsApp.")+'</p>';
+      else if(p.status==="troca")h+=`<div class="troca-box"><b>↩️ Troca/devolução pedida</b><br>${esc(p.troca?p.troca.nome:"")}${p.troca&&p.troca.txt?" · "+esc(p.troca.txt):""}<br><small>A loja vai analisar e te responder pelo WhatsApp.</small></div>`;
       else if(ix===0)h+='<ul class="tl">'+PASSOS.map((s,k)=>`<li class="${k<at||(k===at&&s==="entregue")?"ok":k===at?"at":""}"><i>${k<at||(k===at&&s==="entregue")?"✓":k+1}</i>${STCLI[s]}</li>`).join("")+"</ul>";
       if(p.rastreio&&p.status!=="cancelado")h+=rastHtml(p.rastreio);
       h+='<div style="margin-top:8px">'+p.itens.map(i=>`<div class="lin"><span>${i.q}× ${esc(i.nome)}<small>${esc(detItem(i))}</small></span><b>${brl(i.total)}</b></div>`).join("")+(p.endereco||p.taxa?`<div class="lin"><span>${esc(p.tipo)}<small>${esc(p.endereco||"")}${p.cep?" · CEP "+esc(p.cep):""}</small></span><b>${p.taxa==null?"a combinar":brl(p.taxa)}</b></div>`:"")+`<div class="lin"><b>Total</b><b>${brl(p.total)}</b></div></div>`;
       const dt=new Date(p.criado).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
-      return h+`<a class="btn wa" style="width:100%;margin:10px 0 0" target="_blank" rel="noopener" href="${esc(wa(NEGD.whats,`Olá! É sobre o meu pedido #${p.num} de ${dt} (${p.cliente}):\n`))}">💬 Falar sobre este pedido</a>${p.status==="novo"?`<button type="button" class="btn ghost" style="width:100%;margin:8px 0 0" data-cancelar="${p.id}">Cancelar este pedido</button>`:p.status!=="cancelado"&&p.status!=="entregue"?'<p class="tiny">Precisa cancelar? A loja já confirmou, então combine pelo WhatsApp.</p>':arrep(p)}</div>`}).join("");
+      return h+`<a class="btn wa" style="width:100%;margin:10px 0 0" target="_blank" rel="noopener" href="${esc(wa(NEGD.whats,`Olá! É sobre o meu pedido #${p.num} de ${dt} (${p.cliente}):\n`))}">💬 Falar sobre este pedido</a>${p.status==="novo"?`<button type="button" class="btn ghost" style="width:100%;margin:8px 0 0" data-cancelar="${p.id}">Cancelar este pedido</button>`:["pronto","entregue"].includes(p.status)?arrep(p):p.status!=="cancelado"&&p.status!=="troca"?'<p class="tiny">Precisa cancelar? A loja já confirmou, então combine pelo WhatsApp.</p>':""}</div>`}).join("");
     $$("[data-cancelar]",f).forEach(b=>b.onclick=()=>cancelarPedido(ps.find(p=>p.id===+b.dataset.cancelar)));
+    $$("[data-troca]",f).forEach(b=>b.onclick=()=>pedirTroca(ps.find(p=>p.id===+b.dataset.troca)));
     botaoAvisos($("#mAv",f),"🔔 Me avise aqui quando o pedido andar");
     j.pedidos.forEach(p=>{MEUS.sig[p.id]=p.status+(p.rastreio?"|"+p.rastreio:"")});ls("cf-sig-"+NEG,MEUS.sig);
   }).catch(e=>{$("#mL",f).innerHTML=`<p class="err" style="display:block">${esc(e.message)}</p>`});
@@ -1009,8 +1036,8 @@ function vigiar(){
   clearTimeout(VG);if(location.hash==="#painel")return;
   const l=meus().slice(-5);
   if(l.length)api("meus",{lista:l}).then(j=>{
-    let mud=null,rast=null;j.pedidos.forEach(p=>{const a=MEUS.sig[p.id],sg=p.status+(p.rastreio?"|"+p.rastreio:"");if(a&&a!==sg&&!mud){if(a.split("|")[0]===p.status&&p.rastreio)rast=p;else mud=p}MEUS.sig[p.id]=sg});ls("cf-sig-"+NEG,MEUS.sig);
-    if(mud){const txt={sinal:"✅ Sua encomenda #"+mud.num+" foi confirmada",producao:"✂️ Sua encomenda #"+mud.num+" está sendo produzida",acabamento:"✨ Sua encomenda #"+mud.num+" está nos detalhes finais",pronto:"🎁 Sua encomenda #"+mud.num+" está pronta!",entregue:"💛 Encomenda #"+mud.num+" entregue. Obrigada!",cancelado:"❌ Sua encomenda #"+mud.num+" foi cancelada"}[mud.status]||"Sua encomenda foi atualizada";
+    let mud=null,rast=null;j.pedidos.forEach(p=>{const a=MEUS.sig[p.id],sg=p.status+(p.rastreio?"|"+p.rastreio:"");if(a&&a!==sg&&!mud){if(a.split("|")[0]===p.status&&p.rastreio)rast=p;else{mud=p;mud._ant=a.split("|")[0]}}MEUS.sig[p.id]=sg});ls("cf-sig-"+NEG,MEUS.sig);
+    if(mud){let txt={sinal:"✅ Sua encomenda #"+mud.num+" foi confirmada",producao:"✂️ Sua encomenda #"+mud.num+" está sendo produzida",acabamento:"✨ Sua encomenda #"+mud.num+" está nos detalhes finais",pronto:"🎁 Sua encomenda #"+mud.num+" está pronta!",entregue:"💛 Encomenda #"+mud.num+" entregue. Obrigada!",cancelado:"❌ Sua encomenda #"+mud.num+" foi cancelada",troca:"↩️ Pedido de troca/devolução #"+mud.num+" registrado"}[mud.status]||"Sua encomenda foi atualizada";if(mud._ant==="troca")txt=mud.status==="cancelado"?"↩️ Devolução #"+mud.num+" concluída":"✅ Sua troca #"+mud.num+" foi resolvida";
       bip();vibrar();notificar(NEGD.nome,txt,"cf-"+mud.id);alerta(txt,"Toque em Ver para acompanhar",()=>abrirMeus(mud.id));if($(".sheet.dyn #mL"))abrirMeus(mud.id)}
     else if(rast){const txt="🚚 Sua encomenda #"+rast.num+" foi enviada!";bip();vibrar();notificar(NEGD.nome,txt+" Rastreio: "+rast.rastreio,"cf-r-"+rast.id);alerta(txt,"Toque em Ver para pegar o código de rastreio",()=>abrirMeus(rast.id));if($(".sheet.dyn #mL"))abrirMeus(rast.id)}
   }).catch(()=>{});
@@ -1090,11 +1117,11 @@ function pLogin(msg){
 function pErro(e){if(String(e.message)==="SESSAO"){P.tk=null;ls("cf-tk-"+NEG,null);pLogin("Entre de novo, por favor.");return true}return false}
 function pPuxar(desenhar){
   return api("painel",{token:P.tk}).then(j=>{
-    const novos=[],canc=[];if(P.vistos)j.pedidos.forEach(p=>{if(!P.vistos[p.id])novos.push(p);else if(p.status==="cancelado"&&P.vistos[p.id]!=="cancelado"&&(p.historico||[]).some(x=>x.s==="cancelado"&&x.por==="cliente"))canc.push(p)});
+    const novos=[],canc=[];if(P.vistos)j.pedidos.forEach(p=>{if(!P.vistos[p.id])novos.push(p);else if(["cancelado","troca"].includes(p.status)&&P.vistos[p.id]!==p.status&&(p.historico||[]).some(x=>x.s===p.status&&x.por==="cliente"))canc.push(p)});
     P.vistos={};j.pedidos.forEach(p=>{P.vistos[p.id]=p.status});
     P.d=j;P.v=j.v;NEGD=j.negocio;
     if(desenhar||!$(".sheet.dyn"))pRender();
-    novos.sort((a,b)=>a.id-b.id);if(novos.length)avisarPedido(novos[novos.length-1],novos.length);else if(canc.length){const p=canc[0];bip();vibrar();notificar("❌ Pedido #"+p.num+" cancelado pela cliente",p.cliente,"cf-c-"+p.id);alerta("❌ Pedido #"+p.num+" cancelado pela cliente",p.cliente+" · "+brl(p.total),()=>{P.aba="encomendas";P.encFiltro="todas";pRender();sheetPedido(p.id)})}
+    novos.sort((a,b)=>a.id-b.id);if(novos.length)avisarPedido(novos[novos.length-1],novos.length);else if(canc.length){const p=canc[0],tt=p.status==="troca"?"↩️ Troca/devolução #"+p.num+" · "+(p.troca?p.troca.nome:""):"❌ Pedido #"+p.num+" cancelado pela cliente";bip();vibrar();notificar(tt,p.cliente,"cf-c-"+p.id);alerta(tt,p.cliente+" · "+brl(p.total),()=>{P.aba="encomendas";P.encFiltro="todas";pRender();sheetPedido(p.id)})}
     pVigiar();
   }).catch(e=>{if(!pErro(e)){$("#app").innerHTML=`<div class="cx"><h2>Não consegui abrir o painel</h2><p>${esc(e.message)}</p><button class="btn" type="button" onclick="location.reload()">Tentar de novo</button></div>`;setTimeout(()=>pPuxar(true),15000)}});
 }
@@ -1207,6 +1234,7 @@ function sheetPedido(id){
     <p class="desc">${esc(p.cliente)}${p.tel?" · "+telBR(p.tel):""}${p.email?" · "+esc(p.email):""} · feita em ${dBR(dIso(p.criado))} ${p.origem==="catalogo"?"pelo catálogo":"(anotada por você)"}</p>
     ${p.obs?`<div class="adm-info">💬 Recado da cliente: ${esc(p.obs)}</div>`:""}
     ${p.endereco?`<div class="adm-info" style="display:block!important">🚚 ${esc(p.tipo)}: ${esc(p.endereco)}${p.cep?" · CEP "+esc(p.cep):""}</div>`:""}
+    ${p.troca?`<div class="troca-box"><b>↩️ ${p.status==="troca"?"Pediu troca/devolução":"Teve troca/devolução"}</b> em ${new Date(p.troca.t).toLocaleDateString("pt-BR")}<br>Motivo: ${esc(p.troca.nome)}${p.troca.txt?`<br>“${esc(p.troca.txt)}”`:""}${p.troca.foto?`<br><button class="mini" type="button" data-a="verFoto" data-id="${p.id}" data-i="troca">📷 Ver a foto que ela mandou</button>`:""}${p.status==="troca"?`<br><small>Depois de resolver, mude o andamento para <b>Entregue</b> (troca feita) ou <b>Cancelado</b> (valor devolvido). A cliente é avisada.</small>`:""}</div>`:""}
     <div class="itlist">${p.itens.map((i,k)=>`<div><b>${i.q}× ${esc(i.nome)}</b><span>${esc(detItem(i))}${i.foto?` <button class="mini" type="button" data-a="verFoto" data-id="${p.id}" data-i="${k}">📷 Ver foto</button>`:""}</span><strong>${brl(i.total)}</strong></div>`).join("")}<div class="tt"><b>Total</b><strong>${brl(p.total)}</strong></div></div>
     <div id="fotoCli" class="foto-cli"></div>
     <div class="fld"><label for="pSt">Andamento</label><select id="pSt">${ST.map(([k,n])=>`<option value="${k}" ${k===p.status?"selected":""}>${n}</option>`).join("")}</select></div>
@@ -1491,6 +1519,8 @@ function rAjustes(){
     <section class="box"><h4>🚚 Formas de entrega e taxas</h4><p class="tiny left" style="margin-top:0">Deixe o valor vazio para "a combinar" (ex.: Correios e transportadora, que dependem do CEP). Marque "retira" quando a cliente busca a peça.</p>
       <div id="entEd">${entregasNorm(N.entregas||N.tipos).map(e=>entRow(e)).join("")}</div>
       <button class="mini" style="margin-top:10px" type="button" data-a="addEnt">＋ Nova forma de entrega</button></section>
+    <section class="box"><h4>↩️ Trocas e devoluções</h4><p class="tiny left" style="margin-top:0">Escreva as suas regras. Elas aparecem para a cliente antes de enviar o pedido e em "Meus pedidos". Pela lei, compra pela internet pode ser desistida em até 7 dias depois de receber, e defeito sempre precisa ser resolvido.</p>
+      <div class="fld"><textarea id="aTrocas" rows="6" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit">${esc(N.trocas||TROCAS_PADRAO)}</textarea></div></section>
     <section class="box"><h4>🎁 Brinde</h4><div class="two"><div class="fld"><label for="bCada">A cada (R$) em compras</label><input type="text" id="bCada" inputmode="numeric" value="${B.cada||0}"></div><div class="fld"><label for="bTxt">Ganha uma</label><input type="text" id="bTxt" value="${esc(B.txt||"")}" placeholder="maleta para laços"></div></div>
       <p class="tiny left">Coloque 0 para não ter brinde.</p></section>
     <section class="box"><h4>🔔 Avisos de pedido novo</h4>${c("aEmail","E-mail que recebe cada pedido novo",N.email_aviso,' inputmode="email"')}
@@ -1528,7 +1558,7 @@ async function acao(a,b){
         if(dd.total===old.total)dd.total=Math.round((old.total-(old.taxa||0)+(nt||0))*100)/100}
       if($("#pRast")){const rv=$("#pRast").value.trim();dd.rastreio=ehLink(rv)?rv:rv.toUpperCase().replace(/\s+/g,"")}
       salvar("status",dd,"Encomenda salva").catch(()=>{});break;}
-    case "verFoto":{b.disabled=true;api("verFoto",{token:P.tk,id:Number(id),i:+b.dataset.i}).then(j=>{$("#fotoCli").innerHTML=`<img src="data:${j.tipo};base64,${j.dados}" alt="Foto enviada pela cliente"><a class="mini" style="display:inline-block;margin-top:6px" download="foto-cliente.jpg" href="data:${j.tipo};base64,${j.dados}">⬇️ Baixar a foto</a>`;$("#fotoCli").scrollIntoView({block:"nearest"})}).catch(e=>{if(!pErro(e))toast(e.message)}).then(()=>{b.disabled=false});break;}
+    case "verFoto":{b.disabled=true;api("verFoto",{token:P.tk,id:Number(id),i:b.dataset.i==="troca"?"troca":+b.dataset.i}).then(j=>{$("#fotoCli").innerHTML=`<img src="data:${j.tipo};base64,${j.dados}" alt="Foto enviada pela cliente"><a class="mini" style="display:inline-block;margin-top:6px" download="foto-cliente.jpg" href="data:${j.tipo};base64,${j.dados}">⬇️ Baixar a foto</a>`;$("#fotoCli").scrollIntoView({block:"nearest"})}).catch(e=>{if(!pErro(e))toast(e.message)}).then(()=>{b.disabled=false});break;}
     case "avisaPed":{const p=D.pedidos.find(x=>x.id===Number(id)),n=p.cliente.split(" ")[0],loja=D.negocio.nome;
       const msgs={novo:`Olá, ${n}! Recebi seu pedido #${p.num} na ${loja} 💛 O valor fica ${brl(p.total)}. Para confirmar, o sinal é de ${brl(Math.round(p.total/2))}. Posso te passar o Pix?`,pronto:`Olá, ${n}! Sua encomenda #${p.num} da ${loja} está prontinha ✨ ${/retir/i.test(p.tipo)?"Quando fica bom para você retirar?":"Vamos combinar a entrega?"}`,entregue:`Olá, ${n}! Obrigada por comprar na ${loja} 💛 Se puder, me mande uma foto da peça, vou amar ver!`};
       abrirConversa(p.tel,msgs[p.status]||`Olá, ${n}! Passando para avisar que sua encomenda #${p.num} da ${loja} está na fase: ${stNome(p.status)}. Qualquer dúvida, é só me chamar 💛`,p.cliente);break;}
@@ -1596,7 +1626,7 @@ async function acao(a,b){
       if(!cats.length){toast("Deixe pelo menos uma categoria.");break}
       const B=D.negocio.brinde||{},cada=num(v("#bCada")),bt=v("#bTxt").trim();
       const a={nome:v("#aNome").trim(),titulo:v("#aTit").trim(),subtitulo:v("#aSub").trim(),aviso:v("#aAviso").trim(),whatsapp:soNum(v("#aWa")),telefone:v("#aTel").trim(),email_aviso:v("#aEmail").trim(),
-        cats,tipos,brinde:Object.assign({},B,{cada,txt:bt,txtPl:bt===B.txt?B.txtPl:bt})};
+        cats,tipos,trocas:v("#aTrocas").trim()||TROCAS_PADRAO,brinde:Object.assign({},B,{cada,txt:bt,txtPl:bt===B.txt?B.txtPl:bt})};
       if(!a.nome){toast("Coloque o nome da loja.");break}if(soNum(a.whatsapp).length<10){toast("Coloque o WhatsApp com DDD.");break}
       if(P.logo)a.logo=P.logo;if(v("#aSenha"))a.senha=v("#aSenha");b.disabled=true;
       salvar("salvarAjustes",{ajustes:a},"✅ Ajustes salvos!",()=>{P.logo=null}).catch(()=>{b.disabled=false});break;}

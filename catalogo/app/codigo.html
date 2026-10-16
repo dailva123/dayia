@@ -33,18 +33,20 @@ button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;fon
 var VERSAO_SISTEMA = &quot;1.0&quot;;
 var ABAS = {
   Negocios:  [&quot;n&quot;,&quot;nome&quot;,&quot;situacao&quot;,&quot;teste_ate&quot;,&quot;criado&quot;,&quot;dono&quot;,&quot;whatsapp&quot;,&quot;email_aviso&quot;,&quot;senha&quot;,&quot;telefone&quot;,&quot;logo&quot;,&quot;titulo&quot;,&quot;subtitulo&quot;,&quot;aviso&quot;,
-              &quot;cats&quot;,&quot;faixas&quot;,&quot;brinde&quot;,&quot;redes&quot;,&quot;tipos&quot;,&quot;mkt&quot;,&quot;plano&quot;,&quot;valor&quot;,&quot;vence&quot;,&quot;link_pagto&quot;],
+              &quot;cats&quot;,&quot;faixas&quot;,&quot;brinde&quot;,&quot;redes&quot;,&quot;tipos&quot;,&quot;mkt&quot;,&quot;plano&quot;,&quot;valor&quot;,&quot;vence&quot;,&quot;link_pagto&quot;,&quot;trocas&quot;],
   Pecas:     [&quot;negocio&quot;,&quot;id&quot;,&quot;ordem&quot;,&quot;nome&quot;,&quot;cat&quot;,&quot;preco&quot;,&quot;desc&quot;,&quot;fotos&quot;,&quot;videos&quot;,&quot;campos&quot;,&quot;ativo&quot;,&quot;shopee&quot;,&quot;tiktok&quot;,&quot;criado&quot;],
   Pedidos:   [&quot;negocio&quot;,&quot;id&quot;,&quot;num&quot;,&quot;criado&quot;,&quot;quando&quot;,&quot;cliente_id&quot;,&quot;cliente&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniv&quot;,&quot;tipo&quot;,&quot;entrega&quot;,&quot;itens&quot;,&quot;resumo&quot;,&quot;total&quot;,&quot;sinal&quot;,&quot;pago&quot;,
-              &quot;status&quot;,&quot;obs&quot;,&quot;anot&quot;,&quot;origem&quot;,&quot;chave&quot;,&quot;historico&quot;,&quot;push&quot;,&quot;endereco&quot;,&quot;cep&quot;,&quot;taxa&quot;,&quot;rastreio&quot;],
+              &quot;status&quot;,&quot;obs&quot;,&quot;anot&quot;,&quot;origem&quot;,&quot;chave&quot;,&quot;historico&quot;,&quot;push&quot;,&quot;endereco&quot;,&quot;cep&quot;,&quot;taxa&quot;,&quot;rastreio&quot;,&quot;troca&quot;],
   Clientes:  [&quot;negocio&quot;,&quot;id&quot;,&quot;nome&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniv&quot;,&quot;obs&quot;,&quot;origem&quot;,&quot;criado&quot;],
   Promocoes: [&quot;negocio&quot;,&quot;id&quot;,&quot;titulo&quot;,&quot;desc&quot;,&quot;alvo&quot;,&quot;ate&quot;,&quot;ativa&quot;],
   Envios:    [&quot;negocio&quot;,&quot;chave&quot;,&quot;cliente&quot;,&quot;dia&quot;],
   Config:    [&quot;chave&quot;,&quot;valor&quot;,&quot;explicacao&quot;]
 };
 var MIN = 60000, DIA = 86400000;
-var STATUS = { novo: &quot;Recebido&quot;, sinal: &quot;Sinal pago&quot;, producao: &quot;Produzindo&quot;, acabamento: &quot;Finalizando&quot;, pronto: &quot;Pronto&quot;, entregue: &quot;Entregue&quot;, cancelado: &quot;Cancelado&quot; };
-var ABERTOS = [&quot;novo&quot;, &quot;sinal&quot;, &quot;producao&quot;, &quot;acabamento&quot;, &quot;pronto&quot;];
+var STATUS = { novo: &quot;Recebido&quot;, sinal: &quot;Sinal pago&quot;, producao: &quot;Produzindo&quot;, acabamento: &quot;Finalizando&quot;, pronto: &quot;Pronto&quot;, entregue: &quot;Entregue&quot;, troca: &quot;Troca/devolução&quot;, cancelado: &quot;Cancelado&quot; };
+var ABERTOS = [&quot;novo&quot;, &quot;sinal&quot;, &quot;producao&quot;, &quot;acabamento&quot;, &quot;pronto&quot;, &quot;troca&quot;];
+var TROCAS_PADRAO = &quot;Se a peça chegar com defeito, me avise pelo app (botão Pedir troca ou devolução) com uma foto, que eu resolvo: conserto, troca ou devolução do valor.\nCompras pelo catálogo: você pode desistir em até 7 dias depois de receber, com devolução do valor.\nTroca por gosto, tamanho ou cor: só em peças sem personalização, em até 7 dias depois de receber e sem uso.&quot;;
+var MOTIVOS_TROCA = { defeito: &quot;Veio com defeito&quot;, errado: &quot;Veio diferente do que pedi&quot;, tamanho: &quot;Tamanho ou cor&quot;, desisti: &quot;Desisti da compra&quot;, outro: &quot;Outro motivo&quot; };
 var ENTREGAS_PADRAO = [{ nome: &quot;Retirada&quot;, taxa: 0, retira: true }, { nome: &quot;Entrega na cidade&quot;, taxa: null, retira: false }, { nome: &quot;Correios&quot;, taxa: null, retira: false }, { nome: &quot;Transportadora&quot;, taxa: null, retira: false }];
 var FAIXAS_PADRAO = [{ min: 1, desc: 0 }, { min: 30, desc: 0.10 }, { min: 50, desc: 0.15 }, { min: 100, desc: 0.20 }];
 var MKT_PADRAO = { limite: 20, hIni: 9, hFim: 19, descAniv: 10,
@@ -177,6 +179,31 @@ var ACOES = {
       return { ok: true, pedido: publico_(p) };
     });
   },
+  pedirTroca: function (d) {
+    var N = negocio_(d.n), mot = String(d.motivo || &quot;&quot;), txt = lim_(d.txt, 500);
+    if (!MOTIVOS_TROCA[mot]) throw new Error(&quot;Escolha o motivo.&quot;);
+    if ((mot === &quot;defeito&quot; || mot === &quot;errado&quot;) &amp;&amp; !txt &amp;&amp; !(d.foto &amp;&amp; d.foto.dados)) throw new Error(&quot;Conte o que aconteceu ou mande uma foto.&quot;);
+    return comTrava_(function () {
+      var p = doCliente_(N, d);
+      if (p.status === &quot;troca&quot;) throw new Error(&quot;Você já pediu troca ou devolução deste pedido. A loja vai te responder.&quot;);
+      if ([&quot;pronto&quot;, &quot;entregue&quot;].indexOf(p.status) &lt; 0) throw new Error(&quot;A troca ou devolução fica disponível depois que você recebe a peça. Antes disso, fale com a loja pelo WhatsApp.&quot;);
+      var h = hist_(p), rec = h.filter(function (x) { return x.s === &quot;entregue&quot; || x.s === &quot;pronto&quot;; }).pop(), desde = rec ? rec.t : Number(p.criado), dias = (Date.now() - desde) / DIA;
+      if (dias &gt; 90) throw new Error(&quot;O prazo para pedir pelo app terminou. Fale com a loja pelo WhatsApp.&quot;);
+      if (mot === &quot;desisti&quot; &amp;&amp; dias &gt; 7) throw new Error(&quot;A desistência é em até 7 dias depois de receber. Para outro caso, escolha outro motivo ou fale com a loja.&quot;);
+      var foto = d.foto &amp;&amp; d.foto.dados ? salvarArquivo_(N, d.foto, &quot;troca&quot; + p.id, false) : &quot;&quot;;
+      h.push({ s: &quot;troca&quot;, t: Date.now(), por: &quot;cliente&quot; });
+      var anot = (p.anot ? p.anot + &quot;\n&quot; : &quot;&quot;) + &quot;↩️ Troca/devolução pedida em &quot; + legivel_(Date.now()) + &quot; · &quot; + MOTIVOS_TROCA[mot] + (txt ? &quot; · &quot; + txt : &quot;&quot;);
+      var campos = { status: &quot;troca&quot;, historico: JSON.stringify(h), troca: JSON.stringify({ motivo: mot, txt: txt, foto_id: foto, t: Date.now() }), anot: lim_(anot, 600) };
+      atualizar_(&quot;Pedidos&quot;, function (o) { return String(o.negocio).toLowerCase() === N.n &amp;&amp; Number(o.id) === p.id; }, campos); mudou_(N.n);
+      Object.keys(campos).forEach(function (k) { p[k] = campos[k]; });
+      push_([&quot;N_&quot; + N.n], &quot;↩️ Troca/devolução #&quot; + p.num + &quot; · &quot; + p.cliente, MOTIVOS_TROCA[mot] + (txt ? &quot; · &quot; + txt : &quot;&quot;), linkPainel_(N));
+      if (/@/.test(N.email_aviso || &quot;&quot;)) enviar_(String(N.email_aviso), &quot;↩️ Pedido de troca/devolução #&quot; + p.num + &quot; · &quot; + p.cliente,
+        &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Troca/devolução · pedido #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; · WhatsApp &quot; + esc_(p.tel) + &quot;&lt;br&gt;Motivo: &quot; + esc_(MOTIVOS_TROCA[mot]) + (txt ? &quot;&lt;br&gt;O que ela contou: &quot; + esc_(txt) : &quot;&quot;) + (foto ? &quot;&lt;br&gt;📷 Ela mandou foto: veja no painel.&quot; : &quot;&quot;) + &quot;&lt;/p&gt;&quot; + itensHtml_(p) +
+        &quot;&lt;p&gt;Depois de resolver, mude o andamento no painel para &lt;b&gt;Entregue&lt;/b&gt; (troca feita) ou &lt;b&gt;Cancelado&lt;/b&gt; (valor devolvido).&lt;/p&gt;&quot;, String(N.nome));
+      emailCliente_(N, p, &quot;troca&quot;);
+      return { ok: true, pedido: publico_(p) };
+    });
+  },
   pushReg: function (d) {
     if (d.token) pushGuardar_(&quot;N_&quot; + sessao_(d), d.sub);
     else { var N = negocio_(d.n), sub = subOk_(d.sub); (d.lista || []).slice(0, 10).forEach(function (x) { try { var p = doCliente_(N, x), l = j_(p.push, []).filter(function (s) { return s !== sub; }); l.push(sub);
@@ -306,7 +333,7 @@ var ACOES = {
   },
   verFoto: function (d) {
     var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
-    var it = p &amp;&amp; itens_(p)[Number(d.i)];
+    var it = p &amp;&amp; (d.i === &quot;troca&quot; ? j_(p.troca, {}) : itens_(p)[Number(d.i)]);
     if (!it || !it.foto_id) throw new Error(&quot;Esta peça não tem foto da cliente.&quot;);
     var f = DriveApp.getFileById(String(it.foto_id)), b = f.getBlob();
     return { ok: true, tipo: b.getContentType(), dados: Utilities.base64Encode(b.getBytes()), nome: f.getName() };
@@ -419,6 +446,7 @@ var ACOES = {
     if (a.mkt !== undefined) { var x = a.mkt || {}, o = mkt_({});
       o.limite = Math.min(30, Math.max(5, Math.round(num_(x.limite)) || 20)); o.hIni = Math.min(12, Math.max(6, Math.round(num_(x.hIni)) || 9)); o.hFim = Math.min(22, Math.max(14, Math.round(num_(x.hFim)) || 19));
       o.descAniv = Math.min(90, Math.max(0, Math.round(num_(x.descAniv)))); o.msgAniv = lim_(x.msgAniv, 500) || MKT_PADRAO.msgAniv; m.mkt = JSON.stringify(o); }
+    if (a.trocas !== undefined) m.trocas = lim_(a.trocas, 1000);
     if (a.logo !== undefined) { if (String(a.logo).length &gt; 45000) throw new Error(&quot;Logo grande demais.&quot;); m.logo = String(a.logo); }
     if (a.senha) { if (String(a.senha).length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;); m.senha = hash_(a.senha); }
     atualizar_(&quot;Negocios&quot;, function (r) { return String(r.n).toLowerCase() === n; }, m); mudou_(n);
@@ -521,8 +549,8 @@ function avisarNegocio_(N, p) {
 }
 function emailCliente_(N, p, tipo) {
   if (!/@/.test(p.email || &quot;&quot;)) return;
-  var tit = { novo: &quot;Recebemos seu pedido #&quot; + p.num + &quot; 💛&quot;, sinal: &quot;Sua encomenda #&quot; + p.num + &quot; foi confirmada&quot;, pronto: &quot;Sua encomenda #&quot; + p.num + &quot; está pronta!&quot;, entregue: &quot;Obrigada pela compra!&quot;, cancelado: &quot;Encomenda #&quot; + p.num + &quot; cancelada&quot;, rastreio: &quot;🚚 Sua encomenda #&quot; + p.num + &quot; foi enviada!&quot; }[tipo] || &quot;Encomenda #&quot; + p.num;
-  var txt = { novo: &quot;A &quot; + N.nome + &quot; recebeu o seu pedido. Em breve ela confirma o valor final e o prazo pelo WhatsApp.&quot;, pronto: &quot;Sua encomenda está prontinha. Combine a &quot; + (/retir/i.test(p.tipo) ? &quot;retirada&quot; : &quot;entrega&quot;) + &quot; pelo WhatsApp.&quot;, rastreio: &quot;Ela já está a caminho por &quot; + p.tipo + &quot;.&quot; }[tipo] || &quot;&quot;;
+  var tit = { novo: &quot;Recebemos seu pedido #&quot; + p.num + &quot; 💛&quot;, sinal: &quot;Sua encomenda #&quot; + p.num + &quot; foi confirmada&quot;, pronto: &quot;Sua encomenda #&quot; + p.num + &quot; está pronta!&quot;, entregue: &quot;Obrigada pela compra!&quot;, cancelado: &quot;Encomenda #&quot; + p.num + &quot; cancelada&quot;, rastreio: &quot;🚚 Sua encomenda #&quot; + p.num + &quot; foi enviada!&quot;, troca: &quot;Recebemos seu pedido de troca/devolução #&quot; + p.num }[tipo] || &quot;Encomenda #&quot; + p.num;
+  var txt = { novo: &quot;A &quot; + N.nome + &quot; recebeu o seu pedido. Em breve ela confirma o valor final e o prazo pelo WhatsApp.&quot;, pronto: &quot;Sua encomenda está prontinha. Combine a &quot; + (/retir/i.test(p.tipo) ? &quot;retirada&quot; : &quot;entrega&quot;) + &quot; pelo WhatsApp.&quot;, rastreio: &quot;Ela já está a caminho por &quot; + p.tipo + &quot;.&quot;, troca: &quot;A &quot; + N.nome + &quot; vai analisar e te responder pelo WhatsApp.&quot; }[tipo] || &quot;&quot;;
   if (p.rastreio &amp;&amp; (tipo === &quot;rastreio&quot; || tipo === &quot;pronto&quot; || tipo === &quot;entregue&quot;)) txt += (txt ? &quot; &quot; : &quot;&quot;) + &quot;Código de rastreio: &quot; + p.rastreio + (/^https?:/i.test(p.rastreio) ? &quot;&quot; : &quot; (acompanhe no site dos Correios: rastreamento.correios.com.br ou da transportadora).&quot;);
   var lk = linkCli_(N, p);
   enviar_(p.email, tit + &quot; · &quot; + N.nome,
@@ -569,7 +597,7 @@ function mkt_(N) { var m = j_(N.mkt, {}), o = {}; Object.keys(MKT_PADRAO).forEac
 function publicoNeg_(N) {
   return { n: N.n, nome: String(N.nome), whats: soDig_(N.whatsapp), tel: String(N.telefone || &quot;&quot;), logo: String(N.logo || &quot;&quot;), titulo: String(N.titulo || &quot;&quot;), subtitulo: String(N.subtitulo || &quot;&quot;),
     aviso: String(N.aviso || &quot;&quot;), cats: j_(N.cats, []), faixas: j_(N.faixas, FAIXAS_PADRAO), brinde: j_(N.brinde, {}), redes: j_(N.redes, {}),
-    entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
+    trocas: String(N.trocas || &quot;&quot;) || TROCAS_PADRAO, entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
 }
 function completoNeg_(N) {
   var o = publicoNeg_(N); o.email_aviso = String(N.email_aviso || &quot;&quot;); o.whatsapp = String(N.whatsapp || &quot;&quot;); o.mkt = mkt_(N);
@@ -628,12 +656,13 @@ function pedidos_(n) {
 function itens_(p) { try { return JSON.parse(p.itens || &quot;[]&quot;); } catch (x) { return []; } }
 function proximoNum_(n) { var mx = 100; pedidos_(n).forEach(function (p) { if (p.num &gt; mx) mx = p.num; }); return mx + 1; }
 function doCliente_(N, x) { var p = pedidos_(N.n).filter(function (y) { return y.id === Number(x.id); })[0]; if (!p || !x.chave || String(p.chave) !== String(x.chave)) throw new Error(&quot;Pedido não encontrado.&quot;); return p; }
+function trocaPub_(p) { var t = j_(p.troca, null); if (!t || !t.motivo) return null; return { motivo: t.motivo, nome: MOTIVOS_TROCA[t.motivo] || t.motivo, txt: String(t.txt || &quot;&quot;), foto: !!t.foto_id, t: t.t }; }
 function hist_(p) { try { return JSON.parse(p.historico || &quot;[]&quot;); } catch (x) { return []; } }
 function publico_(p, painel) {
   var its = itens_(p).map(function (i) { var o = JSON.parse(JSON.stringify(i)); o.foto = !!o.foto_id; delete o.foto_id; return o; });
   var o = { id: p.id, num: p.num, criado: p.criado, cliente: String(p.cliente), tipo: String(p.tipo), entrega: dataIso_(p.entrega), itens: its, total: p.total, sinal: p.sinal,
     pago: sim_(p.pago), status: p.status, obs: String(p.obs || &quot;&quot;), historico: hist_(p), origem: String(p.origem || &quot;&quot;),
-    endereco: String(p.endereco || &quot;&quot;), cep: String(p.cep || &quot;&quot;), rastreio: String(p.rastreio || &quot;&quot;), taxa: p.taxa === &quot;&quot; || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
+    endereco: String(p.endereco || &quot;&quot;), cep: String(p.cep || &quot;&quot;), rastreio: String(p.rastreio || &quot;&quot;), troca: trocaPub_(p), taxa: p.taxa === &quot;&quot; || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
   if (painel) { o.tel = soDig_(p.tel); o.email = String(p.email || &quot;&quot;); o.aniv = String(p.aniv || &quot;&quot;); o.anot = String(p.anot || &quot;&quot;); o.cliente_id = String(p.cliente_id || &quot;&quot;); }
   return o;
 }

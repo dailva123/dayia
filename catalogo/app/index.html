@@ -787,9 +787,11 @@ function lojasBar(){
 function abrirLoja(k,pid){const p=pid?PECAS.find(x=>x.id===pid):null,u=redeUrl(p,k),r=REDES.find(x=>x[0]===k);
   if(!u||u==="#demo"){toast(`Demonstração: aqui abre ${p?"esta peça no ":"o "}${r?r[1]:k} da loja`);return}window.open(u,"_blank","noopener")}
 function linkBase(){return location.origin+location.pathname}
-function linkCliente(){const q=[];if(!SID_FIXO&&!DEMO){if(Q.get("api"))q.push("api="+encodeURIComponent(API));else q.push("s="+SID)}if(DEMO&&SID_FIXO)q.push("demo=1");q.push("n="+encodeURIComponent(NEG));return linkBase()+"?"+q.join("&")}
-const linkPeca=p=>linkCliente()+"&peca="+encodeURIComponent(p.id);
-const linkCat=k=>linkCliente()+"&cat="+encodeURIComponent(k);
+const LINK_CURTO={"bab-atelie":"https://dayia.com.br/bab"};
+function linkCliente(){if(LINK_CURTO[NEG]&&SID_FIXO&&!DEMO)return LINK_CURTO[NEG];const q=[];if(!SID_FIXO&&!DEMO){if(Q.get("api"))q.push("api="+encodeURIComponent(API));else q.push("s="+SID)}if(DEMO&&SID_FIXO)q.push("demo=1");q.push("n="+encodeURIComponent(NEG));return linkBase()+"?"+q.join("&")}
+const sepLink=u=>u.indexOf("?")>=0?"&":"?";
+const linkPeca=p=>{const u=linkCliente();return u+sepLink(u)+"peca="+encodeURIComponent(p.id)};
+const linkCat=k=>{const u=linkCliente();return u+sepLink(u)+"cat="+encodeURIComponent(k)};
 async function compartilhar(titulo,url){try{if(navigator.share){await navigator.share({title:titulo,text:titulo,url});return}}catch(e){return}copiar(url,"Link copiado! É só colar na conversa 💛")}
 
 function abrir(id){
@@ -1536,7 +1538,7 @@ function dLogin(tem,msg){
 }
 function dErro(e){if(String(e.message)==="SESSAO"){AD.tk=null;ls("cf-adm",null);dLogin(true,"Entre de novo, por favor.");return true}toast(e.message);return false}
 function dPuxar(){return api("admLista",{token:AD.tk}).then(j=>{AD.d=j;dRender()}).catch(dErro)}
-function linkLoja(n,painel){const q=[];if(!SID_FIXO&&!DEMO){if(Q.get("api"))q.push("api="+encodeURIComponent(API));else q.push("s="+SID)}if(DEMO&&SID_FIXO)q.push("demo=1");q.push("n="+encodeURIComponent(n));return linkBase()+"?"+q.join("&")+(painel?"#painel":"")}
+function linkLoja(n,painel){if(LINK_CURTO[n]&&SID_FIXO&&!DEMO)return LINK_CURTO[n]+(painel?"/painel":"");const q=[];if(!SID_FIXO&&!DEMO){if(Q.get("api"))q.push("api="+encodeURIComponent(API));else q.push("s="+SID)}if(DEMO&&SID_FIXO)q.push("demo=1");q.push("n="+encodeURIComponent(n));return linkBase()+"?"+q.join("&")+(painel?"#painel":"")}
 function dSit(l){const L=l.licenca||{};
   if(L.situacao==="cortesia")return ["Cortesia 💛","ok"];if(L.situacao==="suspenso")return ["Pausada","red"];if(L.situacao==="vencido")return ["Vencida · travada","red"];if(L.situacao==="teste_vencido")return ["Teste acabou · travada","red"];
   if(L.situacao==="teste")return [`Teste até ${l.teste_ate}${L.dias_restantes!=null?` (${L.dias_restantes}d)`:""}`,L.dias_restantes!=null&&L.dias_restantes<=3?"gold":""];

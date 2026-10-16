@@ -446,6 +446,13 @@ body.painel .bag{display:none!important}
 .foto-cli{margin-top:10px}
 .foto-cli img{max-width:100%;border-radius:12px;border:1px solid var(--line)}
 .embed .dy-inst{display:none!important}.embed #intro{display:none}
+.lupa{position:relative;display:flex;align-items:center;margin-top:12px}
+.lupa span{position:absolute;left:14px;font-size:15px;pointer-events:none}
+.lupa input{width:100%;border:1px solid var(--line);background:#fff;border-radius:999px;padding:11px 40px 11px 40px;font:inherit;font-size:15px;color:var(--text);-webkit-appearance:none;appearance:none}
+.lupa input:focus{outline:2px solid var(--peach);border-color:var(--rose)}
+.lupa input::-webkit-search-cancel-button{display:none}
+.lupa button{position:absolute;right:8px;width:28px;height:28px;border-radius:50%;border:0;background:var(--cream);font-size:17px;line-height:1;color:var(--brown)}
+.lupa-vazio{text-align:center;color:var(--muted);font-size:13px;padding:18px 0}
 /* abertura estilo ateliê (Catálogo Fácil) */
 #intro.artesa{background:radial-gradient(120% 90% at 50% 40%,#FFF9F3 0%,#F6EDE4 55%,#EED6C4 100%);transition:opacity .5s ease,background-color .5s ease}
 #intro.artesa .quadro{width:132px;height:132px;border-radius:50%;padding:8px;background:#fff;box-shadow:0 14px 40px rgba(115,92,75,.22);position:relative;animation:ateFlor 1.1s cubic-bezier(.2,.9,.25,1.1) both}
@@ -1088,6 +1095,15 @@ function salvar(acao,dados,msg,depois){
   return api(acao,Object.assign({token:P.tk},dados)).then(j=>{if(msg)toast(msg);fechar();if(depois)depois(j);return pPuxar(true).then(()=>j)}).catch(e=>{if(!pErro(e))toast(e.message);throw e});
 }
 
+/* ---------- lupa (busca rápida em todas as listas) ---------- */
+P.busca={};
+function lupa(k,ph){const v=P.busca[k]||"";return `<div class="lupa"><span aria-hidden="true">🔍</span><input type="search" id="lp_${k}" data-lupa="${k}" placeholder="${ph}" value="${esc(v)}" autocomplete="off" enterkeyhint="search" aria-label="${ph}">${v?`<button type="button" data-lupax="${k}" aria-label="Limpar busca">×</button>`:""}</div>`}
+const achou=(k,...partes)=>{const q=norm(P.busca[k]||"").trim();if(!q)return true;const t=norm(partes.join(" "));const tn=soNum(t);return q.split(/\s+/).every(w=>t.includes(w)||(soNum(w).length>=3&&tn.includes(soNum(w))))};
+const RLUPA={enc:()=>rEnc(),cli:()=>rCli(),pec:()=>rCat(),promo:()=>rMkt(),div:()=>{const t=$("#dvMsg");if(t)sheetDivulgar(t.dataset.id)}};
+function lupaRe(k,pos){(RLUPA[k]||(()=>{}))();const i=$("#lp_"+k);if(i){i.focus();try{i.setSelectionRange(pos,pos)}catch(e){}}}
+document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.lupa;if(!k||location.hash!=="#painel")return;P.busca[k]=e.target.value;lupaRe(k,e.target.selectionStart)});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-lupax]");if(!b||location.hash!=="#painel")return;P.busca[b.dataset.lupax]="";lupaRe(b.dataset.lupax,0)});
+
 /* ---------- INÍCIO ---------- */
 function rInicio(){
   const D=P.d,h=hojeISO(),mes=h.slice(0,7),val=D.pedidos.filter(p=>p.status!=="cancelado"),doMes=val.filter(p=>dIso(p.criado).slice(0,7)===mes);
@@ -1128,10 +1144,11 @@ function rEnc(){
   const cont=k=>k==="abertas"?abertas.length:k==="todas"?D.pedidos.length:D.pedidos.filter(p=>p.status===k).length;
   const filtros=[["abertas","Em aberto"],...ST,["todas","Todas"]];
   let lista=P.encFiltro==="abertas"?abertas:P.encFiltro==="todas"?D.pedidos.slice():D.pedidos.filter(p=>p.status===P.encFiltro);
-  if(P.encBusca)lista=lista.filter(p=>norm(p.cliente+" "+p.num).includes(norm(P.encBusca)));
+  if((P.busca.enc||"").trim())lista=D.pedidos.slice();
+  lista=lista.filter(p=>achou("enc",p.cliente,"#"+p.num,p.num,p.tel,p.email,p.itens.map(i=>i.nome+" "+detItem(i)).join(" "),stNome(p.status),p.tipo));
   lista.sort((a,b)=>fechada(a)!==fechada(b)?(fechada(a)?1:-1):fechada(a)?b.criado-a.criado:(a.status==="novo")!==(b.status==="novo")?(a.status==="novo"?-1:1):((a.entrega||"9")<(b.entrega||"9")?-1:1));
   $("#pc").innerHTML=`<button class="btn" style="width:100%;margin:0" data-a="novaEnc" type="button">＋ Nova encomenda</button>
-    <input type="text" class="search" id="encBusca" placeholder="Buscar por nome ou número" value="${esc(P.encBusca)}">
+    ${lupa("enc","Procurar por nome, número, telefone ou peça")}
     <div class="fchips">${filtros.map(([k,n])=>`<button type="button" data-a="encF" data-f="${k}" class="${k===P.encFiltro?"on":""}">${n} <i>${cont(k)}</i></button>`).join("")}</div>
     ${lista.length?lista.map(p=>{const nx=proxSt(p.status),atras=!fechada(p)&&p.entrega&&p.entrega<h,dt=!p.entrega?"Sem data":p.entrega===h?"Hoje":p.entrega===addDias(1)?"Amanhã":dBR(p.entrega);
       return `<div class="enc st-${p.status} ${p.status==="novo"?"isnew":""}" data-ped="${p.id}">
@@ -1139,7 +1156,7 @@ function rEnc(){
           <div class="enc-top"><b>#${p.num} · ${esc(p.cliente)}${p.status==="novo"?'<em class="newtag">NOVO</em>':""}</b><span class="pill st-${p.status}">${stNome(p.status)}</span></div>
           <div class="enc-itens">${esc(p.itens.map(i=>i.q+"× "+i.nome).join(", "))}</div>
           <div class="enc-bot"><span class="${atras?"late":""}">📅 ${dt}${atras?" · atrasada":""} · ${esc(p.tipo)}</span><span><b>${brl(p.total)}</b> ${p.pago?'<em class="ok">Pago</em>':p.sinal?'<em class="half">Sinal '+brl(p.sinal)+"</em>":'<em class="no">Sem sinal</em>'}</span></div>
-        </button>${nx?`<button class="adv" data-a="avancar" data-id="${p.id}" data-s="${nx[0]}" type="button">Mover para: ${nx[1]} →</button>`:""}</div>`}).join(""):'<p class="muted center">Nenhuma encomenda aqui.</p>'}`;
+        </button>${nx?`<button class="adv" data-a="avancar" data-id="${p.id}" data-s="${nx[0]}" type="button">Mover para: ${nx[1]} →</button>`:""}</div>`}).join(""):`<p class="muted center">${P.busca.enc?"Nada encontrado com essa busca.":"Nenhuma encomenda aqui."}</p>`}`;
 }
 function sheetPedido(id){
   const p=P.d.pedidos.find(x=>x.id===Number(id));if(!p)return;
@@ -1178,11 +1195,11 @@ function sheetNovaEnc(){
 function statsCli(){const m={};P.d.pedidos.filter(p=>p.status!=="cancelado").forEach(p=>{const k=p.cliente_id;if(!k)return;m[k]=m[k]||{n:0,v:0};m[k].n++;m[k].v+=p.total});return m}
 function rCli(){
   const D=P.d,st=statsCli();let lista=D.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome));
-  if(P.cliBusca)lista=lista.filter(c=>norm(c.nome+" "+c.tel).includes(norm(P.cliBusca)));
+  lista=lista.filter(c=>achou("cli",c.nome,c.tel,c.email,c.obs,anivTxt(c.aniv)));
   const compraram=D.clientes.filter(c=>st[c.id]).length,mm=String(new Date().getMonth()+1).padStart(2,"0"),anivMes=D.clientes.filter(c=>c.aniv&&c.aniv.slice(0,2)===mm).length;
   $("#pc").innerHTML=`<div class="kpis three"><div class="kpi"><small>Contatos</small><b>${D.clientes.length}</b></div><div class="kpi"><small>Já compraram</small><b>${compraram}</b></div><div class="kpi"><small>Aniversário no mês</small><b>${anivMes}</b></div></div>
     <div class="two-btn"><button class="btn" data-a="importar" type="button">📥 Importar contatos</button><button class="btn ghost" data-a="novoCli" type="button">＋ Novo</button></div>
-    <input type="text" class="search" id="cliBusca" placeholder="Buscar cliente" value="${esc(P.cliBusca)}">
+    ${lupa("cli","Procurar cliente por nome, telefone ou e-mail")}
     ${lista.map(c=>{const s=st[c.id];return `<button class="row cli" data-a="cli" data-id="${esc(c.id)}" type="button"><span><b>${esc(c.nome)}</b>${telBR(c.tel)||"sem WhatsApp"}${c.aniv?` · 🎂 ${anivTxt(c.aniv)}`:""}</span>
       ${s?`<em class="tag">${s.n} pedido${s.n>1?"s":""} · ${brl(s.v)}</em>`:`<em class="tag soft">${c.origem==="importado"?"Importado":"Ainda não comprou"}</em>`}</button>`}).join("")||'<p class="muted center">Nenhum contato encontrado.</p>'}`;
 }
@@ -1255,11 +1272,12 @@ function caixaEnvios(){
 }
 function rMkt(){
   const D=P.d,h=hojeISO(),m=mktCfg(),ano=new Date().getFullYear();
-  const promos=D.promos.slice().sort((a,b)=>(b.ativa&&b.ate>=h)-(a.ativa&&a.ate>=h));
+  const promos=D.promos.slice().sort((a,b)=>(b.ativa&&b.ate>=h)-(a.ativa&&a.ate>=h)).filter(p=>achou("promo",p.titulo,pAlvoNome(p.alvo),p.desc+"%"));
   const aniv=D.clientes.filter(c=>diasAteAniv(c.aniv)<=7).sort((a,b)=>diasAteAniv(a.aniv)-diasAteAniv(b.aniv));
   $("#pc").innerHTML=`${caixaEnvios()}
     <section class="box"><div class="bh"><h4>🎉 Promoções</h4><button class="mini" data-a="novaPromo" type="button">＋ Nova</button></div>
       <p class="tiny left">A promoção ativa já aparece no catálogo com o preço novo.</p>
+      ${D.promos.length>3?lupa("promo","Procurar promoção"):""}
       ${promos.map(p=>{const viva=p.ativa&&p.ate>=h;return `<div class="promo ${viva?"":"off"}"><div><b>${esc(p.titulo)}</b><span>${p.desc}% off em ${esc(pAlvoNome(p.alvo))} · até ${dBR(p.ate)}</span><em class="tag ${viva?"gold":"soft"}">${viva?"No ar":(p.ate<h?"Encerrada":"Pausada")}</em></div>
         <div class="pa">${viva?`<button class="mini" data-a="divulgar" data-id="${p.id}" type="button">📣 Divulgar</button>`:""}<button class="mini" data-a="editPromo" data-id="${p.id}" type="button">Editar</button><button class="mini" data-a="togPromo" data-id="${p.id}" type="button">${p.ativa?"Pausar":"Ativar"}</button></div></div>`}).join("")||'<p class="muted">Nenhuma promoção ainda.</p>'}
     </section>
@@ -1288,13 +1306,14 @@ function msgPromo(p){return ls("cf-pmsg-"+p.id)||`Olá, {nome}! 💛 Está rolan
 function sheetDivulgar(id){
   const p=P.d.promos.find(x=>x.id===id),st=statsCli(),chave="promo"+p.id,r=podeEnviar();
   let pub=P.d.clientes.filter(c=>c.tel);if(P.pubFiltro==="compraram")pub=pub.filter(c=>st[c.id]);else if(P.pubFiltro==="nunca")pub=pub.filter(c=>!st[c.id]);
-  pub.sort((a,b)=>((st[b.id]||{v:0}).v)-((st[a.id]||{v:0}).v));
+  pub.sort((a,b)=>((st[b.id]||{v:0}).v)-((st[a.id]||{v:0}).v));pub=pub.filter(c=>achou("div",c.nome,c.tel));
   const y=$(".sheet.dyn .pn")?$(".sheet.dyn .pn").scrollTop:0;
   sheet(`<div class="inner"><h2>Divulgar promoção</h2><p class="desc">${esc(p.titulo)} · ${p.desc}% off</p>${caixaEnvios()}
     <div class="fld"><label for="dvMsg">Mensagem <span class="hint">({nome} vira o primeiro nome da cliente)</span></label><textarea id="dvMsg" data-id="${p.id}" style="min-height:120px">${esc(msgPromo(p))}</textarea></div>
     <div class="fld"><span class="lb">Para quem</span><div class="tog">${[["compraram","Já compraram"],["nunca","Ainda não compraram"],["todos","Todos"]].map(([k,n])=>`<button type="button" data-a="pubF" data-f="${k}" data-id="${p.id}" class="${k===P.pubFiltro?"on":""}">${n}</button>`).join("")}</div>
       <p class="tiny left">Dica: comece por quem já comprou. Essas pessoas conhecem você e quase nunca denunciam.</p></div>
     ${r.ok?"":`<div class="stopbox">⏸️ ${r.motivo}</div>`}
+    ${lupa("div","Procurar cliente na lista")}
     <div class="publist">${pub.map(c=>{const ja=P.d.envios.env[chave+"|"+c.id];return `<div class="row static"><span><b>${esc(c.nome)}</b>${st[c.id]?st[c.id].n+" pedido(s)":"Contato importado"}</span>${ja?'<em class="tag ok">Enviada</em>':`<button class="mini send" data-a="envPromo" data-id="${p.id}" data-c="${esc(c.id)}" type="button" ${r.ok?"":"disabled"}>Enviar</button>`}</div>`}).join("")||'<p class="muted">Nenhum contato com WhatsApp neste grupo.</p>'}</div></div>`);
   if(y)$(".sheet.dyn .pn").scrollTop=y;
   if(r.espera){clearTimeout(P.cd);P.cd=setTimeout(()=>{if($("#dvMsg")&&$("#dvMsg").dataset.id===id)sheetDivulgar(id)},r.espera*1000+100)}
@@ -1315,8 +1334,9 @@ function rCat(){
       <section class="box"><h4>📲 Mandar fotos para a cliente</h4><p class="tiny left" style="margin-top:0">Cliente pediu foto no WhatsApp? Em vez de procurar e mandar foto por foto, mande o link: ela abre direto na peça, com todas as fotos e os preços.</p>
         <div class="two-btn" style="grid-template-columns:1fr 1fr"><button class="btn" data-a="shareCat" type="button">Catálogo inteiro</button><button class="btn ghost" data-a="shareCats" type="button">Uma categoria</button></div></section>
       <button class="btn" style="width:100%;margin:12px 0 0" data-a="nova" type="button">＋ Adicionar peça nova</button>
-      ${D.pecas.map(p=>`<div class="adm-item ${p.ativo===false?"off":""}">${imgHtml(p.fotos[0],"",'loading="lazy"')}<div class="m"><b>${esc(p.nome)}</b>${brl(p.preco)} · ${esc((cats.find(c=>c[0]===p.cat)||["",""])[1])}${(p.videos||[]).length?" · ▶":""}${p.ativo===false?'<br><span style="color:#B4423A">Escondida</span>':""}</div>
-        <div class="adm-acts"><button class="mini send" data-a="sharePeca" data-id="${esc(p.id)}" type="button">📲 Enviar</button><button class="mini" data-a="editar" data-id="${esc(p.id)}" type="button">Editar</button><button class="mini" data-a="toggle" data-id="${esc(p.id)}" type="button">${p.ativo===false?"Mostrar":"Esconder"}</button><button class="mini del" data-a="excluir" data-id="${esc(p.id)}" type="button">Excluir</button></div></div>`).join("")||'<p class="muted center">Nenhuma peça ainda. Toque em Adicionar peça nova.</p>'}
+      ${lupa("pec","Procurar peça pelo nome ou categoria")}
+      ${D.pecas.filter(p=>achou("pec",p.nome,p.desc,(cats.find(c=>c[0]===p.cat)||["",""])[1],String(p.preco).replace(".",","))).map(p=>`<div class="adm-item ${p.ativo===false?"off":""}">${imgHtml(p.fotos[0],"",'loading="lazy"')}<div class="m"><b>${esc(p.nome)}</b>${brl(p.preco)} · ${esc((cats.find(c=>c[0]===p.cat)||["",""])[1])}${(p.videos||[]).length?" · ▶":""}${p.ativo===false?'<br><span style="color:#B4423A">Escondida</span>':""}</div>
+        <div class="adm-acts"><button class="mini send" data-a="sharePeca" data-id="${esc(p.id)}" type="button">📲 Enviar</button><button class="mini" data-a="editar" data-id="${esc(p.id)}" type="button">Editar</button><button class="mini" data-a="toggle" data-id="${esc(p.id)}" type="button">${p.ativo===false?"Mostrar":"Esconder"}</button><button class="mini del" data-a="excluir" data-id="${esc(p.id)}" type="button">Excluir</button></div></div>`).join("")||`<p class="muted center">${P.busca.pec?"Nenhuma peça com essa busca.":"Nenhuma peça ainda. Toque em Adicionar peça nova."}</p>`}
       ${DEMO?'<button class="btn ghost" style="width:100%;margin:16px 0 0" data-a="restaurar" type="button">Voltar a demonstração ao início</button>':""}`;
   }else if(P.catSub==="descontos"){
     const F=faixasTxt(N.faixas&&N.faixas.length?N.faixas:FAIXAS_PADRAO);
@@ -1531,8 +1551,6 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(b&&!b.disabled){if(b.tagName==="A")e.preventDefault();acao(b.dataset.a,b)}
 });
 document.addEventListener("input",e=>{
-  if(e.target.id==="encBusca"){P.encBusca=e.target.value;const pos=e.target.selectionStart;rEnc();const i=$("#encBusca");i.focus();i.setSelectionRange(pos,pos)}
-  if(e.target.id==="cliBusca"){P.cliBusca=e.target.value;const pos=e.target.selectionStart;rCli();const i=$("#cliBusca");i.focus();i.setSelectionRange(pos,pos)}
   if(e.target.id==="dvMsg")ls("cf-pmsg-"+e.target.dataset.id,e.target.value);
 });
 document.addEventListener("change",async e=>{
@@ -1570,14 +1588,14 @@ function dRender(){
   const D=AD.d,L=D.lojas;let lista=L.slice().sort((a,b)=>a.nome.localeCompare(b.nome));
   const grupo=l=>{const s=l.licenca.situacao;return !l.licenca.ok?"travadas":s==="teste"?"teste":"ativas"};
   if(AD.filtro!=="todas")lista=lista.filter(l=>grupo(l)===AD.filtro);
-  if(AD.busca)lista=lista.filter(l=>norm(l.nome+" "+l.n).includes(norm(AD.busca)));
+  if(AD.busca){const q=norm(AD.busca);lista=lista.filter(l=>norm(l.nome+" "+l.n+" "+l.whatsapp+" "+telBR(l.whatsapp)).includes(q)||(soNum(q).length>=3&&l.whatsapp.includes(soNum(q))))}
   const c=k=>L.filter(l=>grupo(l)===k).length,atencao=L.filter(l=>{const x=l.licenca;return !x.ok||(x.dias_restantes!=null&&x.dias_restantes<=3)}).length;
   $("#app").innerHTML=`<div class="adm-titulo"><b>Central da DayIA</b><button class="mini" type="button" data-d="sairD">Sair</button></div><div class="adm-main">
     ${DEMO?'<div class="adm-info">🧪 Demonstração: aqui aparece só a loja de exemplo.</div>':""}
     <div class="kpis"><div class="kpi"><small>Lojas</small><b>${L.length}</b><span>no sistema</span></div><div class="kpi"><small>Ativas</small><b>${c("ativas")}</b><span>pagando ou cortesia</span></div>
       <div class="kpi"><small>Em teste</small><b>${c("teste")}</b><span>30 dias grátis</span></div><div class="kpi"><small>Precisam de atenção</small><b>${atencao}</b><span>vencendo ou travadas</span></div></div>
     <button class="btn" style="width:100%;margin:12px 0 0" type="button" data-d="nova">＋ Criar loja nova</button>
-    <input type="text" class="search" id="dBusca" placeholder="Buscar loja" value="${esc(AD.busca)}">
+    <div class="lupa"><span aria-hidden="true">🔍</span><input type="search" id="dBusca" placeholder="Procurar loja pelo nome, link ou WhatsApp" value="${esc(AD.busca)}" autocomplete="off" aria-label="Procurar loja"></div>
     <div class="fchips">${[["todas","Todas",L.length],["ativas","Ativas",c("ativas")],["teste","Em teste",c("teste")],["travadas","Travadas",c("travadas")]].map(([k,n,q])=>`<button type="button" data-d="filtro" data-f="${k}" class="${AD.filtro===k?"on":""}">${n} <i>${q}</i></button>`).join("")}</div>
     ${lista.map(l=>{const [st,cl]=dSit(l);return `<div class="box"><div class="bh"><h4>${esc(l.nome)}</h4><em class="tag ${cl}">${esc(st)}</em></div>
       <p class="tiny left" style="margin-top:2px">?n=${esc(l.n)} · ${l.pecas} peça(s) · ${l.pedidos} pedido(s)${l.plano?" · "+esc(l.plano):""}${l.valor?" "+esc(l.valor):""} · WhatsApp ${telBR(l.whatsapp)}</p>

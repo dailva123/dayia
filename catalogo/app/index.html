@@ -1426,7 +1426,7 @@ function sheetPromo(id){
     <button class="btn" data-a="salvaPromo" data-id="${p.id}" type="button">Salvar promoção</button>
     ${id?`<button class="btn ghost del" data-a="delPromo" data-id="${p.id}" type="button">Excluir promoção</button>`:""}`);
 }
-function msgPromo(p){return ls("cf-pmsg-"+p.id)||`Olá, {nome}! 💛 Está rolando a *${p.titulo}* na ${P.d.negocio.nome}: ${p.desc}% de desconto em ${pAlvoNome(p.alvo)} até ${dBR(p.ate)}. Veja as peças e faça seu pedido: ${linkCliente()}`}
+function msgPromo(p){return ls("cf-pmsg-"+p.id)||`Olá, {nome}! 🥰 Está rolando a *${p.titulo}* na ${P.d.negocio.nome}: ${p.desc}% de desconto em ${pAlvoNome(p.alvo)} até ${dBR(p.ate)}. Veja as peças e faça seu pedido: ${linkCliente()}`}
 function sheetDivulgar(id){
   const p=P.d.promos.find(x=>x.id===id),st=statsCli(),chave="promo"+p.id,r=podeEnviar();
   let pub=P.d.clientes.filter(c=>c.tel);if(P.pubFiltro==="compraram")pub=pub.filter(c=>st[c.id]);else if(P.pubFiltro==="nunca")pub=pub.filter(c=>!st[c.id]);
@@ -1549,7 +1549,7 @@ const PLANOS=[
   ["Alteração avulsa","Para quem fez o pagamento único","https://mpago.la/2oivpp4","R$ 15"]];
 function rAjustes(){
   const N=P.d.negocio,lk=linkCliente(),L=P.d.licenca||{},pl=N.plano||{};
-  const div=`Olá! 💛 Agora você pode ver todas as peças da ${N.nome}, com fotos e preços, e fazer o seu pedido direto pelo nosso catálogo:\n${lk}\n\nObrigada!`;
+  const div=`Olá! 🥰 Agora você pode ver todas as peças da ${N.nome}, com fotos e preços, e fazer o seu pedido direto pelo nosso catálogo:\n${lk}\n\nObrigada!`;
   const c=(id,lbl,v,ex)=>`<div class="fld"><label for="${id}">${lbl}</label><input type="text" id="${id}" value="${esc(v==null?"":v)}"${ex||""}></div>`;
   const tps=TIPOS(),B=N.brinde||{};
   $("#pc").innerHTML=`${lupa("aj","Procurar nos ajustes (ex.: Pix, senha, entrega)")}<p class="vazio" id="ajNada" style="display:none">Não achei nada com esse nome nos ajustes.</p>
@@ -1651,10 +1651,10 @@ async function acao(a,b){
     case "salvaAniv":salvar("salvarAjustes",{ajustes:{mkt:Object.assign({},mktCfg(),{descAniv:parseInt($("#anD").value)||0,msgAniv:$("#anM").value.trim()||mktCfg().msgAniv})}},"Mensagem de aniversário salva").catch(()=>{});break;
     case "salvaCfg":salvar("salvarAjustes",{ajustes:{mkt:Object.assign({},mktCfg(),{limite:+$("#cfLim").value,hIni:+$("#cfIni").value,hFim:+$("#cfFim").value})}},"Regras salvas").catch(()=>{});break;
     case "catSub":P.catSub=b.dataset.s;rCat();break;
-    case "sharePeca":{const p=D.pecas.find(x=>x.id===id);sheetShare(`Olá! 💛 Segue a ${p.nome} da ${D.negocio.nome}, com todas as fotos, as opções e o preço. É só tocar no link:`,linkPeca(p),p.nome,p.fotos[0]);break;}
-    case "shareCat":sheetShare(`Olá! 💛 Este é o catálogo da ${D.negocio.nome}, com as fotos e os preços de todas as peças. Você escolhe, personaliza e já me manda o pedido prontinho:`,linkCliente(),"Catálogo inteiro",null);break;
+    case "sharePeca":{const p=D.pecas.find(x=>x.id===id);sheetShare(`Olá! 🥰 Segue a ${p.nome} da ${D.negocio.nome}, com todas as fotos, as opções e o preço. É só tocar no link:`,linkPeca(p),p.nome,p.fotos[0]);break;}
+    case "shareCat":sheetShare(`Olá! 🥰 Este é o catálogo da ${D.negocio.nome}, com as fotos e os preços de todas as peças. Você escolhe, personaliza e já me manda o pedido prontinho:`,linkCliente(),"Catálogo inteiro",null);break;
     case "shareCats":sheet(`<div class="inner"><h2>Enviar uma categoria</h2><p class="desc">A cliente abre o catálogo já mostrando só essas peças.</p>${pCats().map(([k,n])=>`<button class="row" data-a="shareC" data-c="${esc(k)}" type="button"><span><b>${esc(n)}</b>${D.pecas.filter(p=>p.cat===k&&p.ativo!==false).length} peça(s)</span><em class="tag">Enviar →</em></button>`).join("")}</div>`);break;
-    case "shareC":{const n=(pCats().find(c=>c[0]===b.dataset.c)||["",""])[1];sheetShare(`Olá! 💛 Separei para você os modelos de ${n.toLowerCase()} da ${D.negocio.nome}, com fotos e preços:`,linkCat(b.dataset.c),n,null);break;}
+    case "shareC":{const n=(pCats().find(c=>c[0]===b.dataset.c)||["",""])[1];sheetShare(`Olá! 🥰 Separei para você os modelos de ${n.toLowerCase()} da ${D.negocio.nome}, com fotos e preços:`,linkCat(b.dataset.c),n,null);break;}
     case "shareWa":{const m=$("#shMsg").value+"\n"+b.dataset.url;if(DEMO){toast("Demonstração: abriria o WhatsApp para você escolher a cliente");break}window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(m),"_blank","noopener");break;}
     case "shareCopy":copiar($("#shMsg").value+"\n"+b.dataset.url,"Mensagem e link copiados 💛");break;
     case "salvaLojas":{const o={},R=D.negocio.redes||{};REDES.forEach(([k])=>{const el=$("#rd_"+k),v=el?fixUrl(el.value):"";if(v)o[k]=v;else if(DEMO&&R[k]==="#demo"&&el&&el.dataset.demo==="1")o[k]="#demo"});
@@ -1674,7 +1674,7 @@ async function acao(a,b){
       F.sort((x,y)=>x.min-y.min);salvar("salvarAjustes",{ajustes:{faixas:F}},"Descontos salvos").catch(()=>{});break;}
     case "restaurar":if(!confirm("Voltar toda a demonstração ao começo? (peças, encomendas, clientes e promoções)"))break;ls("cf-demo",null);pPuxar(true).then(()=>toast("Demonstração restaurada"));break;
     case "cpL":copiar(linkCliente(),"Link copiado!");break;
-    case "cpM":copiar(`Olá! 💛 Agora você pode ver todas as peças da ${D.negocio.nome}, com fotos e preços, e fazer o seu pedido direto pelo nosso catálogo:\n${linkCliente()}\n\nObrigada!`,"Mensagem copiada!");break;
+    case "cpM":copiar(`Olá! 🥰 Agora você pode ver todas as peças da ${D.negocio.nome}, com fotos e preços, e fazer o seu pedido direto pelo nosso catálogo:\n${linkCliente()}\n\nObrigada!`,"Mensagem copiada!");break;
     case "addEnt":document.getElementById("entEd").insertAdjacentHTML("beforeend",entRow());$("#entEd .ent-ed:last-child .en-n").focus();break;
     case "rmEnt":b.closest(".ent-ed").remove();break;
     case "addCat":document.getElementById("catEd").insertAdjacentHTML("beforeend",'<div class="cat-ed" data-k=""><input type="text" value="" placeholder="Nome da categoria" aria-label="Nome da categoria"><button type="button" data-a="rmCat" aria-label="Tirar categoria">×</button></div>');$("#catEd .cat-ed:last-child input").focus();break;
@@ -1752,7 +1752,7 @@ function dRender(){
     <details><summary>Trocar a senha da Central</summary><div class="copiar"><input type="password" id="dNova" placeholder="Nova senha (mín. 6)" autocomplete="new-password"><button class="mini" type="button" data-d="trocaSenha">Salvar</button></div></details>
     <p class="tiny">Catálogo Fácil by DayIA · Central da DayIA</p></div>`;
 }
-function dMsgLoja(l,senha){return `Olá, ${l.nome}! 💛 O seu Catálogo Fácil está pronto.\n\n🛍️ Link do catálogo (para mandar para as suas clientes):\n${linkLoja(l.n)}\n\n✏️ O seu painel (só você usa):\n${linkLoja(l.n,true)}\n${senha?"🔒 Senha: "+senha+" (troque em Ajustes)\n":""}\nVocê tem 30 dias grátis para testar. No painel você coloca as fotos, os preços e as suas redes. Qualquer dúvida, é só me chamar. Obrigada!`}
+function dMsgLoja(l,senha){return `Olá, ${l.nome}! 🥰 O seu Catálogo Fácil está pronto.\n\n🛍️ Link do catálogo (para mandar para as suas clientes):\n${linkLoja(l.n)}\n\n✏️ O seu painel (só você usa):\n${linkLoja(l.n,true)}\n${senha?"🔒 Senha: "+senha+" (troque em Ajustes)\n":""}\nVocê tem 30 dias grátis para testar. No painel você coloca as fotos, os preços e as suas redes. Qualquer dúvida, é só me chamar. Obrigada!`}
 function dLinks(l,senha){
   folha(`<div class="inner share-sheet"><h2>${esc(l.nome)}</h2><p class="desc">${senha?"Loja criada ✨ Mande a mensagem abaixo para a dona.":"Links da loja."}</p>
     <div class="fld"><span class="lb">🛍️ Catálogo das clientes</span><div class="copiar"><input type="text" readonly value="${esc(linkLoja(l.n))}"><button class="mini" type="button" data-d="cp" data-v="${esc(linkLoja(l.n))}">Copiar</button></div></div>

@@ -1046,7 +1046,7 @@ function mostrar() {
   var zap = "Rosca encontrada pelo " + (NOME ? "medidor da " + NOME : "Rosca Fácil") + ": " + r.melhor.rotulo + " " + titulo +
     (m.tem_referencia ? " (medida: " + fmt(m.diametro_mm, 1) + " mm / " + Roscas.pol(m.diametro_mm) + ")" : " (cerca de " + fmt(r.melhor.diametro, 0) + " mm de diâmetro)");
   h += '<div class="linha"><button type="button" class="btn sec" id="btnNovo">Medir outra peça</button>' +
-    '<a class="btn zap" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(zap) + '">Enviar pelo WhatsApp</a></div>';
+    '<a class="btn zap" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=' + encodeURIComponent(zap) + '">Enviar pelo WhatsApp</a></div>';
 
   var novo = box.hidden || !estado.respondeu;
   if (estado.origem === "foto" && estado.tempo && estado.tempo.total) {

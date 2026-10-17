@@ -174,7 +174,7 @@ $("#lista").onclick = function (e) {
     (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () { toast("Link copiado"); }, function () { prompt("Copie o link:", link); });
   } else if (a === "zap") {
     var txt = "Olá! Este é o app da " + nome + " para descobrir a medida da rosca pela foto: " + link;
-    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
+    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(txt), "_blank");
   } else if (a === "nome") {
     var novo = prompt("Novo nome da empresa:", nome);
     if (novo && novo.trim() && novo.trim() !== nome) chamar({ op: "editar", id: id, nome: novo.trim() }).then(abrir).catch(falha);

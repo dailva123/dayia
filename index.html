@@ -217,7 +217,7 @@ var V = {
 (function(){
   if(WHATSAPP){
     var w=document.createElement("a");w.className="contato";w.target="_blank";w.rel="noopener";
-    w.href="https://wa.me/"+WHATSAPP.replace(/\D/g,"")+"?text="+encodeURIComponent(MENSAGEM_WHATSAPP);
+    w.href="https://api.whatsapp.com/send?phone="+WHATSAPP.replace(/\D/g,"")+"&text="+encodeURIComponent(MENSAGEM_WHATSAPP);
     w.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>Fale comigo no WhatsApp';
     document.getElementById("contato").appendChild(w);
   }

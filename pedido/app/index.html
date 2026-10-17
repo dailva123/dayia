@@ -191,7 +191,7 @@ function hm2min(s){var p=String(s||"0:0").split(":");return (+p[0])*60+(+p[1]||0
 var DS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"],DSL=["domingo","segunda","terça","quarta","quinta","sexta","sábado"];
 var STATUS={novo:"Recebido",confirmado:"Confirmado",preparo:"Em preparo",pronto:"Pronto para retirar",saiu:"Saiu para entrega",entregue:"Entregue",cancelado:"Cancelado"};
 function stTxt(p){return p.status==="entregue"&&p.tipo==="retirada"?"Retirado":STATUS[p.status]||p.status}
-function wa(num,txt){num=soDig(num);if(num.length<=11)num="55"+num;return "https://wa.me/"+num+"?text="+encodeURIComponent(txt)}
+function wa(num,txt){num=soDig(num);if(num.length<=11)num="55"+num;return "https://api.whatsapp.com/send?phone="+num+"&text="+encodeURIComponent(txt)}
 function diasTxt(d){d=(d||[]).slice().sort();if(!d.length)return "";var s=d.join(",");if(s==="1,2,3,4,5,6")return "segunda a sábado";if(s==="1,2,3,4,5")return "segunda a sexta";if(s==="0,1,2,3,4,5,6")return "todos os dias";return d.map(function(x){return DSL[x]}).join(", ")}
 
 /* ================= servidor ================= */
@@ -635,7 +635,7 @@ function pAjustes(){
   var div="Olá! 😊 Agora você pode fazer o seu pedido da "+n.nome+" direto pelo nosso cardápio online. É só escolher, pagar no Pix e mandar o comprovante:\n"+lk+"\n\nObrigada!";
   var c=function(id,lbl,v,ex){return '<label class="rot" for="'+id+'">'+lbl+'</label><input class="f" id="'+id+'" value="'+esc(v==null?"":v)+'"'+(ex||"")+'>'};
   var h='<div class="card"><h3>🔗 Seu link de pedidos</h3><p class="sub">Coloque no WhatsApp, no Instagram e no status.</p><div class="copiar" style="margin-top:8px"><input class="f" readonly value="'+esc(lk)+'"><button class="btn min" id="cpL">Copiar</button></div>'+
-    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn sec min" id="cpM">Copiar mensagem pronta</button><a class="btn wa min" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(div)+'">Enviar no WhatsApp</a><a class="btn sec min" href="'+esc(lk)+'" target="_blank" rel="noopener">Ver como cliente</a></div></div>';
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn sec min" id="cpM">Copiar mensagem pronta</button><a class="btn wa min" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text='+encodeURIComponent(div)+'">Enviar no WhatsApp</a><a class="btn sec min" href="'+esc(lk)+'" target="_blank" rel="noopener">Ver como cliente</a></div></div>';
   h+='<div class="card"><h3>Restaurante</h3>'+c("aNome","Nome",n.nome)+c("aTel","Telefone que aparece",n.tel)+c("aWa","WhatsApp que recebe as mensagens dos clientes",n.whatsapp||n.whats,' inputmode="tel"')+c("aEnd","Endereço (para retirada)",n.end)+c("aIg","Instagram",n.insta)+c("aAviso","Recado no topo do cardápio (opcional)",n.aviso,' placeholder="Ex.: Hoje tem pudim de sobremesa!"')+
     '<span class="rot">Logo</span><label class="arq"><img src="'+esc(logoDe(n)||"icon-192.png")+'" alt=""><span><b>Trocar a logo</b><br><small>Foto quadrada</small></span><input type="file" id="aLogo" accept="image/*" hidden></label></div>';
   h+='<div class="card"><h3>Pix</h3>'+c("aPix","Chave Pix",n.pix_chave)+c("aPixN","Nome que aparece no banco",n.pix_nome)+c("aPixB","Banco",n.pix_banco)+'<label class="chk" style="margin-top:10px"><input type="checkbox" id="aHora"'+(n.na_hora?' checked':'')+'> Aceitar também pagamento na entrega/retirada</label></div>';

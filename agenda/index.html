@@ -436,7 +436,7 @@ function waMsg(a,tipo){var sv=serv(a.serv),n=a.cli.split(" ")[0],q=dataLonga(a.i
   if(tipo==="lembrete")t="Olá, "+n+"! Passando para lembrar do seu horário de "+sv.nome+(a.pet?" do(a) "+a.pet:"")+" na "+DB.negocio.nome+": "+q+", com "+prof(a.prof).nome+". Pode confirmar?";
   else if(tipo==="confirma")t="Olá, "+n+"! Seu horário de "+sv.nome+" está confirmado para "+q+", com "+prof(a.prof).nome+". Endereço: "+DB.negocio.end+". Até lá!";
   else t="Olá, "+n+"! Sentimos sua falta no horário de "+q+". Quer remarcar? É só responder esta mensagem.";
-  var tel=String(a.tel).replace(/\D/g,"");if(tel.length<=11)tel="55"+tel;return "https://wa.me/"+tel+"?text="+encodeURIComponent(t)}
+  var tel=String(a.tel).replace(/\D/g,"");if(tel.length<=11)tel="55"+tel;return "https://api.whatsapp.com/send?phone="+tel+"&text="+encodeURIComponent(t)}
 function detalhe(id){
   var a=achar(id);if(!a)return;var sv=serv(a.serv),s=S();
   var hist=DB.ags.filter(function(x){return x.tel===a.tel&&x.id!==a.id&&x.ini<Date.now()&&x.status==="concluido"});
@@ -488,7 +488,7 @@ function nClientes(){
     (sumidos.length?'<p class="sub" style="margin-top:10px">💡 <b>'+sumidos.length+'</b> sem voltar há mais de 3 semanas e sem horário marcado. Use o botão do WhatsApp para chamar de volta.</p>':'')+
     '<div class="tabela"><table><thead><tr><th>Nome</th><th>Atendimentos</th><th>Total gasto</th><th>Última vez</th><th>Próximo</th><th></th></tr></thead><tbody id="cTb"></tbody></table></div></div>';
   function pinta(){var b=$("#cBusca").value.toLowerCase();$("#cTb").innerHTML=l.filter(function(c){return !b||(c.nome+" "+c.tel+" "+c.pet).toLowerCase().indexOf(b)>=0}).map(function(c){var tel=String(c.tel).replace(/\D/g,"");tel=tel.length<=11?"55"+tel:tel;
-    return '<tr><td><b>'+esc(c.nome)+'</b>'+(c.pet?' · 🐾 '+esc(c.pet):'')+'<br><small style="color:var(--mute)">'+esc(c.tel)+(c.faltas?' · '+c.faltas+' falta'+(c.faltas>1?'s':''):'')+'</small></td><td>'+c.vis+'</td><td>'+brl(c.gasto)+'</td><td>'+(c.ult?dataCurta(c.ult):"—")+'</td><td>'+(c.prox?dataCurta(c.prox)+" "+hm(c.prox):(c.ult&&c.ult<Date.now()-21*864e5?'<span class="tag t-warn">sumido</span>':"—"))+'</td><td><a class="btn wa min" target="_blank" rel="noopener" href="https://wa.me/'+tel+'?text='+encodeURIComponent("Olá, "+c.nome.split(" ")[0]+"! Tudo bem? Aqui é da "+DB.negocio.nome+". Que tal agendar seu próximo horário?")+'">💬</a></td></tr>'}).join("")}
+    return '<tr><td><b>'+esc(c.nome)+'</b>'+(c.pet?' · 🐾 '+esc(c.pet):'')+'<br><small style="color:var(--mute)">'+esc(c.tel)+(c.faltas?' · '+c.faltas+' falta'+(c.faltas>1?'s':''):'')+'</small></td><td>'+c.vis+'</td><td>'+brl(c.gasto)+'</td><td>'+(c.ult?dataCurta(c.ult):"—")+'</td><td>'+(c.prox?dataCurta(c.prox)+" "+hm(c.prox):(c.ult&&c.ult<Date.now()-21*864e5?'<span class="tag t-warn">sumido</span>':"—"))+'</td><td><a class="btn wa min" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?phone='+tel+'&text='+encodeURIComponent("Olá, "+c.nome.split(" ")[0]+"! Tudo bem? Aqui é da "+DB.negocio.nome+". Que tal agendar seu próximo horário?")+'">💬</a></td></tr>'}).join("")}
   $("#cBusca").oninput=pinta;pinta();
 }
 function nResultados(){

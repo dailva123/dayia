@@ -381,8 +381,8 @@ function contato(c,p,i){
   const m=msgs(c,p),mail=p.email&&!p.erro?`mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(m.a)}&body=${encodeURIComponent(m.b).replace(/%0A/g,"%0D%0A")}`:"";
   let acts="";
   if(mail)acts+=`<a class="btn main" href="${mail}" target="_blank" rel="noopener" data-mark="Mandei e-mail" data-k="${key(c)}">E-mail</a>`;
-  if(p.wa)acts+=`<a class="btn main" href="https://wa.me/${p.wa}?text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener" data-mark="Mandei WhatsApp" data-k="${key(c)}">WhatsApp</a>`;
-  if(p.wa2)acts+=`<a class="btn" href="https://wa.me/${p.wa2}?text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener" data-mark="Mandei WhatsApp" data-k="${key(c)}">WhatsApp (outro número)</a>`;
+  if(p.wa)acts+=`<a class="btn main" href="https://api.whatsapp.com/send?phone=${p.wa}&text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener" data-mark="Mandei WhatsApp" data-k="${key(c)}">WhatsApp</a>`;
+  if(p.wa2)acts+=`<a class="btn" href="https://api.whatsapp.com/send?phone=${p.wa2}&text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener" data-mark="Mandei WhatsApp" data-k="${key(c)}">WhatsApp (outro número)</a>`;
   if(p.wa)acts+=waAjBtn(c,p,m);
   if(p.li)acts+=`<a class="btn" href="${esc(p.li)}" target="_blank" rel="noopener">Abrir LinkedIn</a>`;
   else if(first(p.nome))acts+=`<a class="btn" href="${liBusca(p.nome+" "+curto(c.n))}" target="_blank" rel="noopener">Procurar no LinkedIn</a>`;
@@ -412,7 +412,7 @@ function proximo(c,m,vivos){const k=key(c),s=stat(c);
   let b="";
   if(i===0){if(p.email&&!p.erro)b+=`<a class="btn main" href="mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(m.a)}&body=${encodeURIComponent(m.b).replace(/%0A/g,"%0D%0A")}" target="_blank" rel="noopener">Abrir o e-mail no Outlook</a>`;
     b+=`<a class="btn" href="${p.li?esc(p.li):liBusca((p.nome||"")+" "+curto(c.n))}" target="_blank" rel="noopener">Abrir LinkedIn</a><button class="btn" data-cp="${esc(m.l)}" data-l="Convite">Copiar convite do LinkedIn</button>`+cpTrio(p.email&&!p.erro?p.email:"",m.a,m.b)}
-  if(i===1&&p.wa)b+=`<a class="btn main" href="https://wa.me/${p.wa}?text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener">Abrir WhatsApp</a>`+waAjBtn(c,p,m);
+  if(i===1&&p.wa)b+=`<a class="btn main" href="https://api.whatsapp.com/send?phone=${p.wa}&text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener">Abrir WhatsApp</a>`+waAjBtn(c,p,m);
   if(i===1&&!p.wa)b+=`<button class="btn" data-cpk="${k}" data-w="w">Sem celular: copiar mensagem para usar no LinkedIn</button>`;
   if(i===2){const t=p.cel||p.tel;b+=t?`<span class="b">Ligar para ${esc(p.nome||"")}: ${esc(t)}</span>`:`<span class="b y">Sem telefone: ligue na portaria e peça compras</span>`}
   if(i>=3){const pp={3:[m.p4a,m.p4],4:[m.p5a,m.p5],5:[m.p6a,m.p6]}[i];if(p.email&&!p.erro)b+=`<a class="btn main" href="mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(pp[0])}&body=${encodeURIComponent(pp[1]).replace(/%0A/g,"%0D%0A")}" target="_blank" rel="noopener">Abrir o e-mail no Outlook</a>`;b+=cpTrio(p.email&&!p.erro?p.email:"",pp[0],pp[1])}
@@ -439,7 +439,7 @@ function convite(c,p,v){const m=msgs(c,p),[d1,d2]=duasDatas(),dn=c.num?c.dono:c.
   w:`${oi.replace(", tudo bem?","! Tudo bem?")} Aqui é ${eu}, da Empresa Modelo. Podemos falar 20 minutos por vídeo sobre a reposição da ${emp}? Consigo ${d1} ou ${d2}. Qual fica melhor?`}}
 function visitaBox(c,vivos){const v=visita(c),p=vivos.find(z=>z.email&&!z.erro)||vivos.find(z=>z.wa)||vivos[0]||{},cv=convite(c,p,v);
  let b="";if(p.email&&!p.erro)b+=`<a class="btn main" href="mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(cv.a)}&body=${encodeURIComponent(cv.b).replace(/%0A/g,"%0D%0A")}" target="_blank" rel="noopener">Convidar por e-mail (Outlook)</a>`;
- if(p.wa)b+=`<a class="btn" href="https://wa.me/${p.wa}?text=${encodeURIComponent(cv.w)}" target="_blank" rel="noopener">Convidar por WhatsApp</a>`;
+ if(p.wa)b+=`<a class="btn" href="https://api.whatsapp.com/send?phone=${p.wa}&text=${encodeURIComponent(cv.w)}" target="_blank" rel="noopener">Convidar por WhatsApp</a>`;
  b+=cpTrio(p.email&&!p.erro?p.email:"",cv.a,cv.b);
  return `<div class="visita ${v.tipo==="Presencial"?"pres":"virt"}"><h4>Reunião recomendada: ${v.tipo}</h4><p>${v.por}</p><details><summary>Ver o convite (com duas datas)</summary><div class="box"><b>${esc(cv.a)}</b>\n\n${esc(cv.b)}</div></details><div class="acts" style="padding:8px 0 0">${b}</div></div>`}
 
@@ -653,8 +653,8 @@ function renderApollo(){
    return s};
  const acts=(c,p)=>{const m=msgP(c,p);let s="";
    if(p.email&&!p.erro)s+=`<a class="btn main" href="mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(m.a)}&body=${encodeURIComponent(m.b).replace(/%0A/g,"%0D%0A")}" target="_blank" rel="noopener" data-mark="Mandei e-mail" data-k="${key(c)}">Abrir no Outlook</a>`;
-   if(p.wa)s+=`<a class="btn main" href="https://wa.me/${p.wa}?text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener" data-mark="Mandei WhatsApp" data-k="${key(c)}">WhatsApp</a>`;
-   if(p.wa2)s+=`<a class="btn" href="https://wa.me/${p.wa2}?text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener" data-mark="Mandei WhatsApp" data-k="${key(c)}">WhatsApp (outro número)</a>`;
+   if(p.wa)s+=`<a class="btn main" href="https://api.whatsapp.com/send?phone=${p.wa}&text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener" data-mark="Mandei WhatsApp" data-k="${key(c)}">WhatsApp</a>`;
+   if(p.wa2)s+=`<a class="btn" href="https://api.whatsapp.com/send?phone=${p.wa2}&text=${encodeURIComponent(m.w)}" target="_blank" rel="noopener" data-mark="Mandei WhatsApp" data-k="${key(c)}">WhatsApp (outro número)</a>`;
    if(p.wa)s+=waAjBtn(c,p,m);
    if(p.wa||p.td)s+=`<a class="btn" href="tel:+${p.wa||p.td}" data-mark="Liguei" data-k="${key(c)}">Ligar</a>`;
    s+=`<button class="btn" data-cp="${esc(m.a+"\n\n"+m.b)}" data-l="E-mail">Copiar e-mail</button>`;
@@ -674,7 +674,7 @@ function waAjuda(o){
   <h2 style="margin:0 0 6px;font-size:1.3rem;color:var(--navy,#14325a)">O WhatsApp disse que o número não está no WhatsApp?</h2>
   <p style="margin:0 0 12px">Isso acontece. Antes de desistir de ${esc(nome)}, tente nesta ordem:</p>
   <ol style="padding-left:20px;margin:0 0 12px">
-  ${o.w2?`<li style="margin-bottom:10px"><b>Tente o outro número dele.</b> O cadastro tem dois celulares e um pode estar digitado errado.<br><a class="btn main" href="https://wa.me/${o.w2}?text=${encodeURIComponent(o.msg)}" target="_blank" rel="noopener">WhatsApp no outro número: ${esc(waNum(o.w2))}</a></li>`:""}
+  ${o.w2?`<li style="margin-bottom:10px"><b>Tente o outro número dele.</b> O cadastro tem dois celulares e um pode estar digitado errado.<br><a class="btn main" href="https://api.whatsapp.com/send?phone=${o.w2}&text=${encodeURIComponent(o.msg)}" target="_blank" rel="noopener">WhatsApp no outro número: ${esc(waNum(o.w2))}</a></li>`:""}
   <li style="margin-bottom:10px"><b>Salve o contato no celular e mande por lá.</b><br>1. Copie o número e a mensagem nos botões abaixo.<br>2. No celular, abra a agenda, crie um contato novo com o nome "${esc((o.n||"Contato")+(o.e?" "+o.e:""))}" e cole o número.<br>3. Abra o WhatsApp, toque em <b>Nova conversa</b> e procure o nome. Se não aparecer, puxe a lista para baixo ou toque nos três pontinhos e em <b>Atualizar</b>.<br>4. Abra a conversa, cole a mensagem e envie.
   <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${o.w?`<button class="btn" data-cp="${esc(waNum(o.w))}" data-l="Número">Copiar número ${esc(waNum(o.w))}</button>`:""}<button class="btn" data-cp="${esc(o.msg)}" data-l="Mensagem">Copiar mensagem</button></div></li>
   <li style="margin-bottom:10px"><b>Ou digite o número direto no WhatsApp.</b> Em <b>Nova conversa</b>, digite o número com DDD na busca (sem o zero na frente). Se ele usar WhatsApp, o nome ou a foto aparecem.</li>
@@ -726,7 +726,7 @@ function renderOuro(){
  <h3 style="margin:16px 0 6px;color:var(--navy)">Relatório da semana para o Eduardo</h3>
  <p style="margin:0 0 8px">Escolha a carteira no topo da área Agir e clique abaixo. Sai pronto para colar no WhatsApp.</p>
  <div class="row"><div class="box" id="rel">${esc(relatorio(alvo||"Ana"))}</div></div>
- <div class="acts" style="padding:8px 0 0"><button class="btn main" data-rel="copy">Copiar relatório</button><a class="btn" id="relwa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(relatorio(alvo||"Ana"))}">Mandar no WhatsApp</a></div></section>
+ <div class="acts" style="padding:8px 0 0"><button class="btn main" data-rel="copy">Copiar relatório</button><a class="btn" id="relwa" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=${encodeURIComponent(relatorio(alvo||"Ana"))}">Mandar no WhatsApp</a></div></section>
 
  <section class="p" style="padding:16px 18px"><h2 style="font-size:1.5rem;color:var(--navy)">4. As 3 decisões que valem mais que tudo (para o Eduardo)</h2>
  <ol style="margin:6px 0 0;padding-left:20px">

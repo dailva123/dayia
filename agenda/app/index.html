@@ -416,7 +416,7 @@ function planosHtml(nome){
 }
 document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-pl]");if(!b)return;var u=b.dataset.pl,an=b.dataset.m==="a";
   document.querySelectorAll('[data-pl="'+u+'"]').forEach(function(x){x.setAttribute("aria-pressed",x===b)});var m=document.getElementById(u+"m"),a=document.getElementById(u+"a");if(m)m.style.display=an?"none":"grid";if(a){a.hidden=!an;a.style.display=an?"grid":"none"}});
-function waDayia(msg){return "https://wa.me/"+((P.lic&&P.lic.whatsapp)||WA_DAYIA)+"?text="+encodeURIComponent(msg)}
+function waDayia(msg){return "https://api.whatsapp.com/send?phone="+((P.lic&&P.lic.whatsapp)||WA_DAYIA)+"&text="+encodeURIComponent(msg)}
 function telaBloqueada(L){
   var venc=L.situacao==="teste_vencido";
   $("#app").innerHTML='<div class="caixa card" style="text-align:center"><div style="font-size:40px">'+(venc?"⏳":"⏸️")+'</div><h2>'+(venc?"Seu período de teste terminou":"Sua agenda está pausada")+'</h2><p class="sub">'+(venc?"Gostou da Agenda Fácil? Escolha um plano para continuar. Seus horários, clientes e serviços continuam guardados.":"Fale com a DayIA para reativar. Seus horários, clientes e serviços continuam guardados.")+'</p>'+planosHtml(NEG)+'<p></p><a class="btn wa" target="_blank" rel="noopener" href="'+waDayia("Olá! Quero "+(venc?"continuar usando":"reativar")+" a Agenda Fácil ("+NEG+").")+'">💬 Tirar dúvidas no WhatsApp</a><p></p><button class="btn sec min" onclick="P.sair()">Sair</button></div>';
@@ -688,7 +688,7 @@ function waMsg(a,tipo){var n=String(a.cli).split(" ")[0],q=dataLonga(a.ini)+" à
   else if(tipo==="confirma")t="Olá, "+n+"! Seu horário de "+sn+" está confirmado para "+q+"."+(DB.negocio.end?" Endereço: "+DB.negocio.end+".":"")+" Até lá!";
   else if(tipo==="indisp")t="Olá, "+n+"! Infelizmente não vou conseguir te atender em "+q+". Podemos remarcar? Me fala qual dia e horário ficam melhores para você.";
   else t="Olá, "+n+"! Sentimos sua falta no horário de "+q+". Quer remarcar? É só responder esta mensagem.";
-  var tel=String(a.tel).replace(/\D/g,"");if(tel.length<=11)tel="55"+tel;return "https://wa.me/"+tel+"?text="+encodeURIComponent(t)}
+  var tel=String(a.tel).replace(/\D/g,"");if(tel.length<=11)tel="55"+tel;return "https://api.whatsapp.com/send?phone="+tel+"&text="+encodeURIComponent(t)}
 function detalhe(id){
   var a=achar(id);if(!a)return;var sv=serv(a.serv),s=S();
   var hist=DB.ags.filter(function(x){return String(x.tel).replace(/\D/g,"")===String(a.tel).replace(/\D/g,"")&&x.id!==a.id&&x.status==="concluido"});

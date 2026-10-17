@@ -181,7 +181,7 @@ var PFX=DEMO?"dfd2-":"df-";
 function $(s,el){return (el||document).querySelector(s)}
 function $$(s,el){return Array.prototype.slice.call((el||document).querySelectorAll(s))}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
-function waDayia(t){return "https://wa.me/"+ZAP_DAYIA+"?text="+encodeURIComponent(t)}
+function waDayia(t){return "https://api.whatsapp.com/send?phone="+ZAP_DAYIA+"&text="+encodeURIComponent(t)}
 function aviso(t){var a=$("#aviso");a.textContent=t;a.classList.add("on");clearTimeout(aviso.t);aviso.t=setTimeout(function(){a.classList.remove("on")},2400)}
 function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")}
 function novoId(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -417,7 +417,7 @@ function abaMsgs(){
     '<p class="sub">Toque em <b>Enviar no WhatsApp</b> e escolha o contato: a mensagem já vai pronta. Você pode mudar o texto aqui mesmo.</p>'+
     '<div class="lista">'+(ms.map(function(m){return '<article class="card post" data-mid="'+esc(m.id)+'"><div class="ph"><h3>'+esc(m.t)+'</h3></div>'+
       '<textarea rows="6" data-msg aria-label="'+esc(m.t)+'">'+esc(m.m)+'</textarea>'+
-      '<div class="acoes"><button type="button" class="btn pri min" data-copia-msg>Copiar mensagem</button><a class="btn wa min" data-zap target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(m.m)+'">Enviar no WhatsApp</a>'+
+      '<div class="acoes"><button type="button" class="btn pri min" data-copia-msg>Copiar mensagem</button><a class="btn wa min" data-zap target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text='+encodeURIComponent(m.m)+'">Enviar no WhatsApp</a>'+
       '<button type="button" class="btn lnk" data-renomear>✏️ Renomear</button><button type="button" class="btn del" data-apagar-msg>Excluir</button></div></article>'}).join("")||'<div class="card vazio" style="grid-column:1/-1">Nenhuma mensagem ainda.</div>')+'</div>';
   $("#novaMsg").onclick=function(){formMsg(null)};
 }
@@ -472,7 +472,7 @@ document.addEventListener("change",function(e){
 document.addEventListener("input",function(e){
   var t=e.target,c;
   if(t.hasAttribute("data-leg")){c=achar("posts",t.closest("[data-id]").dataset.id);c.leg=t.value;mexeu(c)}
-  else if(t.hasAttribute("data-msg")){c=achar("msgs",t.closest("[data-mid]").dataset.mid);c.m=t.value;mexeu(c);var z=$("[data-zap]",t.closest("[data-mid]"));if(z)z.href="https://wa.me/?text="+encodeURIComponent(c.m)}
+  else if(t.hasAttribute("data-msg")){c=achar("msgs",t.closest("[data-mid]").dataset.mid);c.m=t.value;mexeu(c);var z=$("[data-zap]",t.closest("[data-mid]"));if(z)z.href="https://api.whatsapp.com/send?text="+encodeURIComponent(c.m)}
   else if(t.hasAttribute("data-lnome")||t.hasAttribute("data-lvalor")){c=achar("links",t.closest("[data-lid]").dataset.lid);if(t.hasAttribute("data-lnome"))c.nome=t.value;else c.valor=t.value;mexeu(c)}
 });
 window.addEventListener("beforeunload",function(e){if(PEND&&!DEMO){enviar();e.preventDefault();e.returnValue=""}});

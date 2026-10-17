@@ -570,7 +570,7 @@ function normTel(t){let n=soNum(t).replace(/^0+/,"");if(n.length===10||n.length=
 function anivTxt(a){return a?a.slice(3,5)+"/"+a.slice(0,2):""}
 function anivDe(txt){const m=(txt||"").match(/(\d{1,2})\D+(\d{1,2})/);if(!m)return "";const d=+m[1],mo=+m[2];if(d<1||d>31||mo<1||mo>12)return "";return String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0")}
 function diasAteAniv(a){if(!a)return 999;const h=new Date();h.setHours(0,0,0,0);let d=new Date(h.getFullYear(),+a.slice(0,2)-1,+a.slice(3,5));if(d<h)d.setFullYear(h.getFullYear()+1);return Math.round((d-h)/864e5)}
-function wa(n,txt){n=soNum(n);if(n&&n.length<=11)n="55"+n;return "https://wa.me/"+n+"?text="+encodeURIComponent(txt)}
+function wa(n,txt){n=soNum(n);if(n&&n.length<=11)n="55"+n;return "https://api.whatsapp.com/send?phone="+n+"&text="+encodeURIComponent(txt)}
 let tt;function toast(s){const t=$("#toast");t.textContent=s;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2600)}
 function copiar(txt,msg){const ok=()=>toast(msg||"Copiado!");if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(txt).then(ok,velho);else velho();
   function velho(){const t=document.createElement("textarea");t.value=txt;t.style.position="fixed";t.style.opacity="0";document.body.appendChild(t);t.select();try{document.execCommand("copy");ok()}catch(e){prompt("Copie:",txt)}t.remove()}}
@@ -1555,7 +1555,7 @@ function rAjustes(){
   $("#pc").innerHTML=`${lupa("aj","Procurar nos ajustes (ex.: Pix, senha, entrega)")}<p class="vazio" id="ajNada" style="display:none">Não achei nada com esse nome nos ajustes.</p>
     <section class="box"><h4>🔗 Seu link</h4><p class="tiny left" style="margin-top:0">Coloque no WhatsApp, na bio do Instagram e no status.</p>
       <div class="copiar"><input type="text" readonly value="${esc(lk)}" aria-label="Seu link"><button class="mini" type="button" data-a="cpL">Copiar</button></div>
-      <div class="btns"><button class="mini" type="button" data-a="cpM">Copiar mensagem pronta</button><a class="mini wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(div)}">Enviar no WhatsApp</a><button class="mini" type="button" data-a="verCli">Ver como cliente</button></div></section>
+      <div class="btns"><button class="mini" type="button" data-a="cpM">Copiar mensagem pronta</button><a class="mini wa" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=${encodeURIComponent(div)}">Enviar no WhatsApp</a><button class="mini" type="button" data-a="verCli">Ver como cliente</button></div></section>
     <section class="box"><h4>🏪 Sua loja</h4>
       ${c("aNome","Nome da loja",N.nome)}${c("aTit","Frase de abertura do catálogo",N.titulo)}
       <div class="fld"><label for="aSub">Texto embaixo da frase</label><textarea id="aSub">${esc(N.subtitulo||"")}</textarea></div>
@@ -1655,7 +1655,7 @@ async function acao(a,b){
     case "shareCat":sheetShare(`Olá! 💛 Este é o catálogo da ${D.negocio.nome}, com as fotos e os preços de todas as peças. Você escolhe, personaliza e já me manda o pedido prontinho:`,linkCliente(),"Catálogo inteiro",null);break;
     case "shareCats":sheet(`<div class="inner"><h2>Enviar uma categoria</h2><p class="desc">A cliente abre o catálogo já mostrando só essas peças.</p>${pCats().map(([k,n])=>`<button class="row" data-a="shareC" data-c="${esc(k)}" type="button"><span><b>${esc(n)}</b>${D.pecas.filter(p=>p.cat===k&&p.ativo!==false).length} peça(s)</span><em class="tag">Enviar →</em></button>`).join("")}</div>`);break;
     case "shareC":{const n=(pCats().find(c=>c[0]===b.dataset.c)||["",""])[1];sheetShare(`Olá! 💛 Separei para você os modelos de ${n.toLowerCase()} da ${D.negocio.nome}, com fotos e preços:`,linkCat(b.dataset.c),n,null);break;}
-    case "shareWa":{const m=$("#shMsg").value+"\n"+b.dataset.url;if(DEMO){toast("Demonstração: abriria o WhatsApp para você escolher a cliente");break}window.open("https://wa.me/?text="+encodeURIComponent(m),"_blank","noopener");break;}
+    case "shareWa":{const m=$("#shMsg").value+"\n"+b.dataset.url;if(DEMO){toast("Demonstração: abriria o WhatsApp para você escolher a cliente");break}window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(m),"_blank","noopener");break;}
     case "shareCopy":copiar($("#shMsg").value+"\n"+b.dataset.url,"Mensagem e link copiados 💛");break;
     case "salvaLojas":{const o={},R=D.negocio.redes||{};REDES.forEach(([k])=>{const el=$("#rd_"+k),v=el?fixUrl(el.value):"";if(v)o[k]=v;else if(DEMO&&R[k]==="#demo"&&el&&el.dataset.demo==="1")o[k]="#demo"});
       salvar("salvarAjustes",{ajustes:{redes:o}},"Redes e lojas salvas · os botões já aparecem no catálogo").catch(()=>{});break;}

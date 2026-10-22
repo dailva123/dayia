@@ -18,7 +18,7 @@
    5. Copie o endereço que termina em /exec.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "2.6";
+var VERSAO_SISTEMA = "2.7";
 var ABAS = {
   Negocios:     ["n","nome","segmento","situacao","teste_ate","criado","dono","whatsapp_dono","email_dono","senha","telefone","endereco","instagram","email_aviso","dias","abre","fecha","intervalo_ini","intervalo_fim","passo","antecedencia","cancelar_ate","observacao","marketing","lancamento_ate"],
   Agendamentos: ["negocio","id","criado","ini","fim","quando","cliente","tel","email","pet","servico","servico_nome","prof","prof_nome","preco","status","origem","obs","conversa","recado_novo","chave","promo"],
@@ -117,6 +117,7 @@ var ACOES = {
   /* ======== CADASTRO DE NEGÓCIO NOVO ======== */
   cadastro: function (d) {
     if (!sim_(cfgVal_("cadastro_aberto"))) throw new Error("O cadastro de novas agendas está fechado. Fale com a DayIA pelo WhatsApp.");
+    limite_("cadastro", 10, 3600, "Muitos cadastros agora. Tente de novo mais tarde.");
     var c = d.dados || {};
     var nome = lim_(c.nome, 60), dono = lim_(c.dono, 60), senha = String(c.senha || "");
     if (!nome) throw new Error("Coloque o nome do seu negócio.");
@@ -234,7 +235,9 @@ var ACOES = {
   /* ======== PAINEL DO NEGÓCIO ======== */
   login: function (d) {
     var N = negocio_(d.n);
-    if (!confereSenha_(N, String(d.senha || ""))) throw new Error("Senha incorreta.");
+    tentativa_("n_" + N.n);
+    if (!confereSenha_(N, String(d.senha || ""))) { errou_("n_" + N.n); throw new Error("Senha incorreta."); }
+    acertou_("n_" + N.n);
     return { ok: true, token: novoToken_(N.n), nome: String(N.nome) };
   },
 
@@ -396,6 +399,15 @@ function horario_(N) {
 }
 function hDia_(H, wd) { var e = H.esp && H.esp[wd]; return e ? { ini: e[0], fim: e[1], almoco: ["", ""] } : H; }
 function hmTxt_(v) { if (v instanceof Date) return ("0" + v.getHours()).slice(-2) + ":" + ("0" + v.getMinutes()).slice(-2); return String(v || "").trim(); }
+/* segurança: no máximo 5 senhas erradas a cada 15 minutos e limite de uso (protege contra robôs) */
+function tentativa_(k) { if (Number(CacheService.getScriptCache().get("lf_" + k) || 0) >= 5) throw new Error("Muitas tentativas erradas. Aguarde 15 minutos e tente de novo."); }
+function errou_(k) { var c = CacheService.getScriptCache(); c.put("lf_" + k, String(Number(c.get("lf_" + k) || 0) + 1), 900); }
+function acertou_(k) { CacheService.getScriptCache().remove("lf_" + k); }
+function limite_(nome, max, seg, msg) {
+  var c = CacheService.getScriptCache(), k = "lim_" + nome + "_" + Math.floor(Date.now() / (seg * 1000)), n = Number(c.get(k) || 0);
+  if (n >= max) throw new Error(msg);
+  c.put(k, String(n + 1), seg);
+}
 function confereSenha_(N, senha) {
   var s = String(N.senha || "");
   if (/^[0-9a-f]{64}$/.test(s)) return hash_(senha) === s;

@@ -14,7 +14,7 @@
    5. Copie o código da implantação e coloque no link do sistema.
    ===================================================================== */
 
-var VERSAO_SISTEMA = "1.4";
+var VERSAO_SISTEMA = "1.5";
 var ABAS = {
   Chamados:  ["id","criado","atualizado","nome","empresa","email","tel","setor","categoria","prioridade","assunto","descricao","patrimonio","app","rid","permite","anexo","status","tecnico","prazo","acesso","nota","minutos","resolvido","chave"],
   Mensagens: ["chamado","quando","de","autor","texto"],
@@ -88,7 +88,7 @@ function responder_(obj) {
 }
 function executar_(d) {
   try {
-    var f = ACOES[d.acao];
+    var f = Object.prototype.hasOwnProperty.call(ACOES, d.acao) ? ACOES[d.acao] : null;
     if (!f) return { erro: "Ação desconhecida." };
     return f(d);
   } catch (x) {
@@ -132,12 +132,15 @@ var ACOES = {
     var c = d.dados || {};
     ["nome", "email", "assunto"].forEach(function (k) { if (!String(c[k] || "").trim()) throw new Error("Preencha o campo " + k + "."); });
     var prio = PRIO[c.prioridade] ? c.prioridade : "Média";
+    limite_("abrir", 30, 3600, "Muitos chamados abertos agora. Tente de novo mais tarde.");
     var anexo = "";
     if (c.anexo && c.anexo.base64) anexo = salvarAnexo_(c.anexo);
     return comTrava_(function () {
       var id = Number(cfg_("proximo_id")) || 1001;
       setCfg_("proximo_id", id + 1);
-      if (d.base) setCfg_("link_sistema", String(d.base).split("#")[0]);
+      /* segurança: o link só é gravado uma vez e só se for do próprio sistema */
+      var b = String(d.base || "").split("#")[0].split("?")[0];
+      if (!cfg_("link_sistema") && /^https:\/\/([\w-]+\.github\.io|([\w-]+\.)?dayia\.com\.br)\/[\w\/.-]*$/.test(b)) setCfg_("link_sistema", b);
       var agora = new Date(), chave = Utilities.getUuid().replace(/-/g, "").slice(0, 10);
       var tecnico = "";
       if (cfg_("distribuicao") === "rodizio") tecnico = proximoRodizio_();
@@ -210,10 +213,14 @@ var ACOES = {
   /* ======== TÉCNICOS ======== */
   login: function (d) {
     var email = String(d.email || "").trim().toLowerCase(), pin = String(d.pin || "").trim();
+    var cc = CacheService.getScriptCache(), kk = "lf_" + email, nn = Number(cc.get(kk) || 0);
+    if (nn >= 5) throw new Error("Muitas tentativas erradas. Aguarde 15 minutos.");
+    limite_("login", 60, 900, "Muitas tentativas de entrar agora. Aguarde alguns minutos.");
     var tec = linhas_("Tecnicos").filter(function (r) {
       return String(r.email).trim().toLowerCase() === email && String(r.pin).trim() === pin && sim_(r.ativo);
     })[0];
-    if (!tec) throw new Error("E-mail ou senha incorretos.");
+    if (!tec) { cc.put(kk, String(nn + 1), 900); throw new Error("E-mail ou senha incorretos."); }
+    cc.remove(kk);
     var token = Utilities.getUuid();
     guardarSessao_(token, JSON.stringify({ nome: tec.nome, email: email, gestor: sim_(tec.gestor) }));
     return { ok: true, token: token, nome: tec.nome, gestor: sim_(tec.gestor), empresa: cfg_("empresa"), distribuicao: cfg_("distribuicao") };
@@ -403,7 +410,10 @@ function pastaAnexos_() {
 function salvarAnexo_(a) {
   var bytes = Utilities.base64Decode(String(a.base64));
   if (bytes.length > 8 * 1024 * 1024) throw new Error("O anexo passa de 8 MB.");
-  var blob = Utilities.newBlob(bytes, a.tipo || "application/octet-stream", lim_(a.nome, 100) || "anexo");
+  var nomeA = lim_(a.nome, 100) || "anexo", tipo = String(a.tipo || "").toLowerCase();
+  var ok = { "image/png": /\.png$/i, "image/jpeg": /\.jpe?g$/i, "image/webp": /\.webp$/i, "application/pdf": /\.pdf$/i, "text/plain": /\.txt$/i };
+  if (!ok[tipo] || !ok[tipo].test(nomeA)) throw new Error("Envie só foto (PNG, JPG), PDF ou texto.");
+  var blob = Utilities.newBlob(bytes, tipo, nomeA);
   var arq = pastaAnexos_().createFile(blob);
   try { arq.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {}
   return arq.getUrl();
@@ -459,6 +469,7 @@ function cfg_(k) {
 }
 function setCfg_(k, v) {
   var sh = aba_("Config"), v0 = sh.getDataRange().getValues();
+  v = txt_(v);
   for (var i = 1; i < v0.length; i++) if (v0[i][0] === k) { sh.getRange(i + 1, 2).setValue(v); return; }
   sh.appendRow([k, v, ""]);
 }
@@ -487,6 +498,12 @@ function chamadoCliente_(d) {
 }
 function versao_() { return Number(PropertiesService.getScriptProperties().getProperty("VERSAO") || 1); }
 function mudou_() { PropertiesService.getScriptProperties().setProperty("VERSAO", String(Date.now())); }
+/* segurança: limite de uso por janela de tempo (protege contra robôs) */
+function limite_(nome, max, seg, msg) {
+  var c = CacheService.getScriptCache(), k = "lim_" + nome + "_" + Math.floor(Date.now() / (seg * 1000)), n = Number(c.get(k) || 0);
+  if (n >= max) throw new Error(msg);
+  c.put(k, String(n + 1), seg);
+}
 function comTrava_(fn) {
   var l = LockService.getScriptLock();
   if (!l.tryLock(20000)) throw new Error("Sistema ocupado, tente de novo em alguns segundos.");

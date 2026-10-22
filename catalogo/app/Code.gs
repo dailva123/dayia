@@ -227,7 +227,9 @@ var ACOES = {
   /* ======== PAINEL DA ARTESÃ ======== */
   entrar: function (d) {
     var N = negocio_(d.n);
-    if (!confereSenha_(N, String(d.senha || ""))) throw new Error("Senha incorreta.");
+    tentativa_("n_" + N.n);
+    if (!confereSenha_(N, String(d.senha || ""))) { errou_("n_" + N.n); throw new Error("Senha incorreta."); }
+    acertou_("n_" + N.n);
     limparSessoes_();
     return { ok: true, token: novoToken_(N.n) };
   },
@@ -237,6 +239,9 @@ var ACOES = {
   admEstado: function () { return { ok: true, temSenha: !!cfgVal_("senha_dayia") }; },
   admEntrar: function (d) {
     var atual = cfgVal_("senha_dayia"), senha = String(d.senha || "");
+    tentativa_("adm");
+    if (atual && hash_("dayia:" + senha) !== atual) { errou_("adm"); throw new Error("Senha incorreta."); }
+    acertou_("adm");
     if (!atual) { if (senha.length < 6) throw new Error("Crie uma senha com pelo menos 6 caracteres."); setCfg_("senha_dayia", hash_("dayia:" + senha)); }
     else if (hash_("dayia:" + senha) !== atual) throw new Error("Senha incorreta.");
     limparSessoes_();
@@ -645,6 +650,10 @@ function completoNeg_(N) {
   o.plano = { plano: String(N.plano || ""), valor: String(N.valor || ""), vence: N.vence ? dataBr_(dataIso_(N.vence) || String(N.vence)) : "", link: String(N.link_pagto || ""), situacao: String(N.situacao || ""), teste_ate: N.teste_ate ? String(legivel_(dataDe_(N.teste_ate))).slice(0, 10) : "" };
   return o;
 }
+/* segurança: no máximo 5 senhas erradas a cada 15 minutos (protege contra robôs) */
+function tentativa_(k) { if (Number(CacheService.getScriptCache().get("lf_" + k) || 0) >= 5) throw new Error("Muitas tentativas erradas. Aguarde 15 minutos e tente de novo."); }
+function errou_(k) { var c = CacheService.getScriptCache(); c.put("lf_" + k, String(Number(c.get("lf_" + k) || 0) + 1), 900); }
+function acertou_(k) { CacheService.getScriptCache().remove("lf_" + k); }
 function confereSenha_(N, senha) {
   var s = String(N.senha || "");
   if (/^[0-9a-f]{64}$/.test(s)) return hash_(senha) === s;

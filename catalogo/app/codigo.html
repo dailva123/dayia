@@ -13,16 +13,16 @@ button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;fon
    Catálogo digital com pedido pelo WhatsApp, painel da artesã,
    encomendas, clientes e promoções. UMA planilha para todas as
    lojas. Cada loja tem o próprio link e o próprio painel.
-   Aba &quot;Negocios&quot;, coluna situacao:
+   Aba "Negocios", coluna situacao:
      teste · ativo · cortesia · suspenso   (igual à Agenda Fácil)
    Colunas plano / valor / vence / link_pagto: o plano de cada loja
-   (aparece em &quot;Meu plano&quot; no painel dela).
+   (aparece em "Meu plano" no painel dela).
 
    Instalação (uma vez só):
-   1. Crie uma planilha Google em branco chamada &quot;Catálogo Fácil&quot;
+   1. Crie uma planilha Google em branco chamada "Catálogo Fácil"
       (na conta da DayIA: dayaraujoia@gmail.com).
    2. Extensões &gt; Apps Script. Apague o que estiver lá e cole este arquivo.
-   3. Selecione a função &quot;configurar&quot; e clique em Executar (autorize).
+   3. Selecione a função "configurar" e clique em Executar (autorize).
    4. Implantar &gt; Nova implantação &gt; App da Web
         Executar como: Eu  ·  Quem pode acessar: Qualquer pessoa
    5. Copie o endereço que termina em /exec e mande para a DayIA.
@@ -30,90 +30,90 @@ button.ok{background:#1F8A5B}textarea{width:100%;height:60vh;margin-top:12px;fon
       Agenda Fácil (começa com os_v2_) e rode a função testarAviso.
    ===================================================================== */
 
-var VERSAO_SISTEMA = &quot;1.0&quot;;
+var VERSAO_SISTEMA = "1.0";
 var ABAS = {
-  Negocios:  [&quot;n&quot;,&quot;nome&quot;,&quot;situacao&quot;,&quot;teste_ate&quot;,&quot;criado&quot;,&quot;dono&quot;,&quot;whatsapp&quot;,&quot;email_aviso&quot;,&quot;senha&quot;,&quot;telefone&quot;,&quot;logo&quot;,&quot;titulo&quot;,&quot;subtitulo&quot;,&quot;aviso&quot;,
-              &quot;cats&quot;,&quot;faixas&quot;,&quot;brinde&quot;,&quot;redes&quot;,&quot;tipos&quot;,&quot;mkt&quot;,&quot;plano&quot;,&quot;valor&quot;,&quot;vence&quot;,&quot;link_pagto&quot;,&quot;trocas&quot;,&quot;pix_chave&quot;,&quot;pix_nome&quot;,&quot;pix_banco&quot;,&quot;pix_modo&quot;,&quot;pix_pct&quot;,&quot;pagtos&quot;],
-  Pecas:     [&quot;negocio&quot;,&quot;id&quot;,&quot;ordem&quot;,&quot;nome&quot;,&quot;cat&quot;,&quot;preco&quot;,&quot;desc&quot;,&quot;fotos&quot;,&quot;videos&quot;,&quot;campos&quot;,&quot;ativo&quot;,&quot;shopee&quot;,&quot;tiktok&quot;,&quot;criado&quot;],
-  Pedidos:   [&quot;negocio&quot;,&quot;id&quot;,&quot;num&quot;,&quot;criado&quot;,&quot;quando&quot;,&quot;cliente_id&quot;,&quot;cliente&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniv&quot;,&quot;tipo&quot;,&quot;entrega&quot;,&quot;itens&quot;,&quot;resumo&quot;,&quot;total&quot;,&quot;sinal&quot;,&quot;pago&quot;,
-              &quot;status&quot;,&quot;obs&quot;,&quot;anot&quot;,&quot;origem&quot;,&quot;chave&quot;,&quot;historico&quot;,&quot;push&quot;,&quot;endereco&quot;,&quot;cep&quot;,&quot;taxa&quot;,&quot;rastreio&quot;,&quot;troca&quot;,&quot;cobrar&quot;,&quot;comprovante&quot;,&quot;comp_em&quot;,&quot;pagamento&quot;,&quot;link_pag&quot;],
-  Clientes:  [&quot;negocio&quot;,&quot;id&quot;,&quot;nome&quot;,&quot;tel&quot;,&quot;email&quot;,&quot;aniv&quot;,&quot;obs&quot;,&quot;origem&quot;,&quot;criado&quot;],
-  Promocoes: [&quot;negocio&quot;,&quot;id&quot;,&quot;titulo&quot;,&quot;desc&quot;,&quot;alvo&quot;,&quot;ate&quot;,&quot;ativa&quot;],
-  Envios:    [&quot;negocio&quot;,&quot;chave&quot;,&quot;cliente&quot;,&quot;dia&quot;],
-  Config:    [&quot;chave&quot;,&quot;valor&quot;,&quot;explicacao&quot;]
+  Negocios:  ["n","nome","situacao","teste_ate","criado","dono","whatsapp","email_aviso","senha","telefone","logo","titulo","subtitulo","aviso",
+              "cats","faixas","brinde","redes","tipos","mkt","plano","valor","vence","link_pagto","trocas","pix_chave","pix_nome","pix_banco","pix_modo","pix_pct","pagtos"],
+  Pecas:     ["negocio","id","ordem","nome","cat","preco","desc","fotos","videos","campos","ativo","shopee","tiktok","criado"],
+  Pedidos:   ["negocio","id","num","criado","quando","cliente_id","cliente","tel","email","aniv","tipo","entrega","itens","resumo","total","sinal","pago",
+              "status","obs","anot","origem","chave","historico","push","endereco","cep","taxa","rastreio","troca","cobrar","comprovante","comp_em","pagamento","link_pag"],
+  Clientes:  ["negocio","id","nome","tel","email","aniv","obs","origem","criado"],
+  Promocoes: ["negocio","id","titulo","desc","alvo","ate","ativa"],
+  Envios:    ["negocio","chave","cliente","dia"],
+  Config:    ["chave","valor","explicacao"]
 };
 var MIN = 60000, DIA = 86400000;
-var STATUS = { novo: &quot;Recebido&quot;, sinal: &quot;Sinal pago&quot;, producao: &quot;Produzindo&quot;, acabamento: &quot;Finalizando&quot;, pronto: &quot;Pronto&quot;, entregue: &quot;Entregue&quot;, troca: &quot;Troca/devolução&quot;, cancelado: &quot;Cancelado&quot; };
-var ABERTOS = [&quot;novo&quot;, &quot;sinal&quot;, &quot;producao&quot;, &quot;acabamento&quot;, &quot;pronto&quot;, &quot;troca&quot;];
-var TROCAS_PADRAO = &quot;Se a peça chegar com defeito, me avise pelo app (botão Pedir troca ou devolução) com uma foto, que eu resolvo: conserto, troca ou devolução do valor.\nCompras pelo catálogo: você pode desistir em até 7 dias depois de receber, com devolução do valor.\nTroca por gosto, tamanho ou cor: só em peças sem personalização, em até 7 dias depois de receber e sem uso.&quot;;
-var FORMAS_PAG = { pix: &quot;Pix&quot;, credito: &quot;Cartão de crédito&quot;, debito: &quot;Cartão de débito&quot;, boleto: &quot;Boleto&quot;, dinheiro: &quot;Dinheiro na retirada ou entrega&quot; };
-var MOTIVOS_TROCA = { defeito: &quot;Veio com defeito&quot;, errado: &quot;Veio diferente do que pedi&quot;, tamanho: &quot;Tamanho ou cor&quot;, desisti: &quot;Desisti da compra&quot;, outro: &quot;Outro motivo&quot; };
-var ENTREGAS_PADRAO = [{ nome: &quot;Retirada&quot;, taxa: 0, retira: true }, { nome: &quot;Entrega na cidade&quot;, taxa: null, retira: false }, { nome: &quot;Correios&quot;, taxa: null, retira: false }, { nome: &quot;Transportadora&quot;, taxa: null, retira: false }];
+var STATUS = { novo: "Recebido", sinal: "Sinal pago", producao: "Produzindo", acabamento: "Finalizando", pronto: "Pronto", entregue: "Entregue", troca: "Troca/devolução", cancelado: "Cancelado" };
+var ABERTOS = ["novo", "sinal", "producao", "acabamento", "pronto", "troca"];
+var TROCAS_PADRAO = "Se a peça chegar com defeito, me avise pelo app (botão Pedir troca ou devolução) com uma foto, que eu resolvo: conserto, troca ou devolução do valor.\nCompras pelo catálogo: você pode desistir em até 7 dias depois de receber, com devolução do valor.\nTroca por gosto, tamanho ou cor: só em peças sem personalização, em até 7 dias depois de receber e sem uso.";
+var FORMAS_PAG = { pix: "Pix", credito: "Cartão de crédito", debito: "Cartão de débito", boleto: "Boleto", dinheiro: "Dinheiro na retirada ou entrega" };
+var MOTIVOS_TROCA = { defeito: "Veio com defeito", errado: "Veio diferente do que pedi", tamanho: "Tamanho ou cor", desisti: "Desisti da compra", outro: "Outro motivo" };
+var ENTREGAS_PADRAO = [{ nome: "Retirada", taxa: 0, retira: true }, { nome: "Entrega na cidade", taxa: null, retira: false }, { nome: "Correios", taxa: null, retira: false }, { nome: "Transportadora", taxa: null, retira: false }];
 var FAIXAS_PADRAO = [{ min: 1, desc: 0 }, { min: 30, desc: 0.10 }, { min: 50, desc: 0.15 }, { min: 100, desc: 0.20 }];
 var MKT_PADRAO = { limite: 20, hIni: 9, hFim: 19, descAniv: 10,
-  msgAniv: &quot;Olá, {nome}! 🎉 A {loja} deseja um feliz aniversário! Para comemorar, você ganha {desconto}% de desconto na sua próxima peça. É só me chamar aqui 💛&quot; };
+  msgAniv: "Olá, {nome}! 🎉 A {loja} deseja um feliz aniversário! Para comemorar, você ganha {desconto}% de desconto na sua próxima peça. É só me chamar aqui 💛" };
 
 /* ---------------- instalação ---------------- */
 function configurar() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error(&quot;Abra este script a partir da planilha (Extensões &gt; Apps Script).&quot;);
-  PropertiesService.getScriptProperties().setProperty(&quot;PLANILHA&quot;, ss.getId());
+  if (!ss) throw new Error("Abra este script a partir da planilha (Extensões &gt; Apps Script).");
+  PropertiesService.getScriptProperties().setProperty("PLANILHA", ss.getId());
   Object.keys(ABAS).forEach(function (nome) {
     var sh = ss.getSheetByName(nome) || ss.insertSheet(nome);
-    if (sh.getLastRow() === 0) { sh.appendRow(ABAS[nome]); sh.setFrozenRows(1); sh.getRange(1, 1, 1, ABAS[nome].length).setFontWeight(&quot;bold&quot;).setBackground(&quot;#4E3D31&quot;).setFontColor(&quot;#FFFFFF&quot;); }
+    if (sh.getLastRow() === 0) { sh.appendRow(ABAS[nome]); sh.setFrozenRows(1); sh.getRange(1, 1, 1, ABAS[nome].length).setFontWeight("bold").setBackground("#4E3D31").setFontColor("#FFFFFF"); }
   });
-  var cfg = ss.getSheetByName(&quot;Config&quot;), tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
-  [[&quot;dias_teste&quot;, &quot;30&quot;, &quot;Dias de teste grátis para loja nova&quot;],
-   [&quot;email_admin&quot;, &quot;dayaraujoia@gmail.com&quot;, &quot;E-mail da DayIA: recebe todo dia de manhã quem está vencendo e o lembrete dos links de pagamento&quot;],
-   [&quot;dias_tolerancia&quot;, &quot;3&quot;, &quot;Dias que o catálogo continua no ar depois do vencimento, esperando o pagamento&quot;],
-   [&quot;whatsapp_dayia&quot;, &quot;5519999389118&quot;, &quot;WhatsApp que aparece quando o teste vence ou a loja está suspensa&quot;],
-   [&quot;fuso_minutos&quot;, &quot;-180&quot;, &quot;Fuso horário (Brasília = -180). Não mexa.&quot;],
-   [&quot;proximo_id&quot;, &quot;1&quot;, &quot;Uso interno (não mexa)&quot;],
-   [&quot;link_base&quot;, &quot;&quot;, &quot;Preenchido sozinho&quot;],
-   [&quot;pasta_midia&quot;, &quot;&quot;, &quot;Preenchido sozinho (pasta do Drive com as fotos e vídeos)&quot;],
-   [&quot;push_chave&quot;, &quot;&quot;, &quot;Chave do OneSignal (a mesma da Agenda Fácil, começa com os_v2_)&quot;],
-   [&quot;senha_dayia&quot;, &quot;&quot;, &quot;Senha da Central da DayIA (criada no primeiro acesso, fica guardada em código)&quot;]
+  var cfg = ss.getSheetByName("Config"), tem = cfg.getDataRange().getValues().map(function (r) { return r[0]; });
+  [["dias_teste", "30", "Dias de teste grátis para loja nova"],
+   ["email_admin", "dayaraujoia@gmail.com", "E-mail da DayIA: recebe todo dia de manhã quem está vencendo e o lembrete dos links de pagamento"],
+   ["dias_tolerancia", "3", "Dias que o catálogo continua no ar depois do vencimento, esperando o pagamento"],
+   ["whatsapp_dayia", "5519999389118", "WhatsApp que aparece quando o teste vence ou a loja está suspensa"],
+   ["fuso_minutos", "-180", "Fuso horário (Brasília = -180). Não mexa."],
+   ["proximo_id", "1", "Uso interno (não mexa)"],
+   ["link_base", "", "Preenchido sozinho"],
+   ["pasta_midia", "", "Preenchido sozinho (pasta do Drive com as fotos e vídeos)"],
+   ["push_chave", "", "Chave do OneSignal (a mesma da Agenda Fácil, começa com os_v2_)"],
+   ["senha_dayia", "", "Senha da Central da DayIA (criada no primeiro acesso, fica guardada em código)"]
   ].forEach(function (p) { if (tem.indexOf(p[0]) &lt; 0) cfg.appendRow([p[0], txt_(p[1]), p[2]]); });
   cfg.autoResizeColumns(1, 3);
-  if (!negocio_(&quot;bab-atelie&quot;, true)) criarBab_();
-  var sobra = ss.getSheetByName(&quot;Página1&quot;) || ss.getSheetByName(&quot;Sheet1&quot;);
+  if (!negocio_("bab-atelie", true)) criarBab_();
+  var sobra = ss.getSheetByName("Página1") || ss.getSheetByName("Sheet1");
   if (sobra &amp;&amp; sobra.getLastRow() === 0 &amp;&amp; ss.getSheets().length &gt; 3) ss.deleteSheet(sobra);
   pasta_();
-  if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === &quot;avisoDiario&quot;; }))
-    ScriptApp.newTrigger(&quot;avisoDiario&quot;).timeBased().everyDays(1).atHour(8).create();
+  if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === "avisoDiario"; }))
+    ScriptApp.newTrigger("avisoDiario").timeBased().everyDays(1).atHour(8).create();
   MailApp.getRemainingDailyQuota();
-  return &quot;Pronto! Agora faça a implantação como App da Web.&quot;;
+  return "Pronto! Agora faça a implantação como App da Web.";
 }
-var FOTOS_BASE = &quot;https://app.dayia.com.br/catalogo/app/&quot;;
-var CATS_BAB = [[&quot;lacos&quot;, &quot;Laços e tiaras&quot;], [&quot;canetas&quot;, &quot;Canetas&quot;], [&quot;topos&quot;, &quot;Topos de bolo&quot;], [&quot;cadernetas&quot;, &quot;Cadernetas&quot;], [&quot;documentos&quot;, &quot;Porta-documentos&quot;], [&quot;bolsas&quot;, &quot;Bolsas&quot;]];
-var PECAS_BAB = [{&quot;id&quot;: &quot;laco-trio&quot;, &quot;ordem&quot;: 1, &quot;nome&quot;: &quot;Trio de laços&quot;, &quot;cat&quot;: &quot;lacos&quot;, &quot;preco&quot;: 35, &quot;desc&quot;: &quot;Trio encantador e básico. Você escolhe a cor principal.&quot;, &quot;fotos&quot;: [&quot;demo/laco-trio.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;cor&quot;: 1}}, {&quot;id&quot;: &quot;tiara-encantada&quot;, &quot;ordem&quot;: 2, &quot;nome&quot;: &quot;Tiara encantada&quot;, &quot;cat&quot;: &quot;lacos&quot;, &quot;preco&quot;: 45, &quot;desc&quot;: &quot;Tiara com borboleta e florzinhas. Um encanto!&quot;, &quot;fotos&quot;: [&quot;demo/tiara1.jpg&quot;, &quot;demo/tiara3.jpg&quot;], &quot;videos&quot;: [&quot;demo/tiara.mp4&quot;], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;laco-organza&quot;, &quot;ordem&quot;: 3, &quot;nome&quot;: &quot;Laço de organza preto&quot;, &quot;cat&quot;: &quot;lacos&quot;, &quot;preco&quot;: 29, &quot;desc&quot;: &quot;Elegância que encanta em cada detalhe.&quot;, &quot;fotos&quot;: [&quot;demo/laco-preto.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;kit-lacos&quot;, &quot;ordem&quot;: 4, &quot;nome&quot;: &quot;Kit de laços temático&quot;, &quot;cat&quot;: &quot;lacos&quot;, &quot;preco&quot;: 39, &quot;desc&quot;: &quot;3 laços com cartela temática. Lindo para presentear.&quot;, &quot;fotos&quot;: [&quot;demo/kit-criancas.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;cor&quot;: 1, &quot;tema&quot;: 1, &quot;lembr&quot;: 1}}, {&quot;id&quot;: &quot;caneta&quot;, &quot;ordem&quot;: 5, &quot;nome&quot;: &quot;Caneta pompom personalizada&quot;, &quot;cat&quot;: &quot;canetas&quot;, &quot;preco&quot;: 15, &quot;desc&quot;: &quot;Com o nome em letrinhas e pompom. A queridinha das lembrancinhas!&quot;, &quot;fotos&quot;: [&quot;demo/caneta.jpg&quot;, &quot;demo/caneta2.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;nome&quot;: 1, &quot;cor&quot;: 1, &quot;lembr&quot;: 1}}, {&quot;id&quot;: &quot;topo&quot;, &quot;ordem&quot;: 6, &quot;nome&quot;: &quot;Topo de bolo personalizado&quot;, &quot;cat&quot;: &quot;topos&quot;, &quot;preco&quot;: 45, &quot;desc&quot;: &quot;Com o nome, a idade e o tema da festa.&quot;, &quot;fotos&quot;: [&quot;demo/topo-alice.jpg&quot;, &quot;demo/topo-stitch.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;nome&quot;: 1, &quot;idade&quot;: 1, &quot;tema&quot;: 1}}, {&quot;id&quot;: &quot;cad-safari&quot;, &quot;ordem&quot;: 7, &quot;nome&quot;: &quot;Caderneta de saúde · Safari&quot;, &quot;cat&quot;: &quot;cadernetas&quot;, &quot;preco&quot;: 65, &quot;desc&quot;: &quot;Capa dura com o nome do bebê e os bichinhos do safari.&quot;, &quot;fotos&quot;: [&quot;demo/cad-oliver.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;nome&quot;: 1}}, {&quot;id&quot;: &quot;cad-floral&quot;, &quot;ordem&quot;: 8, &quot;nome&quot;: &quot;Caderneta de saúde · Floral&quot;, &quot;cat&quot;: &quot;cadernetas&quot;, &quot;preco&quot;: 65, &quot;desc&quot;: &quot;Capa dura floral com coração e o nome do bebê.&quot;, &quot;fotos&quot;: [&quot;demo/cad-rebeca.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;nome&quot;: 1}}, {&quot;id&quot;: &quot;cad-cereja&quot;, &quot;ordem&quot;: 9, &quot;nome&quot;: &quot;Caderneta · Cerejinha&quot;, &quot;cat&quot;: &quot;cadernetas&quot;, &quot;preco&quot;: 65, &quot;desc&quot;: &quot;Estampa cerejinha com o nome.&quot;, &quot;fotos&quot;: [&quot;demo/cad-livia.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;nome&quot;: 1}}, {&quot;id&quot;: &quot;cad-carrinho&quot;, &quot;ordem&quot;: 10, &quot;nome&quot;: &quot;Caderneta de saúde · Carrinho&quot;, &quot;cat&quot;: &quot;cadernetas&quot;, &quot;preco&quot;: 65, &quot;desc&quot;: &quot;Delicada, com carrinho de bebê.&quot;, &quot;fotos&quot;: [&quot;demo/cad-carrinho.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;nome&quot;: 1}}, {&quot;id&quot;: &quot;bolsa-bege&quot;, &quot;ordem&quot;: 11, &quot;nome&quot;: &quot;Bolsa na tela · Bege&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 189, &quot;desc&quot;: &quot;Feita à mão, com alça de mão e corrente dourada. Estilo e elegância para o dia a dia.&quot;, &quot;fotos&quot;: [&quot;demo/bolsa-bege1.jpg&quot;, &quot;demo/bolsa-bege2.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;bolsa-preta&quot;, &quot;ordem&quot;: 12, &quot;nome&quot;: &quot;Bolsa na tela · Preta&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 189, &quot;desc&quot;: &quot;Feita à mão, com fecho dourado e alça trançada.&quot;, &quot;fotos&quot;: [&quot;demo/bolsa-preta.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;bolsa-rose&quot;, &quot;ordem&quot;: 13, &quot;nome&quot;: &quot;Bolsa na tela · Rosê&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 179, &quot;desc&quot;: &quot;Feita à mão, com corrente dourada.&quot;, &quot;fotos&quot;: [&quot;demo/bolsa-rose.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;bolsa-bordo&quot;, &quot;ordem&quot;: 14, &quot;nome&quot;: &quot;Bolsa na tela · Bordô e dourada&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 199, &quot;desc&quot;: &quot;Feita à mão, com corrente e fecho dourados.&quot;, &quot;fotos&quot;: [&quot;demo/bolsa-bordo.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;bolsa-vermelha&quot;, &quot;ordem&quot;: 15, &quot;nome&quot;: &quot;Bolsa na tela · Vermelha com alça&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 189, &quot;desc&quot;: &quot;Feita à mão, com alça trançada e corrente dourada.&quot;, &quot;fotos&quot;: [&quot;demo/b-vermelha.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;bolsa-nude&quot;, &quot;ordem&quot;: 16, &quot;nome&quot;: &quot;Bolsa na tela · Nude e branca&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 179, &quot;desc&quot;: &quot;Feita à mão, em zigue-zague, com corrente dourada.&quot;, &quot;fotos&quot;: [&quot;demo/b-nude.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;bolsa-royal&quot;, &quot;ordem&quot;: 17, &quot;nome&quot;: &quot;Bolsa na tela · Azul royal&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 199, &quot;desc&quot;: &quot;Feita à mão, com alça trançada e corrente prateada.&quot;, &quot;fotos&quot;: [&quot;demo/b-azul.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;bolsa-pink&quot;, &quot;ordem&quot;: 18, &quot;nome&quot;: &quot;Bolsa na tela · Pink&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 179, &quot;desc&quot;: &quot;Feita à mão, com corrente dourada.&quot;, &quot;fotos&quot;: [&quot;demo/b-pink.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;bolsa-verm-zig&quot;, &quot;ordem&quot;: 19, &quot;nome&quot;: &quot;Bolsa na tela · Vermelha e branca&quot;, &quot;cat&quot;: &quot;bolsas&quot;, &quot;preco&quot;: 179, &quot;desc&quot;: &quot;Feita à mão, em zigue-zague, com corrente dourada.&quot;, &quot;fotos&quot;: [&quot;demo/b-verm-zig.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {}}, {&quot;id&quot;: &quot;porta-doc&quot;, &quot;ordem&quot;: 20, &quot;nome&quot;: &quot;Porta-documentos personalizado&quot;, &quot;cat&quot;: &quot;documentos&quot;, &quot;preco&quot;: 55, &quot;desc&quot;: &quot;Para guardar os documentos com o nome e o tema que você escolher.&quot;, &quot;fotos&quot;: [&quot;demo/porta-pedro.jpg&quot;], &quot;videos&quot;: [], &quot;campos&quot;: {&quot;nome&quot;: 1, &quot;tema&quot;: 1}}];
+var FOTOS_BASE = "https://app.dayia.com.br/catalogo/app/";
+var CATS_BAB = [["lacos", "Laços e tiaras"], ["canetas", "Canetas"], ["topos", "Topos de bolo"], ["cadernetas", "Cadernetas"], ["documentos", "Porta-documentos"], ["bolsas", "Bolsas"]];
+var PECAS_BAB = [{"id": "laco-trio", "ordem": 1, "nome": "Trio de laços", "cat": "lacos", "preco": 35, "desc": "Trio encantador e básico. Você escolhe a cor principal.", "fotos": ["demo/laco-trio.jpg"], "videos": [], "campos": {"cor": 1}}, {"id": "tiara-encantada", "ordem": 2, "nome": "Tiara encantada", "cat": "lacos", "preco": 45, "desc": "Tiara com borboleta e florzinhas. Um encanto!", "fotos": ["demo/tiara1.jpg", "demo/tiara3.jpg"], "videos": ["demo/tiara.mp4"], "campos": {}}, {"id": "laco-organza", "ordem": 3, "nome": "Laço de organza preto", "cat": "lacos", "preco": 29, "desc": "Elegância que encanta em cada detalhe.", "fotos": ["demo/laco-preto.jpg"], "videos": [], "campos": {}}, {"id": "kit-lacos", "ordem": 4, "nome": "Kit de laços temático", "cat": "lacos", "preco": 39, "desc": "3 laços com cartela temática. Lindo para presentear.", "fotos": ["demo/kit-criancas.jpg"], "videos": [], "campos": {"cor": 1, "tema": 1, "lembr": 1}}, {"id": "caneta", "ordem": 5, "nome": "Caneta pompom personalizada", "cat": "canetas", "preco": 15, "desc": "Com o nome em letrinhas e pompom. A queridinha das lembrancinhas!", "fotos": ["demo/caneta.jpg", "demo/caneta2.jpg"], "videos": [], "campos": {"nome": 1, "cor": 1, "lembr": 1}}, {"id": "topo", "ordem": 6, "nome": "Topo de bolo personalizado", "cat": "topos", "preco": 45, "desc": "Com o nome, a idade e o tema da festa.", "fotos": ["demo/topo-alice.jpg", "demo/topo-stitch.jpg"], "videos": [], "campos": {"nome": 1, "idade": 1, "tema": 1}}, {"id": "cad-safari", "ordem": 7, "nome": "Caderneta de saúde · Safari", "cat": "cadernetas", "preco": 65, "desc": "Capa dura com o nome do bebê e os bichinhos do safari.", "fotos": ["demo/cad-oliver.jpg"], "videos": [], "campos": {"nome": 1}}, {"id": "cad-floral", "ordem": 8, "nome": "Caderneta de saúde · Floral", "cat": "cadernetas", "preco": 65, "desc": "Capa dura floral com coração e o nome do bebê.", "fotos": ["demo/cad-rebeca.jpg"], "videos": [], "campos": {"nome": 1}}, {"id": "cad-cereja", "ordem": 9, "nome": "Caderneta · Cerejinha", "cat": "cadernetas", "preco": 65, "desc": "Estampa cerejinha com o nome.", "fotos": ["demo/cad-livia.jpg"], "videos": [], "campos": {"nome": 1}}, {"id": "cad-carrinho", "ordem": 10, "nome": "Caderneta de saúde · Carrinho", "cat": "cadernetas", "preco": 65, "desc": "Delicada, com carrinho de bebê.", "fotos": ["demo/cad-carrinho.jpg"], "videos": [], "campos": {"nome": 1}}, {"id": "bolsa-bege", "ordem": 11, "nome": "Bolsa na tela · Bege", "cat": "bolsas", "preco": 189, "desc": "Feita à mão, com alça de mão e corrente dourada. Estilo e elegância para o dia a dia.", "fotos": ["demo/bolsa-bege1.jpg", "demo/bolsa-bege2.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-preta", "ordem": 12, "nome": "Bolsa na tela · Preta", "cat": "bolsas", "preco": 189, "desc": "Feita à mão, com fecho dourado e alça trançada.", "fotos": ["demo/bolsa-preta.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-rose", "ordem": 13, "nome": "Bolsa na tela · Rosê", "cat": "bolsas", "preco": 179, "desc": "Feita à mão, com corrente dourada.", "fotos": ["demo/bolsa-rose.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-bordo", "ordem": 14, "nome": "Bolsa na tela · Bordô e dourada", "cat": "bolsas", "preco": 199, "desc": "Feita à mão, com corrente e fecho dourados.", "fotos": ["demo/bolsa-bordo.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-vermelha", "ordem": 15, "nome": "Bolsa na tela · Vermelha com alça", "cat": "bolsas", "preco": 189, "desc": "Feita à mão, com alça trançada e corrente dourada.", "fotos": ["demo/b-vermelha.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-nude", "ordem": 16, "nome": "Bolsa na tela · Nude e branca", "cat": "bolsas", "preco": 179, "desc": "Feita à mão, em zigue-zague, com corrente dourada.", "fotos": ["demo/b-nude.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-royal", "ordem": 17, "nome": "Bolsa na tela · Azul royal", "cat": "bolsas", "preco": 199, "desc": "Feita à mão, com alça trançada e corrente prateada.", "fotos": ["demo/b-azul.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-pink", "ordem": 18, "nome": "Bolsa na tela · Pink", "cat": "bolsas", "preco": 179, "desc": "Feita à mão, com corrente dourada.", "fotos": ["demo/b-pink.jpg"], "videos": [], "campos": {}}, {"id": "bolsa-verm-zig", "ordem": 19, "nome": "Bolsa na tela · Vermelha e branca", "cat": "bolsas", "preco": 179, "desc": "Feita à mão, em zigue-zague, com corrente dourada.", "fotos": ["demo/b-verm-zig.jpg"], "videos": [], "campos": {}}, {"id": "porta-doc", "ordem": 20, "nome": "Porta-documentos personalizado", "cat": "documentos", "preco": 55, "desc": "Para guardar os documentos com o nome e o tema que você escolher.", "fotos": ["demo/porta-pedro.jpg"], "videos": [], "campos": {"nome": 1, "tema": 1}}];
 function criarBab_() {
-  inserir_(&quot;Negocios&quot;, {
-    n: &quot;bab-atelie&quot;, nome: &quot;B.A.B Ateliê&quot;, situacao: &quot;teste&quot;, teste_ate: legivel_(Date.now() + (Number(cfgVal_(&quot;dias_teste&quot;)) || 30) * DIA).slice(0, 10),
-    criado: legivel_(Date.now()), dono: &quot;B.A.B Ateliê&quot;, whatsapp: &quot;5519996977016&quot;, email_aviso: &quot;&quot;, senha: hash_(&quot;1234&quot;), telefone: &quot;(19) 99697-7016&quot;,
-    logo: &quot;&quot;, titulo: &quot;Laços, tiaras, bolsas e papelaria personalizada ✨&quot;, subtitulo: &quot;Escolha, personalize do seu jeito e envie o pedido prontinho pelo WhatsApp.&quot;,
-    aviso: &quot;&quot;, cats: JSON.stringify(CATS_BAB), faixas: JSON.stringify(FAIXAS_PADRAO),
-    brinde: JSON.stringify({ cada: 100, txt: &quot;maleta para guardar seus laços&quot;, txtPl: &quot;maletas para guardar seus laços&quot;, img: FOTOS_BASE + &quot;demo/maleta.jpg&quot; }),
-    redes: JSON.stringify({ instagram: &quot;https://www.instagram.com/bab.atelie&quot; }), tipos: JSON.stringify(ENTREGAS_PADRAO), mkt: JSON.stringify(MKT_PADRAO),
-    plano: &quot;&quot;, valor: &quot;&quot;, vence: &quot;&quot;, link_pagto: &quot;&quot;
+  inserir_("Negocios", {
+    n: "bab-atelie", nome: "B.A.B Ateliê", situacao: "teste", teste_ate: legivel_(Date.now() + (Number(cfgVal_("dias_teste")) || 30) * DIA).slice(0, 10),
+    criado: legivel_(Date.now()), dono: "B.A.B Ateliê", whatsapp: "5519996977016", email_aviso: "", senha: hash_("1234"), telefone: "(19) 99697-7016",
+    logo: "", titulo: "Laços, tiaras, bolsas e papelaria personalizada ✨", subtitulo: "Escolha, personalize do seu jeito e envie o pedido prontinho pelo WhatsApp.",
+    aviso: "", cats: JSON.stringify(CATS_BAB), faixas: JSON.stringify(FAIXAS_PADRAO),
+    brinde: JSON.stringify({ cada: 100, txt: "maleta para guardar seus laços", txtPl: "maletas para guardar seus laços", img: FOTOS_BASE + "demo/maleta.jpg" }),
+    redes: JSON.stringify({ instagram: "https://www.instagram.com/bab.atelie" }), tipos: JSON.stringify(ENTREGAS_PADRAO), mkt: JSON.stringify(MKT_PADRAO),
+    plano: "", valor: "", vence: "", link_pagto: ""
   });
   var agora = Date.now();
   PECAS_BAB.forEach(function (p, i) {
-    inserir_(&quot;Pecas&quot;, { negocio: &quot;bab-atelie&quot;, id: p.id, ordem: i + 1, nome: p.nome, cat: p.cat, preco: p.preco, desc: p.desc,
+    inserir_("Pecas", { negocio: "bab-atelie", id: p.id, ordem: i + 1, nome: p.nome, cat: p.cat, preco: p.preco, desc: p.desc,
       fotos: JSON.stringify(p.fotos.map(function (f) { return FOTOS_BASE + f; })), videos: JSON.stringify((p.videos || []).map(function (f) { return FOTOS_BASE + f; })),
-      campos: JSON.stringify(p.campos || {}), ativo: &quot;SIM&quot;, shopee: &quot;&quot;, tiktok: &quot;&quot;, criado: agora + i });
+      campos: JSON.stringify(p.campos || {}), ativo: "SIM", shopee: "", tiktok: "", criado: agora + i });
   });
 }
 
 /* ---------------- entrada ---------------- */
-function doGet(e) { var p = (e &amp;&amp; e.parameter) || {}; if (p.acao) return responder_(executar_(p)); return ContentService.createTextOutput(&quot;Catálogo Fácil by DayIA · servidor funcionando (versão &quot; + VERSAO_SISTEMA + &quot;).&quot;); }
-function doPost(e) { var d = {}; try { d = JSON.parse(e.postData.contents || &quot;{}&quot;); } catch (x) { return responder_({ erro: &quot;Pedido inválido.&quot; }); } return responder_(executar_(d)); }
+function doGet(e) { var p = (e &amp;&amp; e.parameter) || {}; if (p.acao) return responder_(executar_(p)); return ContentService.createTextOutput("Catálogo Fácil by DayIA · servidor funcionando (versão " + VERSAO_SISTEMA + ")."); }
+function doPost(e) { var d = {}; try { d = JSON.parse(e.postData.contents || "{}"); } catch (x) { return responder_({ erro: "Pedido inválido." }); } return responder_(executar_(d)); }
 function responder_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
-var TRAVADAS = [&quot;status&quot;,&quot;novaEncomenda&quot;,&quot;verFoto&quot;,&quot;verComprovante&quot;,&quot;subirMidia&quot;,&quot;salvarPeca&quot;,&quot;esconderPeca&quot;,&quot;excluirPeca&quot;,&quot;salvarCliente&quot;,&quot;excluirCliente&quot;,&quot;importarClientes&quot;,&quot;salvarPromo&quot;,&quot;excluirPromo&quot;,&quot;envio&quot;,&quot;salvarAjustes&quot;];
+var TRAVADAS = ["status","novaEncomenda","verFoto","verComprovante","subirMidia","salvarPeca","esconderPeca","excluirPeca","salvarCliente","excluirCliente","importarClientes","salvarPromo","excluirPromo","envio","salvarAjustes"];
 function executar_(d) {
   try {
-    var f = ACOES[d.acao]; if (!f) return { erro: &quot;Ação desconhecida.&quot; };
-    if (TRAVADAS.indexOf(d.acao) &gt;= 0) { var L = liberado_(negocio_(sessao_(d))); if (!L.ok) throw new Error(L.situacao === &quot;suspenso&quot; ? &quot;Seu catálogo está pausado. Fale com a DayIA.&quot; : &quot;Seu plano venceu. Para continuar usando, faça o pagamento em Ajustes › Meu plano.&quot;); }
+    var f = ACOES[d.acao]; if (!f) return { erro: "Ação desconhecida." };
+    if (TRAVADAS.indexOf(d.acao) &gt;= 0) { var L = liberado_(negocio_(sessao_(d))); if (!L.ok) throw new Error(L.situacao === "suspenso" ? "Seu catálogo está pausado. Fale com a DayIA." : "Seu plano venceu. Para continuar usando, faça o pagamento em Ajustes › Meu plano."); }
     return f(d);
   } catch (x) { return { erro: String(x &amp;&amp; x.message || x) }; }
 }
@@ -124,38 +124,38 @@ var ACOES = {
   /* ======== CATÁLOGO DA CLIENTE ======== */
   info: function (d) {
     var N = negocio_(d.n), L = liberado_(N);
-    if (!L.ok) return { ok: true, bloqueado: true, negocio: { nome: String(N.nome), logo: String(N.logo || &quot;&quot;) }, whatsapp: L.whatsapp };
+    if (!L.ok) return { ok: true, bloqueado: true, negocio: { nome: String(N.nome), logo: String(N.logo || "") }, whatsapp: L.whatsapp };
     return { ok: true, negocio: publicoNeg_(N), pecas: pecas_(N.n).filter(function (p) { return p.ativo; }), promos: promosAtivas_(N.n), agora: Date.now(), fuso: fuso_() };
   },
   pedir: function (d) {
     var N = negocio_(d.n);
-    if (!liberado_(N).ok) throw new Error(&quot;Os pedidos pelo catálogo estão indisponíveis no momento.&quot;);
+    if (!liberado_(N).ok) throw new Error("Os pedidos pelo catálogo estão indisponíveis no momento.");
     var c = d.dados || {};
-    if (!lim_(c.nome, 80)) throw new Error(&quot;Coloque o seu nome.&quot;);
-    if (soDig_(c.tel).length &lt; 10) throw new Error(&quot;Coloque o seu WhatsApp com DDD.&quot;);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(lim_(c.email, 120))) throw new Error(&quot;Coloque um e-mail válido para receber a confirmação.&quot;);
+    if (!lim_(c.nome, 80)) throw new Error("Coloque o seu nome.");
+    if (soDig_(c.tel).length &lt; 10) throw new Error("Coloque o seu WhatsApp com DDD.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(lim_(c.email, 120))) throw new Error("Coloque um e-mail válido para receber a confirmação.");
     var calc = calcular_(N, c.itens || []);
-    if (!calc.itens.length) throw new Error(&quot;Escolha pelo menos uma peça.&quot;);
-    var ens = entregas_(N), en = ens.filter(function (e) { return e.nome === String(c.tipo || &quot;&quot;); })[0] || ens[0] || { nome: &quot;Retirada&quot;, taxa: 0, retira: true };
-    var endereco = en.retira ? &quot;&quot; : lim_(c.endereco, 200), cep = en.retira ? &quot;&quot; : soDig_(c.cep).slice(0, 8);
-    if (!en.retira &amp;&amp; endereco.length &lt; 8) throw new Error(&quot;Coloque o endereço para a entrega (rua, número e bairro).&quot;);
-    if (!en.retira &amp;&amp; cep.length !== 8) throw new Error(&quot;Coloque o CEP com 8 números.&quot;);
-    var taxa = en.taxa === null ? &quot;&quot; : en.taxa, pg = pagNeg_(N), forma = String(c.pagamento || &quot;&quot;);
-    if (pg.formas.length &amp;&amp; pg.formas.indexOf(forma) &lt; 0) { if (pg.formas.length === 1) forma = pg.formas[0]; else throw new Error(&quot;Escolha como você quer pagar.&quot;); }
-    if (!pg.formas.length) forma = &quot;&quot;;
+    if (!calc.itens.length) throw new Error("Escolha pelo menos uma peça.");
+    var ens = entregas_(N), en = ens.filter(function (e) { return e.nome === String(c.tipo || ""); })[0] || ens[0] || { nome: "Retirada", taxa: 0, retira: true };
+    var endereco = en.retira ? "" : lim_(c.endereco, 200), cep = en.retira ? "" : soDig_(c.cep).slice(0, 8);
+    if (!en.retira &amp;&amp; endereco.length &lt; 8) throw new Error("Coloque o endereço para a entrega (rua, número e bairro).");
+    if (!en.retira &amp;&amp; cep.length !== 8) throw new Error("Coloque o CEP com 8 números.");
+    var taxa = en.taxa === null ? "" : en.taxa, pg = pagNeg_(N), forma = String(c.pagamento || "");
+    if (pg.formas.length &amp;&amp; pg.formas.indexOf(forma) &lt; 0) { if (pg.formas.length === 1) forma = pg.formas[0]; else throw new Error("Escolha como você quer pagar."); }
+    if (!pg.formas.length) forma = "";
     return comTrava_(function () {
       var id = proximoId_(), agora = Date.now();
-      calc.itens.forEach(function (it, i) { var orig = (c.itens || [])[it._i] || {}; if (orig.foto &amp;&amp; orig.foto.dados) it.foto_id = salvarArquivo_(N, orig.foto, &quot;pedido&quot; + id + &quot;_&quot; + (i + 1), false); delete it._i; });
-      var cli = clienteUpsert_(N.n, { nome: c.nome, tel: c.tel, email: c.email, aniv: anivDe_(c.aniv) }, &quot;pedido&quot;);
+      calc.itens.forEach(function (it, i) { var orig = (c.itens || [])[it._i] || {}; if (orig.foto &amp;&amp; orig.foto.dados) it.foto_id = salvarArquivo_(N, orig.foto, "pedido" + id + "_" + (i + 1), false); delete it._i; });
+      var cli = clienteUpsert_(N.n, { nome: c.nome, tel: c.tel, email: c.email, aniv: anivDe_(c.aniv) }, "pedido");
       var p = { negocio: N.n, id: id, num: proximoNum_(N.n), criado: agora, quando: legivel_(agora), cliente_id: cli.id, cliente: lim_(c.nome, 80), tel: lim_(c.tel, 30), email: lim_(c.email, 120),
-        aniv: anivDe_(c.aniv), tipo: en.nome, endereco: endereco, cep: cep, taxa: taxa, entrega: dataIso_(c.entrega), itens: JSON.stringify(calc.itens), resumo: calc.resumo, total: Math.round((calc.total + (taxa === &quot;&quot; ? 0 : taxa)) * 100) / 100, sinal: 0, pago: &quot;&quot;,
-        pagamento: forma, link_pag: &quot;&quot;, cobrar: cobrarDe_(N, Math.round((calc.total + (taxa === &quot;&quot; ? 0 : taxa)) * 100) / 100, forma), status: &quot;novo&quot;, obs: lim_(c.obs, 400), anot: &quot;&quot;, origem: &quot;catalogo&quot;, chave: Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 10), historico: JSON.stringify([{ s: &quot;novo&quot;, t: agora }]) };
-      inserir_(&quot;Pedidos&quot;, p);
-      if (d.base) setCfg_(&quot;link_base&quot;, String(d.base).split(&quot;?&quot;)[0].split(&quot;#&quot;)[0]);
+        aniv: anivDe_(c.aniv), tipo: en.nome, endereco: endereco, cep: cep, taxa: taxa, entrega: dataIso_(c.entrega), itens: JSON.stringify(calc.itens), resumo: calc.resumo, total: Math.round((calc.total + (taxa === "" ? 0 : taxa)) * 100) / 100, sinal: 0, pago: "",
+        pagamento: forma, link_pag: "", cobrar: cobrarDe_(N, Math.round((calc.total + (taxa === "" ? 0 : taxa)) * 100) / 100, forma), status: "novo", obs: lim_(c.obs, 400), anot: "", origem: "catalogo", chave: Utilities.getUuid().replace(/-/g, "").slice(0, 10), historico: JSON.stringify([{ s: "novo", t: agora }]) };
+      inserir_("Pedidos", p);
+      if (d.base) setCfg_("link_base", String(d.base).split("?")[0].split("#")[0]);
       mudou_(N.n);
       avisarNegocio_(N, p);
-      emailCliente_(N, p, &quot;novo&quot;);
-      push_([&quot;N_&quot; + N.n], &quot;🛎️ Pedido novo #&quot; + p.num + &quot; · &quot; + p.cliente, brl_(p.total) + &quot; · &quot; + p.resumo, linkPainel_(N));
+      emailCliente_(N, p, "novo");
+      push_(["N_" + N.n], "🛎️ Pedido novo #" + p.num + " · " + p.cliente, brl_(p.total) + " · " + p.resumo, linkPainel_(N));
       return { ok: true, pedido: publico_(p), chave: p.chave };
     });
   },
@@ -168,138 +168,143 @@ var ACOES = {
     var N = negocio_(d.n), motivo = lim_(d.motivo, 200);
     return comTrava_(function () {
       var p = doCliente_(N, d);
-      if (p.status === &quot;cancelado&quot;) return { ok: true, pedido: publico_(p) };
-      if (p.status !== &quot;novo&quot;) throw new Error(&quot;A loja já confirmou este pedido. Para cancelar, fale com ela pelo WhatsApp.&quot;);
-      var h = hist_(p); h.push({ s: &quot;cancelado&quot;, t: Date.now(), por: &quot;cliente&quot; });
-      var anot = (p.anot ? p.anot + &quot;\n&quot; : &quot;&quot;) + &quot;❌ Cancelado pela cliente em &quot; + legivel_(Date.now()) + (motivo ? &quot; · Motivo: &quot; + motivo : &quot;&quot;);
-      var campos = { status: &quot;cancelado&quot;, historico: JSON.stringify(h), anot: lim_(anot, 600) };
-      atualizar_(&quot;Pedidos&quot;, function (o) { return String(o.negocio).toLowerCase() === N.n &amp;&amp; Number(o.id) === p.id; }, campos); mudou_(N.n);
+      if (p.status === "cancelado") return { ok: true, pedido: publico_(p) };
+      if (p.status !== "novo") throw new Error("A loja já confirmou este pedido. Para cancelar, fale com ela pelo WhatsApp.");
+      var h = hist_(p); h.push({ s: "cancelado", t: Date.now(), por: "cliente" });
+      var anot = (p.anot ? p.anot + "\n" : "") + "❌ Cancelado pela cliente em " + legivel_(Date.now()) + (motivo ? " · Motivo: " + motivo : "");
+      var campos = { status: "cancelado", historico: JSON.stringify(h), anot: lim_(anot, 600) };
+      atualizar_("Pedidos", function (o) { return String(o.negocio).toLowerCase() === N.n &amp;&amp; Number(o.id) === p.id; }, campos); mudou_(N.n);
       Object.keys(campos).forEach(function (k) { p[k] = campos[k]; });
-      push_([&quot;N_&quot; + N.n], &quot;❌ Pedido #&quot; + p.num + &quot; cancelado pela cliente&quot;, p.cliente + (motivo ? &quot; · &quot; + motivo : &quot;&quot;), linkPainel_(N));
-      if (/@/.test(N.email_aviso || &quot;&quot;)) enviar_(String(N.email_aviso), &quot;❌ Pedido #&quot; + p.num + &quot; cancelado pela cliente · &quot; + p.cliente,
-        &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Pedido #&quot; + p.num + &quot; cancelado&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; cancelou o pedido pelo catálogo antes da confirmação.&quot; + (motivo ? &quot;&lt;br&gt;Motivo: &quot; + esc_(motivo) : &quot;&quot;) + &quot;&lt;br&gt;WhatsApp &quot; + esc_(p.tel) + &quot;&lt;/p&gt;&quot; + itensHtml_(p), String(N.nome));
-      emailCliente_(N, p, &quot;cancelado&quot;);
+      push_(["N_" + N.n], "❌ Pedido #" + p.num + " cancelado pela cliente", p.cliente + (motivo ? " · " + motivo : ""), linkPainel_(N));
+      if (/@/.test(N.email_aviso || "")) enviar_(String(N.email_aviso), "❌ Pedido #" + p.num + " cancelado pela cliente · " + p.cliente,
+        "&lt;h2 style='margin:0 0 8px'&gt;Pedido #" + p.num + " cancelado&lt;/h2&gt;&lt;p&gt;&lt;b&gt;" + esc_(p.cliente) + "&lt;/b&gt; cancelou o pedido pelo catálogo antes da confirmação." + (motivo ? "&lt;br&gt;Motivo: " + esc_(motivo) : "") + "&lt;br&gt;WhatsApp " + esc_(p.tel) + "&lt;/p&gt;" + itensHtml_(p), String(N.nome));
+      emailCliente_(N, p, "cancelado");
       return { ok: true, pedido: publico_(p) };
     });
   },
   pedirTroca: function (d) {
-    var N = negocio_(d.n), mot = String(d.motivo || &quot;&quot;), txt = lim_(d.txt, 500);
-    if (!MOTIVOS_TROCA[mot]) throw new Error(&quot;Escolha o motivo.&quot;);
-    if ((mot === &quot;defeito&quot; || mot === &quot;errado&quot;) &amp;&amp; !txt &amp;&amp; !(d.foto &amp;&amp; d.foto.dados)) throw new Error(&quot;Conte o que aconteceu ou mande uma foto.&quot;);
+    var N = negocio_(d.n), mot = String(d.motivo || ""), txt = lim_(d.txt, 500);
+    if (!MOTIVOS_TROCA[mot]) throw new Error("Escolha o motivo.");
+    if ((mot === "defeito" || mot === "errado") &amp;&amp; !txt &amp;&amp; !(d.foto &amp;&amp; d.foto.dados)) throw new Error("Conte o que aconteceu ou mande uma foto.");
     return comTrava_(function () {
       var p = doCliente_(N, d);
-      if (p.status === &quot;troca&quot;) throw new Error(&quot;Você já pediu troca ou devolução deste pedido. A loja vai te responder.&quot;);
-      if ([&quot;pronto&quot;, &quot;entregue&quot;].indexOf(p.status) &lt; 0) throw new Error(&quot;A troca ou devolução fica disponível depois que você recebe a peça. Antes disso, fale com a loja pelo WhatsApp.&quot;);
-      var h = hist_(p), rec = h.filter(function (x) { return x.s === &quot;entregue&quot; || x.s === &quot;pronto&quot;; }).pop(), desde = rec ? rec.t : Number(p.criado), dias = (Date.now() - desde) / DIA;
-      if (dias &gt; 90) throw new Error(&quot;O prazo para pedir pelo app terminou. Fale com a loja pelo WhatsApp.&quot;);
-      if (mot === &quot;desisti&quot; &amp;&amp; dias &gt; 7) throw new Error(&quot;A desistência é em até 7 dias depois de receber. Para outro caso, escolha outro motivo ou fale com a loja.&quot;);
-      var foto = d.foto &amp;&amp; d.foto.dados ? salvarArquivo_(N, d.foto, &quot;troca&quot; + p.id, false) : &quot;&quot;;
-      h.push({ s: &quot;troca&quot;, t: Date.now(), por: &quot;cliente&quot; });
-      var anot = (p.anot ? p.anot + &quot;\n&quot; : &quot;&quot;) + &quot;↩️ Troca/devolução pedida em &quot; + legivel_(Date.now()) + &quot; · &quot; + MOTIVOS_TROCA[mot] + (txt ? &quot; · &quot; + txt : &quot;&quot;);
-      var campos = { status: &quot;troca&quot;, historico: JSON.stringify(h), troca: JSON.stringify({ motivo: mot, txt: txt, foto_id: foto, t: Date.now() }), anot: lim_(anot, 600) };
-      atualizar_(&quot;Pedidos&quot;, function (o) { return String(o.negocio).toLowerCase() === N.n &amp;&amp; Number(o.id) === p.id; }, campos); mudou_(N.n);
+      if (p.status === "troca") throw new Error("Você já pediu troca ou devolução deste pedido. A loja vai te responder.");
+      if (["pronto", "entregue"].indexOf(p.status) &lt; 0) throw new Error("A troca ou devolução fica disponível depois que você recebe a peça. Antes disso, fale com a loja pelo WhatsApp.");
+      var h = hist_(p), rec = h.filter(function (x) { return x.s === "entregue" || x.s === "pronto"; }).pop(), desde = rec ? rec.t : Number(p.criado), dias = (Date.now() - desde) / DIA;
+      if (dias &gt; 90) throw new Error("O prazo para pedir pelo app terminou. Fale com a loja pelo WhatsApp.");
+      if (mot === "desisti" &amp;&amp; dias &gt; 7) throw new Error("A desistência é em até 7 dias depois de receber. Para outro caso, escolha outro motivo ou fale com a loja.");
+      var foto = d.foto &amp;&amp; d.foto.dados ? salvarArquivo_(N, d.foto, "troca" + p.id, false) : "";
+      h.push({ s: "troca", t: Date.now(), por: "cliente" });
+      var anot = (p.anot ? p.anot + "\n" : "") + "↩️ Troca/devolução pedida em " + legivel_(Date.now()) + " · " + MOTIVOS_TROCA[mot] + (txt ? " · " + txt : "");
+      var campos = { status: "troca", historico: JSON.stringify(h), troca: JSON.stringify({ motivo: mot, txt: txt, foto_id: foto, t: Date.now() }), anot: lim_(anot, 600) };
+      atualizar_("Pedidos", function (o) { return String(o.negocio).toLowerCase() === N.n &amp;&amp; Number(o.id) === p.id; }, campos); mudou_(N.n);
       Object.keys(campos).forEach(function (k) { p[k] = campos[k]; });
-      push_([&quot;N_&quot; + N.n], &quot;↩️ Troca/devolução #&quot; + p.num + &quot; · &quot; + p.cliente, MOTIVOS_TROCA[mot] + (txt ? &quot; · &quot; + txt : &quot;&quot;), linkPainel_(N));
-      if (/@/.test(N.email_aviso || &quot;&quot;)) enviar_(String(N.email_aviso), &quot;↩️ Pedido de troca/devolução #&quot; + p.num + &quot; · &quot; + p.cliente,
-        &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Troca/devolução · pedido #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; · WhatsApp &quot; + esc_(p.tel) + &quot;&lt;br&gt;Motivo: &quot; + esc_(MOTIVOS_TROCA[mot]) + (txt ? &quot;&lt;br&gt;O que ela contou: &quot; + esc_(txt) : &quot;&quot;) + (foto ? &quot;&lt;br&gt;📷 Ela mandou foto: veja no painel.&quot; : &quot;&quot;) + &quot;&lt;/p&gt;&quot; + itensHtml_(p) +
-        &quot;&lt;p&gt;Depois de resolver, mude o andamento no painel para &lt;b&gt;Entregue&lt;/b&gt; (troca feita) ou &lt;b&gt;Cancelado&lt;/b&gt; (valor devolvido).&lt;/p&gt;&quot;, String(N.nome));
-      emailCliente_(N, p, &quot;troca&quot;);
+      push_(["N_" + N.n], "↩️ Troca/devolução #" + p.num + " · " + p.cliente, MOTIVOS_TROCA[mot] + (txt ? " · " + txt : ""), linkPainel_(N));
+      if (/@/.test(N.email_aviso || "")) enviar_(String(N.email_aviso), "↩️ Pedido de troca/devolução #" + p.num + " · " + p.cliente,
+        "&lt;h2 style='margin:0 0 8px'&gt;Troca/devolução · pedido #" + p.num + "&lt;/h2&gt;&lt;p&gt;&lt;b&gt;" + esc_(p.cliente) + "&lt;/b&gt; · WhatsApp " + esc_(p.tel) + "&lt;br&gt;Motivo: " + esc_(MOTIVOS_TROCA[mot]) + (txt ? "&lt;br&gt;O que ela contou: " + esc_(txt) : "") + (foto ? "&lt;br&gt;📷 Ela mandou foto: veja no painel." : "") + "&lt;/p&gt;" + itensHtml_(p) +
+        "&lt;p&gt;Depois de resolver, mude o andamento no painel para &lt;b&gt;Entregue&lt;/b&gt; (troca feita) ou &lt;b&gt;Cancelado&lt;/b&gt; (valor devolvido).&lt;/p&gt;", String(N.nome));
+      emailCliente_(N, p, "troca");
       return { ok: true, pedido: publico_(p) };
     });
   },
   comprovante: function (d) {
     var N = negocio_(d.n), a = d.arquivo || {};
-    if (!a.dados) throw new Error(&quot;Escolha a foto ou o PDF do comprovante.&quot;);
-    var tipo = String(a.tipo || &quot;&quot;); if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(tipo)) throw new Error(&quot;Mande o comprovante em foto ou PDF.&quot;);
+    if (!a.dados) throw new Error("Escolha a foto ou o PDF do comprovante.");
+    var tipo = String(a.tipo || ""); if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(tipo)) throw new Error("Mande o comprovante em foto ou PDF.");
     return comTrava_(function () {
       var p = doCliente_(N, d);
-      if (p.status === &quot;cancelado&quot;) throw new Error(&quot;Este pedido foi cancelado.&quot;);
-      var bytes = Utilities.base64Decode(String(a.dados).replace(/^data:[^,]+,/, &quot;&quot;));
-      if (bytes.length &gt; 6 * 1024 * 1024) throw new Error(&quot;Arquivo grande demais. Mande uma foto (print) do comprovante.&quot;);
-      var f = pasta_().createFile(Utilities.newBlob(bytes, tipo, N.n + &quot;_comprovante&quot; + p.id + (tipo === &quot;application/pdf&quot; ? &quot;.pdf&quot; : &quot;.jpg&quot;)));
+      if (p.status === "cancelado") throw new Error("Este pedido foi cancelado.");
+      var bytes = Utilities.base64Decode(String(a.dados).replace(/^data:[^,]+,/, ""));
+      if (bytes.length &gt; 6 * 1024 * 1024) throw new Error("Arquivo grande demais. Mande uma foto (print) do comprovante.");
+      var f = pasta_().createFile(Utilities.newBlob(bytes, tipo, N.n + "_comprovante" + p.id + (tipo === "application/pdf" ? ".pdf" : ".jpg")));
       var agora = Date.now();
-      atualizar_(&quot;Pedidos&quot;, function (o) { return String(o.negocio).toLowerCase() === N.n &amp;&amp; Number(o.id) === p.id; }, { comprovante: f.getId(), comp_em: agora }); mudou_(N.n);
+      atualizar_("Pedidos", function (o) { return String(o.negocio).toLowerCase() === N.n &amp;&amp; Number(o.id) === p.id; }, { comprovante: f.getId(), comp_em: agora }); mudou_(N.n);
       p.comprovante = f.getId(); p.comp_em = agora;
-      push_([&quot;N_&quot; + N.n], &quot;🧾 Comprovante do pedido #&quot; + p.num, p.cliente + &quot; mandou o comprovante&quot; + (p.cobrar !== &quot;&quot; ? &quot; · &quot; + brl_(p.cobrar) : &quot;&quot;), linkPainel_(N));
-      if (/@/.test(N.email_aviso || &quot;&quot;)) enviar_(String(N.email_aviso), &quot;🧾 Comprovante do pedido #&quot; + p.num + &quot; · &quot; + p.cliente,
-        &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Comprovante recebido · pedido #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; mandou o comprovante do Pix&quot; + (p.cobrar !== &quot;&quot; ? &quot; de &quot; + brl_(p.cobrar) : &quot;&quot;) + &quot;.&lt;/p&gt;&lt;p&gt;Confira no seu banco se o valor caiu e toque em &lt;b&gt;Confirmar pagamento&lt;/b&gt; no painel. A cliente é avisada sozinha.&lt;/p&gt;&quot;, String(N.nome));
+      push_(["N_" + N.n], "🧾 Comprovante do pedido #" + p.num, p.cliente + " mandou o comprovante" + (p.cobrar !== "" ? " · " + brl_(p.cobrar) : ""), linkPainel_(N));
+      if (/@/.test(N.email_aviso || "")) enviar_(String(N.email_aviso), "🧾 Comprovante do pedido #" + p.num + " · " + p.cliente,
+        "&lt;h2 style='margin:0 0 8px'&gt;Comprovante recebido · pedido #" + p.num + "&lt;/h2&gt;&lt;p&gt;&lt;b&gt;" + esc_(p.cliente) + "&lt;/b&gt; mandou o comprovante do Pix" + (p.cobrar !== "" ? " de " + brl_(p.cobrar) : "") + ".&lt;/p&gt;&lt;p&gt;Confira no seu banco se o valor caiu e toque em &lt;b&gt;Confirmar pagamento&lt;/b&gt; no painel. A cliente é avisada sozinha.&lt;/p&gt;", String(N.nome));
       return { ok: true, pedido: publico_(p) };
     });
   },
   pushReg: function (d) {
-    if (d.token) pushGuardar_(&quot;N_&quot; + sessao_(d), d.sub);
+    if (d.token) pushGuardar_("N_" + sessao_(d), d.sub);
     else { var N = negocio_(d.n), sub = subOk_(d.sub); (d.lista || []).slice(0, 10).forEach(function (x) { try { var p = doCliente_(N, x), l = j_(p.push, []).filter(function (s) { return s !== sub; }); l.push(sub);
-      atualizar_(&quot;Pedidos&quot;, function (r) { return String(r.negocio).toLowerCase() === N.n &amp;&amp; Number(r.id) === p.id; }, { push: JSON.stringify(l.slice(-3)) }); } catch (e) {} }); }
+      atualizar_("Pedidos", function (r) { return String(r.negocio).toLowerCase() === N.n &amp;&amp; Number(r.id) === p.id; }, { push: JSON.stringify(l.slice(-3)) }); } catch (e) {} }); }
     return { ok: true, ativo: !!pushChave_() };
   },
 
   /* ======== PAINEL DA ARTESÃ ======== */
   entrar: function (d) {
     var N = negocio_(d.n);
-    if (!confereSenha_(N, String(d.senha || &quot;&quot;))) throw new Error(&quot;Senha incorreta.&quot;);
+    tentativa_("n_" + N.n);
+    if (!confereSenha_(N, String(d.senha || ""))) { errou_("n_" + N.n); throw new Error("Senha incorreta."); }
+    acertou_("n_" + N.n);
     limparSessoes_();
     return { ok: true, token: novoToken_(N.n) };
   },
   sair: function (d) { encerrarSessao_(d.token); return { ok: true }; },
 
   /* ======== CENTRAL DA DayIA (só a dona do sistema) ======== */
-  admEstado: function () { return { ok: true, temSenha: !!cfgVal_(&quot;senha_dayia&quot;) }; },
+  admEstado: function () { return { ok: true, temSenha: !!cfgVal_("senha_dayia") }; },
   admEntrar: function (d) {
-    var atual = cfgVal_(&quot;senha_dayia&quot;), senha = String(d.senha || &quot;&quot;);
-    if (!atual) { if (senha.length &lt; 6) throw new Error(&quot;Crie uma senha com pelo menos 6 caracteres.&quot;); setCfg_(&quot;senha_dayia&quot;, hash_(&quot;dayia:&quot; + senha)); }
-    else if (hash_(&quot;dayia:&quot; + senha) !== atual) throw new Error(&quot;Senha incorreta.&quot;);
+    var atual = cfgVal_("senha_dayia"), senha = String(d.senha || "");
+    tentativa_("adm");
+    if (atual &amp;&amp; hash_("dayia:" + senha) !== atual) { errou_("adm"); throw new Error("Senha incorreta."); }
+    acertou_("adm");
+    if (!atual) { if (senha.length &lt; 6) throw new Error("Crie uma senha com pelo menos 6 caracteres."); setCfg_("senha_dayia", hash_("dayia:" + senha)); }
+    else if (hash_("dayia:" + senha) !== atual) throw new Error("Senha incorreta.");
     limparSessoes_();
-    return { ok: true, token: novoToken_(&quot;#dayia&quot;) };
+    return { ok: true, token: novoToken_("#dayia") };
   },
   admLista: function (d) {
     admin_(d);
     var peds = {}, pecs = {};
-    linhas_(&quot;Pedidos&quot;).forEach(function (r) { var n = String(r.negocio).toLowerCase(); peds[n] = (peds[n] || 0) + 1; });
-    linhas_(&quot;Pecas&quot;).forEach(function (r) { var n = String(r.negocio).toLowerCase(); pecs[n] = (pecs[n] || 0) + 1; });
-    var lista = linhas_(&quot;Negocios&quot;).map(function (r) {
+    linhas_("Pedidos").forEach(function (r) { var n = String(r.negocio).toLowerCase(); peds[n] = (peds[n] || 0) + 1; });
+    linhas_("Pecas").forEach(function (r) { var n = String(r.negocio).toLowerCase(); pecs[n] = (pecs[n] || 0) + 1; });
+    var lista = linhas_("Negocios").map(function (r) {
       var N = negocio_(r.n, true); if (!N) return null; var L = liberado_(N);
-      return { n: N.n, nome: String(N.nome), whatsapp: soDig_(N.whatsapp), situacao: String(N.situacao || &quot;&quot;), licenca: L, teste_ate: N.teste_ate ? dataBr_(dataIso_(N.teste_ate) || &quot;&quot;) || String(N.teste_ate) : &quot;&quot;,
-        vence: N.vence ? dataBr_(dataIso_(N.vence)) : &quot;&quot;, plano: String(N.plano || &quot;&quot;), valor: String(N.valor || &quot;&quot;), criado: String(N.criado || &quot;&quot;), pecas: pecs[N.n] || 0, pedidos: peds[N.n] || 0 };
+      return { n: N.n, nome: String(N.nome), whatsapp: soDig_(N.whatsapp), situacao: String(N.situacao || ""), licenca: L, teste_ate: N.teste_ate ? dataBr_(dataIso_(N.teste_ate) || "") || String(N.teste_ate) : "",
+        vence: N.vence ? dataBr_(dataIso_(N.vence)) : "", plano: String(N.plano || ""), valor: String(N.valor || ""), criado: String(N.criado || ""), pecas: pecs[N.n] || 0, pedidos: peds[N.n] || 0 };
     }).filter(Boolean);
-    return { ok: true, lojas: lista, base: cfgVal_(&quot;link_base&quot;), hoje: hojeIso_() };
+    return { ok: true, lojas: lista, base: cfgVal_("link_base"), hoje: hojeIso_() };
   },
   admCriar: function (d) {
     admin_(d); var x = d.loja || {};
-    var nome = lim_(x.nome, 60); if (!nome) throw new Error(&quot;Coloque o nome da loja.&quot;);
-    var wa = telNorm_(x.whatsapp); if (wa.length &lt; 12) throw new Error(&quot;Coloque o WhatsApp da loja com DDD.&quot;);
-    var senha = String(x.senha || &quot;&quot;); if (senha.length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;);
+    var nome = lim_(x.nome, 60); if (!nome) throw new Error("Coloque o nome da loja.");
+    var wa = telNorm_(x.whatsapp); if (wa.length &lt; 12) throw new Error("Coloque o WhatsApp da loja com DDD.");
+    var senha = String(x.senha || ""); if (senha.length &lt; 4) throw new Error("A senha precisa ter pelo menos 4 caracteres.");
     return comTrava_(function () {
-      var base = String(x.n || nome).normalize(&quot;NFD&quot;).replace(/[\u0300-\u036f]/g, &quot;&quot;).toLowerCase().replace(/[^a-z0-9]+/g, &quot;-&quot;).replace(/^-+|-+$/g, &quot;&quot;).slice(0, 30) || &quot;loja&quot;, n = base, k = 2;
-      while (negocio_(n, true)) n = base + &quot;-&quot; + (k++);
-      inserir_(&quot;Negocios&quot;, { n: n, nome: nome, situacao: &quot;teste&quot;, teste_ate: legivel_(Date.now() + (Number(cfgVal_(&quot;dias_teste&quot;)) || 30) * DIA).slice(0, 10), criado: legivel_(Date.now()),
-        dono: lim_(x.dono, 60) || nome, whatsapp: wa, email_aviso: lim_(x.email, 120), senha: hash_(senha), telefone: lim_(x.telefone, 30) || &quot;&quot;, logo: &quot;&quot;,
-        titulo: nome, subtitulo: &quot;Escolha, personalize do seu jeito e envie o pedido prontinho.&quot;, aviso: &quot;&quot;, cats: JSON.stringify([[&quot;pecas&quot;, &quot;Peças&quot;]]), faixas: JSON.stringify(FAIXAS_PADRAO),
-        brinde: JSON.stringify({ cada: 0, txt: &quot;&quot;, txtPl: &quot;&quot;, img: &quot;&quot; }), redes: JSON.stringify({}), tipos: JSON.stringify(ENTREGAS_PADRAO), mkt: JSON.stringify(MKT_PADRAO), plano: &quot;&quot;, valor: &quot;&quot;, vence: &quot;&quot;, link_pagto: &quot;&quot; });
+      var base = String(x.n || nome).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30) || "loja", n = base, k = 2;
+      while (negocio_(n, true)) n = base + "-" + (k++);
+      inserir_("Negocios", { n: n, nome: nome, situacao: "teste", teste_ate: legivel_(Date.now() + (Number(cfgVal_("dias_teste")) || 30) * DIA).slice(0, 10), criado: legivel_(Date.now()),
+        dono: lim_(x.dono, 60) || nome, whatsapp: wa, email_aviso: lim_(x.email, 120), senha: hash_(senha), telefone: lim_(x.telefone, 30) || "", logo: "",
+        titulo: nome, subtitulo: "Escolha, personalize do seu jeito e envie o pedido prontinho.", aviso: "", cats: JSON.stringify([["pecas", "Peças"]]), faixas: JSON.stringify(FAIXAS_PADRAO),
+        brinde: JSON.stringify({ cada: 0, txt: "", txtPl: "", img: "" }), redes: JSON.stringify({}), tipos: JSON.stringify(ENTREGAS_PADRAO), mkt: JSON.stringify(MKT_PADRAO), plano: "", valor: "", vence: "", link_pagto: "" });
       return { ok: true, n: n };
     });
   },
   admPagou: function (d) {
-    admin_(d); var N = negocio_(d.n), tipo = String(d.tipo || &quot;&quot;), m = {}, hoje = hojeIso_();
+    admin_(d); var N = negocio_(d.n), tipo = String(d.tipo || ""), m = {}, hoje = hojeIso_();
     var deData = function (iso, meses) { var y = +iso.slice(0, 4), mo = +iso.slice(5, 7) - 1 + meses, dd = +iso.slice(8, 10), dt = new Date(Date.UTC(y, mo, dd)); if (dt.getUTCDate() !== dd) dt = new Date(Date.UTC(y, mo + 1, 0)); return dt.toISOString().slice(0, 10); };
     var atual = dataIso_(N.vence), inicio = atual &amp;&amp; atual &gt; hoje ? atual : hoje;
-    if (tipo === &quot;mensal&quot; || tipo === &quot;anual&quot;) { m.situacao = &quot;ativo&quot;; m.vence = dataBr_(deData(inicio, tipo === &quot;anual&quot; ? 12 : 1)); m.plano = tipo === &quot;anual&quot; ? &quot;Anual&quot; : &quot;Mensal&quot;; if (d.valor) m.valor = lim_(d.valor, 30); }
-    else if (tipo === &quot;unico&quot;) { m.situacao = &quot;ativo&quot;; m.vence = &quot;&quot;; m.plano = &quot;Pagamento único&quot;; if (d.valor) m.valor = lim_(d.valor, 30); }
-    else if (tipo === &quot;cortesia&quot;) { m.situacao = &quot;cortesia&quot;; m.vence = &quot;&quot;; m.plano = &quot;Cortesia&quot;; }
-    else if (tipo === &quot;pausar&quot;) { m.situacao = &quot;suspenso&quot;; }
-    else if (tipo === &quot;teste&quot;) { m.situacao = &quot;teste&quot;; m.teste_ate = legivel_(Date.now() + (Number(d.dias) || 7) * DIA).slice(0, 10); }
-    else if (tipo === &quot;data&quot;) { var v = dataIso_(d.vence); if (!v) throw new Error(&quot;Escolha a data.&quot;); m.situacao = &quot;ativo&quot;; m.vence = dataBr_(v); }
-    else throw new Error(&quot;Escolha uma opção.&quot;);
-    atualizar_(&quot;Negocios&quot;, function (r) { return String(r.n).toLowerCase() === N.n; }, m); mudou_(N.n);
-    return { ok: true, vence: m.vence || &quot;&quot; };
+    if (tipo === "mensal" || tipo === "anual") { m.situacao = "ativo"; m.vence = dataBr_(deData(inicio, tipo === "anual" ? 12 : 1)); m.plano = tipo === "anual" ? "Anual" : "Mensal"; if (d.valor) m.valor = lim_(d.valor, 30); }
+    else if (tipo === "unico") { m.situacao = "ativo"; m.vence = ""; m.plano = "Pagamento único"; if (d.valor) m.valor = lim_(d.valor, 30); }
+    else if (tipo === "cortesia") { m.situacao = "cortesia"; m.vence = ""; m.plano = "Cortesia"; }
+    else if (tipo === "pausar") { m.situacao = "suspenso"; }
+    else if (tipo === "teste") { m.situacao = "teste"; m.teste_ate = legivel_(Date.now() + (Number(d.dias) || 7) * DIA).slice(0, 10); }
+    else if (tipo === "data") { var v = dataIso_(d.vence); if (!v) throw new Error("Escolha a data."); m.situacao = "ativo"; m.vence = dataBr_(v); }
+    else throw new Error("Escolha uma opção.");
+    atualizar_("Negocios", function (r) { return String(r.n).toLowerCase() === N.n; }, m); mudou_(N.n);
+    return { ok: true, vence: m.vence || "" };
   },
   admSenhaLoja: function (d) {
-    admin_(d); var N = negocio_(d.n), senha = String(d.senha || &quot;&quot;); if (senha.length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;);
-    atualizar_(&quot;Negocios&quot;, function (r) { return String(r.n).toLowerCase() === N.n; }, { senha: hash_(senha) });
+    admin_(d); var N = negocio_(d.n), senha = String(d.senha || ""); if (senha.length &lt; 4) throw new Error("A senha precisa ter pelo menos 4 caracteres.");
+    atualizar_("Negocios", function (r) { return String(r.n).toLowerCase() === N.n; }, { senha: hash_(senha) });
     return { ok: true };
   },
   admSenhaDayia: function (d) {
-    admin_(d); var s = String(d.senha || &quot;&quot;); if (s.length &lt; 6) throw new Error(&quot;A senha precisa ter pelo menos 6 caracteres.&quot;);
-    setCfg_(&quot;senha_dayia&quot;, hash_(&quot;dayia:&quot; + s)); return { ok: true };
+    admin_(d); var s = String(d.senha || ""); if (s.length &lt; 6) throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+    setCfg_("senha_dayia", hash_("dayia:" + s)); return { ok: true };
   },
   versao: function (d) { var n = sessao_(d); return { ok: true, v: versao_(n) }; },
   painel: function (d) {
@@ -312,114 +317,114 @@ var ACOES = {
     var n = sessao_(d), N = negocio_(n);
     return comTrava_(function () {
       var p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
-      if (!p) throw new Error(&quot;Encomenda não encontrada.&quot;);
+      if (!p) throw new Error("Encomenda não encontrada.");
       var campos = {};
-      if (d.status &amp;&amp; STATUS[d.status] &amp;&amp; d.status !== p.status) { campos.status = d.status; var h = hist_(p); h.push({ s: d.status, t: Date.now() }); campos.historico = JSON.stringify(h); if (d.status === &quot;entregue&quot;) campos.pago = &quot;SIM&quot;; }
-      if (d.pago !== undefined) campos.pago = d.pago ? &quot;SIM&quot; : &quot;&quot;;
+      if (d.status &amp;&amp; STATUS[d.status] &amp;&amp; d.status !== p.status) { campos.status = d.status; var h = hist_(p); h.push({ s: d.status, t: Date.now() }); campos.historico = JSON.stringify(h); if (d.status === "entregue") campos.pago = "SIM"; }
+      if (d.pago !== undefined) campos.pago = d.pago ? "SIM" : "";
       if (d.sinal !== undefined) campos.sinal = num_(d.sinal);
       if (d.total !== undefined &amp;&amp; num_(d.total) &gt; 0) campos.total = num_(d.total);
       if (d.entrega !== undefined) campos.entrega = dataIso_(d.entrega);
       if (d.tipo !== undefined) campos.tipo = lim_(d.tipo, 40);
       if (d.endereco !== undefined) campos.endereco = lim_(d.endereco, 200);
-      if (d.taxa !== undefined) campos.taxa = d.taxa === null || d.taxa === &quot;&quot; ? &quot;&quot; : Math.max(0, num_(d.taxa));
+      if (d.taxa !== undefined) campos.taxa = d.taxa === null || d.taxa === "" ? "" : Math.max(0, num_(d.taxa));
       if (d.rastreio !== undefined) campos.rastreio = lim_(d.rastreio, 300);
       if (d.link_pag !== undefined) campos.link_pag = url_(d.link_pag);
-      var linkNovo = campos.link_pag &amp;&amp; campos.link_pag !== String(p.link_pag || &quot;&quot;);
-      var rastNovo = campos.rastreio &amp;&amp; campos.rastreio !== String(p.rastreio || &quot;&quot;);
+      var linkNovo = campos.link_pag &amp;&amp; campos.link_pag !== String(p.link_pag || "");
+      var rastNovo = campos.rastreio &amp;&amp; campos.rastreio !== String(p.rastreio || "");
       if (d.anot !== undefined) campos.anot = lim_(d.anot, 600);
-      atualizar_(&quot;Pedidos&quot;, function (o) { return Number(o.id) === p.id; }, campos); mudou_(n);
+      atualizar_("Pedidos", function (o) { return Number(o.id) === p.id; }, campos); mudou_(n);
       if (linkNovo &amp;&amp; !campos.status) {
         p.link_pag = campos.link_pag;
-        pushSubs_(j_(p.push, []), String(N.nome), &quot;💳 O link para pagar o pedido #&quot; + p.num + &quot; chegou. Toque para pagar.&quot;, linkCli_(N, p));
-        emailCliente_(N, p, &quot;pagar&quot;);
+        pushSubs_(j_(p.push, []), String(N.nome), "💳 O link para pagar o pedido #" + p.num + " chegou. Toque para pagar.", linkCli_(N, p));
+        emailCliente_(N, p, "pagar");
       }
       if (rastNovo &amp;&amp; !campos.status) {
         p.rastreio = campos.rastreio;
-        pushSubs_(j_(p.push, []), String(N.nome), &quot;🚚 Sua encomenda #&quot; + p.num + &quot; foi enviada! Rastreio: &quot; + p.rastreio, linkCli_(N, p));
-        emailCliente_(N, p, &quot;rastreio&quot;);
+        pushSubs_(j_(p.push, []), String(N.nome), "🚚 Sua encomenda #" + p.num + " foi enviada! Rastreio: " + p.rastreio, linkCli_(N, p));
+        emailCliente_(N, p, "rastreio");
       }
       if (campos.status) {
         Object.keys(campos).forEach(function (k) { p[k] = campos[k]; });
         pushSubs_(j_(p.push, []), String(N.nome), avisoCli_(p), linkCli_(N, p));
-        if ([&quot;sinal&quot;, &quot;pronto&quot;, &quot;entregue&quot;, &quot;cancelado&quot;].indexOf(campos.status) &gt;= 0) emailCliente_(N, p, campos.status);
+        if (["sinal", "pronto", "entregue", "cancelado"].indexOf(campos.status) &gt;= 0) emailCliente_(N, p, campos.status);
       }
       return { ok: true };
     });
   },
   novaEncomenda: function (d) {
     var n = sessao_(d), e = d.dados || {};
-    if (!lim_(e.nome, 80)) throw new Error(&quot;Coloque o nome da cliente.&quot;);
-    if (!lim_(e.itens, 400)) throw new Error(&quot;Escreva o que ela pediu.&quot;);
-    var total = num_(e.total); if (!(total &gt; 0)) throw new Error(&quot;Coloque o valor da encomenda.&quot;);
+    if (!lim_(e.nome, 80)) throw new Error("Coloque o nome da cliente.");
+    if (!lim_(e.itens, 400)) throw new Error("Escreva o que ela pediu.");
+    var total = num_(e.total); if (!(total &gt; 0)) throw new Error("Coloque o valor da encomenda.");
     return comTrava_(function () {
-      var cli = clienteUpsert_(n, { nome: e.nome, tel: e.tel }, &quot;manual&quot;), agora = Date.now(), sinal = num_(e.sinal), st = sinal &gt; 0 ? &quot;sinal&quot; : &quot;novo&quot;;
-      var p = { negocio: n, id: proximoId_(), num: proximoNum_(n), criado: agora, quando: legivel_(agora), cliente_id: cli.id, cliente: lim_(e.nome, 80), tel: lim_(e.tel, 30), email: &quot;&quot;, aniv: &quot;&quot;,
-        tipo: lim_(e.tipo, 30) || &quot;Retirada&quot;, entrega: dataIso_(e.entrega), itens: JSON.stringify([{ nome: lim_(e.itens, 400), q: 1, total: total }]), resumo: lim_(e.itens, 120), total: total, sinal: sinal, pago: &quot;&quot;,
-        status: st, obs: &quot;&quot;, anot: &quot;&quot;, origem: &quot;whatsapp&quot;, chave: Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 10), historico: JSON.stringify([{ s: st, t: agora }]) };
-      inserir_(&quot;Pedidos&quot;, p); mudou_(n);
+      var cli = clienteUpsert_(n, { nome: e.nome, tel: e.tel }, "manual"), agora = Date.now(), sinal = num_(e.sinal), st = sinal &gt; 0 ? "sinal" : "novo";
+      var p = { negocio: n, id: proximoId_(), num: proximoNum_(n), criado: agora, quando: legivel_(agora), cliente_id: cli.id, cliente: lim_(e.nome, 80), tel: lim_(e.tel, 30), email: "", aniv: "",
+        tipo: lim_(e.tipo, 30) || "Retirada", entrega: dataIso_(e.entrega), itens: JSON.stringify([{ nome: lim_(e.itens, 400), q: 1, total: total }]), resumo: lim_(e.itens, 120), total: total, sinal: sinal, pago: "",
+        status: st, obs: "", anot: "", origem: "whatsapp", chave: Utilities.getUuid().replace(/-/g, "").slice(0, 10), historico: JSON.stringify([{ s: st, t: agora }]) };
+      inserir_("Pedidos", p); mudou_(n);
       return { ok: true, id: p.id };
     });
   },
   verComprovante: function (d) {
     var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
-    if (!p || !p.comprovante) throw new Error(&quot;Este pedido não tem comprovante.&quot;);
+    if (!p || !p.comprovante) throw new Error("Este pedido não tem comprovante.");
     var f = DriveApp.getFileById(String(p.comprovante)), b = f.getBlob();
     return { ok: true, tipo: b.getContentType(), dados: Utilities.base64Encode(b.getBytes()), nome: f.getName() };
   },
   verFoto: function (d) {
     var n = sessao_(d), p = pedidos_(n).filter(function (x) { return x.id === Number(d.id); })[0];
-    var it = p &amp;&amp; (d.i === &quot;troca&quot; ? j_(p.troca, {}) : itens_(p)[Number(d.i)]);
-    if (!it || !it.foto_id) throw new Error(&quot;Esta peça não tem foto da cliente.&quot;);
+    var it = p &amp;&amp; (d.i === "troca" ? j_(p.troca, {}) : itens_(p)[Number(d.i)]);
+    if (!it || !it.foto_id) throw new Error("Esta peça não tem foto da cliente.");
     var f = DriveApp.getFileById(String(it.foto_id)), b = f.getBlob();
     return { ok: true, tipo: b.getContentType(), dados: Utilities.base64Encode(b.getBytes()), nome: f.getName() };
   },
   subirMidia: function (d) {
     var n = sessao_(d), N = negocio_(n), a = d.arquivo || {};
-    var video = /^video\//.test(String(a.tipo || &quot;&quot;));
-    var id = salvarArquivo_(N, a, (video ? &quot;video_&quot; : &quot;foto_&quot;) + soDig_(legivel_(Date.now())), true);
-    return { ok: true, ref: &quot;d:&quot; + id };
+    var video = /^video\//.test(String(a.tipo || ""));
+    var id = salvarArquivo_(N, a, (video ? "video_" : "foto_") + soDig_(legivel_(Date.now())), true);
+    return { ok: true, ref: "d:" + id };
   },
   salvarPeca: function (d) {
     var n = sessao_(d), x = d.peca || {};
-    var nome = lim_(x.nome, 80); if (!nome) throw new Error(&quot;Coloque o nome da peça.&quot;);
-    var preco = num_(x.preco); if (!(preco &gt; 0)) throw new Error(&quot;Coloque o preço da peça.&quot;);
+    var nome = lim_(x.nome, 80); if (!nome) throw new Error("Coloque o nome da peça.");
+    var preco = num_(x.preco); if (!(preco &gt; 0)) throw new Error("Coloque o preço da peça.");
     var fotos = (x.fotos || []).map(function (f) { return lim_(f, 400); }).filter(String).slice(0, 30);
-    if (!fotos.length) throw new Error(&quot;Coloque pelo menos uma foto.&quot;);
-    var campos = {}; [&quot;nome&quot;, &quot;cor&quot;, &quot;tema&quot;, &quot;idade&quot;, &quot;data&quot;, &quot;foto&quot;, &quot;glitter&quot;, &quot;lembr&quot;, &quot;modelo&quot;].forEach(function (k) { if (x.campos &amp;&amp; x.campos[k]) campos[k] = 1; });
+    if (!fotos.length) throw new Error("Coloque pelo menos uma foto.");
+    var campos = {}; ["nome", "cor", "tema", "idade", "data", "foto", "glitter", "lembr", "modelo"].forEach(function (k) { if (x.campos &amp;&amp; x.campos[k]) campos[k] = 1; });
     var o = { nome: nome, cat: lim_(x.cat, 40), preco: preco, desc: lim_(x.desc, 300), fotos: JSON.stringify(fotos),
       videos: JSON.stringify((x.videos || []).map(function (f) { return lim_(f, 400); }).filter(String).slice(0, 6)), campos: JSON.stringify(campos),
-      ativo: x.ativo === false ? &quot;NÃO&quot; : &quot;SIM&quot;, shopee: url_(x.shopee), tiktok: url_(x.tiktok) };
+      ativo: x.ativo === false ? "NÃO" : "SIM", shopee: url_(x.shopee), tiktok: url_(x.tiktok) };
     return comTrava_(function () {
       var existe = x.id &amp;&amp; pecas_(n).filter(function (p) { return p.id === String(x.id); })[0];
-      if (existe) atualizar_(&quot;Pecas&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === existe.id; }, o);
-      else { o.negocio = n; o.id = &quot;p&quot; + uid_(); o.ordem = 0; o.criado = Date.now(); inserir_(&quot;Pecas&quot;, o); }
+      if (existe) atualizar_("Pecas", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === existe.id; }, o);
+      else { o.negocio = n; o.id = "p" + uid_(); o.ordem = 0; o.criado = Date.now(); inserir_("Pecas", o); }
       mudou_(n); return { ok: true };
     });
   },
   esconderPeca: function (d) {
     var n = sessao_(d);
-    atualizar_(&quot;Pecas&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(d.id); }, { ativo: d.ativo ? &quot;SIM&quot; : &quot;NÃO&quot; }); mudou_(n);
+    atualizar_("Pecas", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(d.id); }, { ativo: d.ativo ? "SIM" : "NÃO" }); mudou_(n);
     return { ok: true };
   },
   excluirPeca: function (d) {
     var n = sessao_(d);
-    excluir_(&quot;Pecas&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(d.id); }); mudou_(n);
+    excluir_("Pecas", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(d.id); }); mudou_(n);
     return { ok: true };
   },
   salvarCliente: function (d) {
     var n = sessao_(d), c = d.cliente || {};
-    if (!lim_(c.nome, 80)) throw new Error(&quot;Coloque o nome.&quot;);
+    if (!lim_(c.nome, 80)) throw new Error("Coloque o nome.");
     var o = { nome: lim_(c.nome, 80), tel: telNorm_(c.tel), email: lim_(c.email, 120), aniv: anivDe_(c.aniv), obs: lim_(c.obs, 400) };
     return comTrava_(function () {
-      if (c.id) { atualizar_(&quot;Clientes&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(c.id); }, o);
-        atualizar_(&quot;Pedidos&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.cliente_id) === String(c.id); }, { cliente: o.nome, tel: o.tel }); }
-      else { o.negocio = n; o.id = &quot;c&quot; + uid_(); o.origem = &quot;manual&quot;; o.criado = Date.now(); inserir_(&quot;Clientes&quot;, o); }
+      if (c.id) { atualizar_("Clientes", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(c.id); }, o);
+        atualizar_("Pedidos", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.cliente_id) === String(c.id); }, { cliente: o.nome, tel: o.tel }); }
+      else { o.negocio = n; o.id = "c" + uid_(); o.origem = "manual"; o.criado = Date.now(); inserir_("Clientes", o); }
       mudou_(n); return { ok: true };
     });
   },
   excluirCliente: function (d) {
     var n = sessao_(d);
-    excluir_(&quot;Clientes&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(d.id); }); mudou_(n);
+    excluir_("Clientes", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(d.id); }); mudou_(n);
     return { ok: true };
   },
   importarClientes: function (d) {
@@ -432,24 +437,24 @@ var ACOES = {
         var nome = lim_(x.nome, 80), tel = telNorm_(x.tel); if (!nome &amp;&amp; !tel) return;
         if (tel &amp;&amp; tels[tel]) { rep++; return; }
         if (tel) tels[tel] = 1; novos++;
-        linhas.push({ negocio: n, id: &quot;c&quot; + uid_(), nome: nome || tel, tel: tel, email: &quot;&quot;, aniv: anivDe_(x.aniv), obs: &quot;&quot;, origem: &quot;importado&quot;, criado: agora });
+        linhas.push({ negocio: n, id: "c" + uid_(), nome: nome || tel, tel: tel, email: "", aniv: anivDe_(x.aniv), obs: "", origem: "importado", criado: agora });
       });
-      inserirVarios_(&quot;Clientes&quot;, linhas); mudou_(n);
+      inserirVarios_("Clientes", linhas); mudou_(n);
       return { ok: true, novos: novos, repetidos: rep };
     });
   },
   salvarPromo: function (d) {
     var n = sessao_(d), x = d.promo || {};
     var t = lim_(x.titulo, 60), ds = Math.round(num_(x.desc)), ate = dataIso_(x.ate);
-    if (!t || ds &lt; 1 || ds &gt; 90 || !ate) throw new Error(&quot;Preencha o nome, um desconto entre 1% e 90% e a data.&quot;);
-    var o = { titulo: t, desc: ds, alvo: lim_(x.alvo, 40) || &quot;todas&quot;, ate: ate, ativa: x.ativa === false ? &quot;NÃO&quot; : &quot;SIM&quot; };
-    if (x.id) atualizar_(&quot;Promocoes&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(x.id); }, o);
-    else { o.negocio = n; o.id = &quot;r&quot; + uid_(); inserir_(&quot;Promocoes&quot;, o); }
+    if (!t || ds &lt; 1 || ds &gt; 90 || !ate) throw new Error("Preencha o nome, um desconto entre 1% e 90% e a data.");
+    var o = { titulo: t, desc: ds, alvo: lim_(x.alvo, 40) || "todas", ate: ate, ativa: x.ativa === false ? "NÃO" : "SIM" };
+    if (x.id) atualizar_("Promocoes", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(x.id); }, o);
+    else { o.negocio = n; o.id = "r" + uid_(); inserir_("Promocoes", o); }
     mudou_(n); return { ok: true };
   },
   excluirPromo: function (d) {
     var n = sessao_(d);
-    excluir_(&quot;Promocoes&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(d.id); }); mudou_(n);
+    excluir_("Promocoes", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === String(d.id); }); mudou_(n);
     return { ok: true };
   },
   envio: function (d) {
@@ -457,24 +462,24 @@ var ACOES = {
     return comTrava_(function () {
       var e = envioRaw_(n), hoje = hojeIso_(), hr = Math.floor(minutosHoje_(Date.now()) / 60);
       if (e.dia !== hoje) { e.dia = hoje; e.n = 0; }
-      if (e.n &gt;= m.limite) throw new Error(&quot;Você chegou ao limite de &quot; + m.limite + &quot; mensagens de hoje. Continue amanhã: isso protege o seu WhatsApp.&quot;);
-      if (hr &lt; m.hIni || hr &gt;= m.hFim) throw new Error(&quot;Fora do horário de envio (&quot; + m.hIni + &quot;h às &quot; + m.hFim + &quot;h).&quot;);
-      if (Date.now() - (e.ultimo || 0) &lt; 15000) throw new Error(&quot;Aguarde alguns segundos antes do próximo envio.&quot;);
+      if (e.n &gt;= m.limite) throw new Error("Você chegou ao limite de " + m.limite + " mensagens de hoje. Continue amanhã: isso protege o seu WhatsApp.");
+      if (hr &lt; m.hIni || hr &gt;= m.hFim) throw new Error("Fora do horário de envio (" + m.hIni + "h às " + m.hFim + "h).");
+      if (Date.now() - (e.ultimo || 0) &lt; 15000) throw new Error("Aguarde alguns segundos antes do próximo envio.");
       var ch = lim_(d.chave, 40), cl = lim_(d.cliente, 20);
-      if (enviados_(n)[ch + &quot;|&quot; + cl]) throw new Error(&quot;Essa mensagem já foi enviada para essa cliente.&quot;);
-      inserir_(&quot;Envios&quot;, { negocio: n, chave: ch, cliente: cl, dia: hoje });
+      if (enviados_(n)[ch + "|" + cl]) throw new Error("Essa mensagem já foi enviada para essa cliente.");
+      inserir_("Envios", { negocio: n, chave: ch, cliente: cl, dia: hoje });
       e.n++; e.ultimo = Date.now();
-      P.setProperty(&quot;EV_&quot; + n, JSON.stringify({ dia: e.dia, n: e.n, ultimo: e.ultimo }));
+      P.setProperty("EV_" + n, JSON.stringify({ dia: e.dia, n: e.n, ultimo: e.ultimo }));
       return { ok: true, envios: envioEstado_(n, N) };
     });
   },
   salvarAjustes: function (d) {
     var n = sessao_(d), a = d.ajustes || {}, m = {};
-    [&quot;nome&quot;, &quot;titulo&quot;, &quot;subtitulo&quot;, &quot;aviso&quot;, &quot;telefone&quot;, &quot;email_aviso&quot;].forEach(function (k) { if (a[k] !== undefined) m[k] = lim_(a[k], 200); });
+    ["nome", "titulo", "subtitulo", "aviso", "telefone", "email_aviso"].forEach(function (k) { if (a[k] !== undefined) m[k] = lim_(a[k], 200); });
     if (a.whatsapp !== undefined) m.whatsapp = soDig_(a.whatsapp);
-    if (a.tipos !== undefined) { var en = (a.tipos || []).map(function (t) { return typeof t === &quot;string&quot; ? { nome: t } : t; }).map(function (e) { return { nome: lim_(e.nome, 40), taxa: e.taxa === null || e.taxa === &quot;&quot; || e.taxa === undefined ? null : Math.max(0, num_(e.taxa)), retira: !!e.retira }; }).filter(function (e) { return e.nome; }).slice(0, 10);
-      if (!en.length) throw new Error(&quot;Deixe pelo menos uma forma de entrega.&quot;); m.tipos = JSON.stringify(en); }
-    if (a.cats !== undefined) { var cs = (a.cats || []).map(function (c) { return [lim_(c[0], 30) || uid_(), lim_(c[1], 40)]; }).filter(function (c) { return c[1]; }); if (!cs.length) throw new Error(&quot;Deixe pelo menos uma categoria.&quot;); m.cats = JSON.stringify(cs); }
+    if (a.tipos !== undefined) { var en = (a.tipos || []).map(function (t) { return typeof t === "string" ? { nome: t } : t; }).map(function (e) { return { nome: lim_(e.nome, 40), taxa: e.taxa === null || e.taxa === "" || e.taxa === undefined ? null : Math.max(0, num_(e.taxa)), retira: !!e.retira }; }).filter(function (e) { return e.nome; }).slice(0, 10);
+      if (!en.length) throw new Error("Deixe pelo menos uma forma de entrega."); m.tipos = JSON.stringify(en); }
+    if (a.cats !== undefined) { var cs = (a.cats || []).map(function (c) { return [lim_(c[0], 30) || uid_(), lim_(c[1], 40)]; }).filter(function (c) { return c[1]; }); if (!cs.length) throw new Error("Deixe pelo menos uma categoria."); m.cats = JSON.stringify(cs); }
     if (a.faixas !== undefined) m.faixas = JSON.stringify(faixasLimpa_(a.faixas));
     if (a.brinde !== undefined) { var b = a.brinde || {}; m.brinde = JSON.stringify({ cada: Math.max(0, num_(b.cada)), txt: lim_(b.txt, 80), txtPl: lim_(b.txtPl || b.txt, 80), img: lim_(b.img, 400) }); }
     if (a.redes !== undefined) { var r = {}; Object.keys(a.redes || {}).forEach(function (k) { var u = url_(a.redes[k]); if (u) r[lim_(k, 20)] = u; }); m.redes = JSON.stringify(r); }
@@ -484,18 +489,18 @@ var ACOES = {
     if (a.trocas !== undefined) m.trocas = lim_(a.trocas, 1000);
     if (a.pix !== undefined) { var px = a.pix || {}; m.pix_chave = lim_(px.chave, 120); m.pix_nome = lim_(px.nome, 80); m.pix_banco = lim_(px.banco, 60);
       if (px.formas !== undefined) m.pagtos = JSON.stringify((px.formas || []).filter(function (f) { return FORMAS_PAG[f]; }));
-      if ((px.formas || []).indexOf(&quot;pix&quot;) &gt;= 0 &amp;&amp; !m.pix_chave) throw new Error(&quot;Coloque a chave Pix ou desmarque o Pix.&quot;);
-      m.pix_modo = [&quot;sinal&quot;, &quot;total&quot;, &quot;depois&quot;].indexOf(String(px.modo)) &gt;= 0 ? String(px.modo) : &quot;sinal&quot;; m.pix_pct = Math.min(100, Math.max(10, Math.round(num_(px.pct)) || 50)); }
-    if (a.logo !== undefined) { if (String(a.logo).length &gt; 45000) throw new Error(&quot;Logo grande demais.&quot;); m.logo = String(a.logo); }
-    if (a.senha) { if (String(a.senha).length &lt; 4) throw new Error(&quot;A senha precisa ter pelo menos 4 caracteres.&quot;); m.senha = hash_(a.senha); }
-    atualizar_(&quot;Negocios&quot;, function (r) { return String(r.n).toLowerCase() === n; }, m); mudou_(n);
+      if ((px.formas || []).indexOf("pix") &gt;= 0 &amp;&amp; !m.pix_chave) throw new Error("Coloque a chave Pix ou desmarque o Pix.");
+      m.pix_modo = ["sinal", "total", "depois"].indexOf(String(px.modo)) &gt;= 0 ? String(px.modo) : "sinal"; m.pix_pct = Math.min(100, Math.max(10, Math.round(num_(px.pct)) || 50)); }
+    if (a.logo !== undefined) { if (String(a.logo).length &gt; 45000) throw new Error("Logo grande demais."); m.logo = String(a.logo); }
+    if (a.senha) { if (String(a.senha).length &lt; 4) throw new Error("A senha precisa ter pelo menos 4 caracteres."); m.senha = hash_(a.senha); }
+    atualizar_("Negocios", function (r) { return String(r.n).toLowerCase() === n; }, m); mudou_(n);
     return { ok: true };
   }
 };
 
 /* ---------------- regras de preço (iguais às do app) ---------------- */
 function faixa_(F, q) { var f = { min: 1, desc: 0 }; (F || []).forEach(function (x) { if (q &gt;= x.min) f = x; }); return f; }
-function promoDe_(promos, p) { var best = null; (promos || []).forEach(function (r) { if ((r.alvo === &quot;todas&quot; || r.alvo === p.cat || r.alvo === p.id) &amp;&amp; (!best || r.desc &gt; best.desc)) best = r; }); return best; }
+function promoDe_(promos, p) { var best = null; (promos || []).forEach(function (r) { if ((r.alvo === "todas" || r.alvo === p.cat || r.alvo === p.id) &amp;&amp; (!best || r.desc &gt; best.desc)) best = r; }); return best; }
 function precoItem_(p, q, F, promos) {
   var d = p.campos.lembr ? faixa_(F, q).desc : 0, pr = promoDe_(promos, p);
   return Math.round(p.preco * q * (1 - d) * (1 - (pr ? pr.desc / 100 : 0)) * 100) / 100;
@@ -514,10 +519,10 @@ function calcular_(N, itens) {
     if (c.cor) o.cor = lim_(it.cor, 30);
     if (c.glitter) o.glitter = lim_(it.glitter, 20);
     o.obs = lim_(it.obs, 200);
-    if (c.foto &amp;&amp; !(it.foto &amp;&amp; it.foto.dados)) throw new Error(&quot;Falta a foto da peça &quot; + p.nome + &quot;.&quot;);
+    if (c.foto &amp;&amp; !(it.foto &amp;&amp; it.foto.dados)) throw new Error("Falta a foto da peça " + p.nome + ".");
     out.push(o); tot += v;
   });
-  return { itens: out, total: Math.round(tot * 100) / 100, resumo: out.map(function (i) { return i.q + &quot;× &quot; + i.nome; }).join(&quot;, &quot;).slice(0, 300) };
+  return { itens: out, total: Math.round(tot * 100) / 100, resumo: out.map(function (i) { return i.q + "× " + i.nome; }).join(", ").slice(0, 300) };
 }
 function faixasLimpa_(F) {
   var l = (F || []).map(function (f) { return { min: Math.max(1, Math.round(num_(f.min))), desc: Math.min(0.9, Math.max(0, num_(f.desc))) }; }).sort(function (a, b) { return a.min - b.min; });
@@ -525,153 +530,157 @@ function faixasLimpa_(F) {
   return l.slice(0, 6);
 }
 function avisoCli_(p) {
-  return { sinal: &quot;✅ Sua encomenda #&quot; + p.num + &quot; foi confirmada&quot;, producao: &quot;✂️ Sua encomenda #&quot; + p.num + &quot; está sendo produzida&quot;, acabamento: &quot;✨ Sua encomenda #&quot; + p.num + &quot; está nos detalhes finais&quot;,
-    pronto: &quot;🎁 Sua encomenda #&quot; + p.num + &quot; está pronta!&quot;, entregue: &quot;💛 Encomenda #&quot; + p.num + &quot; entregue. Obrigada!&quot;, cancelado: &quot;❌ Sua encomenda #&quot; + p.num + &quot; foi cancelada&quot; }[p.status] || &quot;Sua encomenda foi atualizada&quot;;
+  return { sinal: "✅ Sua encomenda #" + p.num + " foi confirmada", producao: "✂️ Sua encomenda #" + p.num + " está sendo produzida", acabamento: "✨ Sua encomenda #" + p.num + " está nos detalhes finais",
+    pronto: "🎁 Sua encomenda #" + p.num + " está pronta!", entregue: "💛 Encomenda #" + p.num + " entregue. Obrigada!", cancelado: "❌ Sua encomenda #" + p.num + " foi cancelada" }[p.status] || "Sua encomenda foi atualizada";
 }
 
 /* ---------------- arquivos no Drive ---------------- */
 function pasta_() {
-  var id = cfgVal_(&quot;pasta_midia&quot;);
+  var id = cfgVal_("pasta_midia");
   if (id) { try { return DriveApp.getFolderById(id); } catch (x) {} }
-  var f = DriveApp.createFolder(&quot;Catálogo Fácil · Fotos e vídeos&quot;); setCfg_(&quot;pasta_midia&quot;, f.getId()); return f;
+  var f = DriveApp.createFolder("Catálogo Fácil · Fotos e vídeos"); setCfg_("pasta_midia", f.getId()); return f;
 }
 function salvarArquivo_(N, arq, nome, publico) {
-  var tipo = String(arq.tipo || &quot;image/jpeg&quot;);
-  if (!/^(image\/(jpeg|png|webp)|video\/(mp4|quicktime|webm|3gpp))$/.test(tipo)) throw new Error(&quot;Mande uma foto ou um vídeo.&quot;);
-  var bytes = Utilities.base64Decode(String(arq.dados).replace(/^data:[^,]+,/, &quot;&quot;));
+  var tipo = String(arq.tipo || "image/jpeg");
+  if (!/^(image\/(jpeg|png|webp)|video\/(mp4|quicktime|webm|3gpp))$/.test(tipo)) throw new Error("Mande uma foto ou um vídeo.");
+  var bytes = Utilities.base64Decode(String(arq.dados).replace(/^data:[^,]+,/, ""));
   var max = /^video/.test(tipo) ? 30 : 8;
-  if (bytes.length &gt; max * 1024 * 1024) throw new Error(/^video/.test(tipo) ? &quot;Vídeo grande demais (máximo 30 MB, uns 40 segundos).&quot; : &quot;Foto grande demais.&quot;);
-  var ext = { &quot;image/png&quot;: &quot;.png&quot;, &quot;image/webp&quot;: &quot;.webp&quot;, &quot;video/mp4&quot;: &quot;.mp4&quot;, &quot;video/quicktime&quot;: &quot;.mov&quot;, &quot;video/webm&quot;: &quot;.webm&quot;, &quot;video/3gpp&quot;: &quot;.3gp&quot; }[tipo] || &quot;.jpg&quot;;
-  var f = pasta_().createFile(Utilities.newBlob(bytes, tipo, N.n + &quot;_&quot; + nome + ext));
-  if (publico) { try { f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) { console.log(&quot;compartilhar: &quot; + x); } }
+  if (bytes.length &gt; max * 1024 * 1024) throw new Error(/^video/.test(tipo) ? "Vídeo grande demais (máximo 30 MB, uns 40 segundos)." : "Foto grande demais.");
+  var ext = { "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4", "video/quicktime": ".mov", "video/webm": ".webm", "video/3gpp": ".3gp" }[tipo] || ".jpg";
+  var f = pasta_().createFile(Utilities.newBlob(bytes, tipo, N.n + "_" + nome + ext));
+  if (publico) { try { f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) { console.log("compartilhar: " + x); } }
   return f.getId();
 }
 
 /* ---------------- aviso diário para a DayIA (roda sozinho às 8h) ---------------- */
-var LINKS_ATE = &quot;2026-12-31&quot;;   // validade dos links de pagamento que estão no app (preço de lançamento)
+var LINKS_ATE = "2026-12-31";   // validade dos links de pagamento que estão no app (preço de lançamento)
 function avisoDiario() {
-  var para = cfgVal_(&quot;email_admin&quot;); if (!/@/.test(para)) return;
+  var para = cfgVal_("email_admin"); if (!/@/.test(para)) return;
   var hoje = hojeIso_(), linhas = [];
-  linhas_(&quot;Negocios&quot;).forEach(function (r) {
+  linhas_("Negocios").forEach(function (r) {
     var N = negocio_(r.n, true); if (!N) return;
-    var L = liberado_(N), nome = esc_(N.nome) + &quot; (&quot; + esc_(N.n) + &quot;)&quot;;
-    if (L.situacao === &quot;vencido&quot;) linhas.push(&quot;🔴 &quot; + nome + &quot;: venceu em &quot; + L.vence + &quot;. O catálogo está travado até pagar.&quot;);
-    else if (L.situacao === &quot;ativo&quot; &amp;&amp; L.dias_restantes !== undefined &amp;&amp; L.dias_restantes &lt;= 3)
-      linhas.push((L.dias_restantes &lt; 0 ? &quot;🟠 &quot; + nome + &quot;: venceu em &quot; + L.vence + &quot;, trava em &quot; + (L.tolerancia + L.dias_restantes + 1) + &quot; dia(s)&quot; : &quot;🟡 &quot; + nome + &quot;: vence em &quot; + L.vence) + &quot;. Confira o pagamento e atualize a coluna vence.&quot;);
-    else if (L.situacao === &quot;teste_vencido&quot;) linhas.push(&quot;⚪ &quot; + nome + &quot;: o teste grátis acabou e ela ainda não pagou.&quot;);
-    else if (L.situacao === &quot;teste&quot; &amp;&amp; L.dias_restantes !== null &amp;&amp; L.dias_restantes &lt;= 3) linhas.push(&quot;🟢 &quot; + nome + &quot;: o teste grátis acaba em &quot; + L.dias_restantes + &quot; dia(s).&quot;);
+    var L = liberado_(N), nome = esc_(N.nome) + " (" + esc_(N.n) + ")";
+    if (L.situacao === "vencido") linhas.push("🔴 " + nome + ": venceu em " + L.vence + ". O catálogo está travado até pagar.");
+    else if (L.situacao === "ativo" &amp;&amp; L.dias_restantes !== undefined &amp;&amp; L.dias_restantes &lt;= 3)
+      linhas.push((L.dias_restantes &lt; 0 ? "🟠 " + nome + ": venceu em " + L.vence + ", trava em " + (L.tolerancia + L.dias_restantes + 1) + " dia(s)" : "🟡 " + nome + ": vence em " + L.vence) + ". Confira o pagamento e atualize a coluna vence.");
+    else if (L.situacao === "teste_vencido") linhas.push("⚪ " + nome + ": o teste grátis acabou e ela ainda não pagou.");
+    else if (L.situacao === "teste" &amp;&amp; L.dias_restantes !== null &amp;&amp; L.dias_restantes &lt;= 3) linhas.push("🟢 " + nome + ": o teste grátis acaba em " + L.dias_restantes + " dia(s).");
   });
   var faltam = Math.round((Date.UTC(+LINKS_ATE.slice(0, 4), +LINKS_ATE.slice(5, 7) - 1, +LINKS_ATE.slice(8, 10)) - Date.UTC(+hoje.slice(0, 4), +hoje.slice(5, 7) - 1, +hoje.slice(8, 10))) / DIA);
-  if (faltam &lt;= 10) linhas.unshift(faltam &lt; 0 ? &quot;🔗 Os links de pagamento venceram em &quot; + dataBr_(LINKS_ATE) + &quot;. As clientes não estão vendo nenhum botão de pagar. Crie os links novos no Mercado Pago e mande para o Claude atualizar o app.&quot;
-    : &quot;🔗 Os links de pagamento de lançamento valem até &quot; + dataBr_(LINKS_ATE) + &quot; (faltam &quot; + faltam + &quot; dias). Crie os links novos no Mercado Pago e mande para o Claude atualizar o app. Depois, desative os links antigos no Mercado Pago.&quot;);
+  if (faltam &lt;= 10) linhas.unshift(faltam &lt; 0 ? "🔗 Os links de pagamento venceram em " + dataBr_(LINKS_ATE) + ". As clientes não estão vendo nenhum botão de pagar. Crie os links novos no Mercado Pago e mande para o Claude atualizar o app."
+    : "🔗 Os links de pagamento de lançamento valem até " + dataBr_(LINKS_ATE) + " (faltam " + faltam + " dias). Crie os links novos no Mercado Pago e mande para o Claude atualizar o app. Depois, desative os links antigos no Mercado Pago.");
   if (!linhas.length) return;
-  enviar_(para, &quot;Catálogo Fácil · avisos de hoje (&quot; + dataBr_(hoje) + &quot;)&quot;, &quot;&lt;p&gt;Olá, Day!&lt;/p&gt;&lt;p&gt;&quot; + linhas.join(&quot;&lt;br&gt;&quot;) + &quot;&lt;/p&gt;&lt;p style=&#x27;color:#8A7A6E&#x27;&gt;Aviso automático do Catálogo Fácil.&lt;/p&gt;&quot;, &quot;Catálogo Fácil&quot;);
+  enviar_(para, "Catálogo Fácil · avisos de hoje (" + dataBr_(hoje) + ")", "&lt;p&gt;Olá, Day!&lt;/p&gt;&lt;p&gt;" + linhas.join("&lt;br&gt;") + "&lt;/p&gt;&lt;p style='color:#8A7A6E'&gt;Aviso automático do Catálogo Fácil.&lt;/p&gt;", "Catálogo Fácil");
 }
 
 /* ---------------- e-mails ---------------- */
-function itemDet_(i) { return [i.texto &amp;&amp; &quot;Nome: &quot; + i.texto, i.idade &amp;&amp; &quot;Idade: &quot; + i.idade, i.tema &amp;&amp; &quot;Tema: &quot; + i.tema, i.data &amp;&amp; &quot;Data: &quot; + i.data, i.cor &amp;&amp; &quot;Cor: &quot; + i.cor + (i.glitter ? &quot; (&quot; + i.glitter + &quot;)&quot; : &quot;&quot;), i.modelo &amp;&amp; &quot;Celular: &quot; + i.modelo, i.foto_id &amp;&amp; &quot;Foto enviada ✅&quot;, i.obs].filter(Boolean); }
+function itemDet_(i) { return [i.texto &amp;&amp; "Nome: " + i.texto, i.idade &amp;&amp; "Idade: " + i.idade, i.tema &amp;&amp; "Tema: " + i.tema, i.data &amp;&amp; "Data: " + i.data, i.cor &amp;&amp; "Cor: " + i.cor + (i.glitter ? " (" + i.glitter + ")" : ""), i.modelo &amp;&amp; "Celular: " + i.modelo, i.foto_id &amp;&amp; "Foto enviada ✅", i.obs].filter(Boolean); }
 function itensHtml_(p) {
-  return &quot;&lt;table style=&#x27;border-collapse:collapse;width:100%;max-width:520px&#x27;&gt;&quot; + itens_(p).map(function (i) {
-    return &quot;&lt;tr&gt;&lt;td style=&#x27;padding:6px 0;border-bottom:1px solid #eee&#x27;&gt;&lt;b&gt;&quot; + i.q + &quot;× &quot; + esc_(i.nome) + &quot;&lt;/b&gt;&quot; + itemDet_(i).map(function (x) { return &quot;&lt;br&gt;&lt;span style=&#x27;color:#6b5d52&#x27;&gt;&quot; + esc_(x) + &quot;&lt;/span&gt;&quot;; }).join(&quot;&quot;) +
-      &quot;&lt;/td&gt;&lt;td style=&#x27;text-align:right;border-bottom:1px solid #eee&#x27;&gt;&quot; + brl_(i.total) + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;; }).join(&quot;&quot;) +
-    (p.endereco || p.taxa !== &quot;&quot; &amp;&amp; p.taxa !== undefined &amp;&amp; Number(p.taxa) &gt; 0 ? &quot;&lt;tr&gt;&lt;td style=&#x27;padding:6px 0;border-bottom:1px solid #eee&#x27;&gt;&lt;b&gt;&quot; + esc_(p.tipo) + &quot;&lt;/b&gt;&quot; + (p.endereco ? &quot;&lt;br&gt;&lt;span style=&#x27;color:#6b5d52&#x27;&gt;&quot; + esc_(p.endereco) + (p.cep ? &quot; · CEP &quot; + esc_(p.cep) : &quot;&quot;) + &quot;&lt;/span&gt;&quot; : &quot;&quot;) +
-      &quot;&lt;/td&gt;&lt;td style=&#x27;text-align:right;border-bottom:1px solid #eee&#x27;&gt;&quot; + (p.taxa === &quot;&quot; || p.taxa === undefined ? &quot;a combinar&quot; : brl_(p.taxa)) + &quot;&lt;/td&gt;&lt;/tr&gt;&quot; : &quot;&quot;) +
-    &quot;&lt;tr&gt;&lt;td style=&#x27;padding:6px 0&#x27;&gt;&lt;b&gt;Total estimado&lt;/b&gt;&lt;/td&gt;&lt;td style=&#x27;text-align:right&#x27;&gt;&lt;b&gt;&quot; + brl_(p.total) + &quot;&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&quot;;
+  return "&lt;table style='border-collapse:collapse;width:100%;max-width:520px'&gt;" + itens_(p).map(function (i) {
+    return "&lt;tr&gt;&lt;td style='padding:6px 0;border-bottom:1px solid #eee'&gt;&lt;b&gt;" + i.q + "× " + esc_(i.nome) + "&lt;/b&gt;" + itemDet_(i).map(function (x) { return "&lt;br&gt;&lt;span style='color:#6b5d52'&gt;" + esc_(x) + "&lt;/span&gt;"; }).join("") +
+      "&lt;/td&gt;&lt;td style='text-align:right;border-bottom:1px solid #eee'&gt;" + brl_(i.total) + "&lt;/td&gt;&lt;/tr&gt;"; }).join("") +
+    (p.endereco || p.taxa !== "" &amp;&amp; p.taxa !== undefined &amp;&amp; Number(p.taxa) &gt; 0 ? "&lt;tr&gt;&lt;td style='padding:6px 0;border-bottom:1px solid #eee'&gt;&lt;b&gt;" + esc_(p.tipo) + "&lt;/b&gt;" + (p.endereco ? "&lt;br&gt;&lt;span style='color:#6b5d52'&gt;" + esc_(p.endereco) + (p.cep ? " · CEP " + esc_(p.cep) : "") + "&lt;/span&gt;" : "") +
+      "&lt;/td&gt;&lt;td style='text-align:right;border-bottom:1px solid #eee'&gt;" + (p.taxa === "" || p.taxa === undefined ? "a combinar" : brl_(p.taxa)) + "&lt;/td&gt;&lt;/tr&gt;" : "") +
+    "&lt;tr&gt;&lt;td style='padding:6px 0'&gt;&lt;b&gt;Total estimado&lt;/b&gt;&lt;/td&gt;&lt;td style='text-align:right'&gt;&lt;b&gt;" + brl_(p.total) + "&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;";
 }
 function avisarNegocio_(N, p) {
-  if (!/@/.test(N.email_aviso || &quot;&quot;)) return;
+  if (!/@/.test(N.email_aviso || "")) return;
   var lk = linkPainel_(N);
-  enviar_(String(N.email_aviso), &quot;🛎️ Pedido novo #&quot; + p.num + &quot; · &quot; + p.cliente + &quot; · &quot; + brl_(p.total),
-    &quot;&lt;h2 style=&#x27;margin:0 0 8px&#x27;&gt;Pedido novo #&quot; + p.num + &quot;&lt;/h2&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(p.cliente) + &quot;&lt;/b&gt; · WhatsApp &quot; + esc_(p.tel) + &quot;&lt;br&gt;E-mail: &quot; + esc_(p.email) + (p.pagamento ? &quot;&lt;br&gt;Pagamento: &quot; + esc_(FORMAS_PAG[p.pagamento] || p.pagamento) + (p.cobrar !== &quot;&quot; &amp;&amp; p.cobrar !== undefined ? &quot; · &quot; + brl_(p.cobrar) + &quot; na hora do pedido&quot; : &quot;&quot;) : &quot;&quot;) + &quot;&lt;br&gt;Receber por: &quot; + esc_(p.tipo) + (p.endereco ? &quot;&lt;br&gt;Endereço: &quot; + esc_(p.endereco) + (p.cep ? &quot; · CEP &quot; + esc_(p.cep) : &quot;&quot;) : &quot;&quot;) +
-    (p.entrega ? &quot;&lt;br&gt;Precisa para: &quot; + dataBr_(p.entrega) : &quot;&quot;) + (p.obs ? &quot;&lt;br&gt;Recado: &quot; + esc_(p.obs) : &quot;&quot;) + &quot;&lt;/p&gt;&quot; + itensHtml_(p) +
-    (lk ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + lk + &quot;&#x27; style=&#x27;background:#4E3D31;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Abrir o painel&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;), String(N.nome));
+  enviar_(String(N.email_aviso), "🛎️ Pedido novo #" + p.num + " · " + p.cliente + " · " + brl_(p.total),
+    "&lt;h2 style='margin:0 0 8px'&gt;Pedido novo #" + p.num + "&lt;/h2&gt;&lt;p&gt;&lt;b&gt;" + esc_(p.cliente) + "&lt;/b&gt; · WhatsApp " + esc_(p.tel) + "&lt;br&gt;E-mail: " + esc_(p.email) + (p.pagamento ? "&lt;br&gt;Pagamento: " + esc_(FORMAS_PAG[p.pagamento] || p.pagamento) + (p.cobrar !== "" &amp;&amp; p.cobrar !== undefined ? " · " + brl_(p.cobrar) + " na hora do pedido" : "") : "") + "&lt;br&gt;Receber por: " + esc_(p.tipo) + (p.endereco ? "&lt;br&gt;Endereço: " + esc_(p.endereco) + (p.cep ? " · CEP " + esc_(p.cep) : "") : "") +
+    (p.entrega ? "&lt;br&gt;Precisa para: " + dataBr_(p.entrega) : "") + (p.obs ? "&lt;br&gt;Recado: " + esc_(p.obs) : "") + "&lt;/p&gt;" + itensHtml_(p) +
+    (lk ? "&lt;p&gt;&lt;a href='" + lk + "' style='background:#4E3D31;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold'&gt;Abrir o painel&lt;/a&gt;&lt;/p&gt;" : ""), String(N.nome));
 }
 function emailCliente_(N, p, tipo) {
-  if (!/@/.test(p.email || &quot;&quot;)) return;
-  var tit = { novo: &quot;Recebemos seu pedido #&quot; + p.num + &quot; 💛&quot;, sinal: &quot;Sua encomenda #&quot; + p.num + &quot; foi confirmada&quot;, pronto: &quot;Sua encomenda #&quot; + p.num + &quot; está pronta!&quot;, entregue: &quot;Obrigada pela compra!&quot;, cancelado: &quot;Encomenda #&quot; + p.num + &quot; cancelada&quot;, rastreio: &quot;🚚 Sua encomenda #&quot; + p.num + &quot; foi enviada!&quot;, troca: &quot;Recebemos seu pedido de troca/devolução #&quot; + p.num, pagar: &quot;💳 Link para pagar o pedido #&quot; + p.num }[tipo] || &quot;Encomenda #&quot; + p.num;
-  var txt = { novo: &quot;A &quot; + N.nome + &quot; recebeu o seu pedido. Em breve ela confirma o valor final e o prazo pelo WhatsApp.&quot;, pronto: &quot;Sua encomenda está prontinha. Combine a &quot; + (/retir/i.test(p.tipo) ? &quot;retirada&quot; : &quot;entrega&quot;) + &quot; pelo WhatsApp.&quot;, rastreio: &quot;Ela já está a caminho por &quot; + p.tipo + &quot;.&quot;, troca: &quot;A &quot; + N.nome + &quot; vai analisar e te responder pelo WhatsApp.&quot; }[tipo] || &quot;&quot;;
-  var px = pixNeg_(N); if (tipo === &quot;novo&quot; &amp;&amp; px &amp;&amp; (p.pagamento === &quot;pix&quot; || !p.pagamento) &amp;&amp; p.cobrar !== &quot;&quot; &amp;&amp; p.cobrar !== undefined &amp;&amp; p.cobrar !== null) txt = &quot;Para confirmar, faça o Pix de &quot; + brl_(p.cobrar) + (px.modo === &quot;sinal&quot; ? &quot; (sinal)&quot; : &quot;&quot;) + &quot; para a chave &quot; + px.chave + (px.nome ? &quot; (&quot; + px.nome + &quot;)&quot; : &quot;&quot;) + &quot; e mande o comprovante pelo botão abaixo. A loja confere e confirma.&quot;;
-  if (tipo === &quot;novo&quot; &amp;&amp; /^(credito|debito|boleto)$/.test(String(p.pagamento))) txt = &quot;Você escolheu pagar com &quot; + FORMAS_PAG[p.pagamento].toLowerCase() + &quot;. A loja vai te mandar o link de pagamento pelo app, e você recebe o aviso.&quot;;
-  if (tipo === &quot;pagar&quot;) txt = &quot;Toque no botão abaixo, abra o seu pedido e toque em Pagar agora. Depois, mande o comprovante por lá.&quot; + (p.link_pag ? &quot; Link: &quot; + p.link_pag : &quot;&quot;);
-  if (p.rastreio &amp;&amp; (tipo === &quot;rastreio&quot; || tipo === &quot;pronto&quot; || tipo === &quot;entregue&quot;)) txt += (txt ? &quot; &quot; : &quot;&quot;) + &quot;Código de rastreio: &quot; + p.rastreio + (/^https?:/i.test(p.rastreio) ? &quot;&quot; : &quot; (acompanhe no site dos Correios: rastreamento.correios.com.br ou da transportadora).&quot;);
+  if (!/@/.test(p.email || "")) return;
+  var tit = { novo: "Recebemos seu pedido #" + p.num + " 💛", sinal: "Sua encomenda #" + p.num + " foi confirmada", pronto: "Sua encomenda #" + p.num + " está pronta!", entregue: "Obrigada pela compra!", cancelado: "Encomenda #" + p.num + " cancelada", rastreio: "🚚 Sua encomenda #" + p.num + " foi enviada!", troca: "Recebemos seu pedido de troca/devolução #" + p.num, pagar: "💳 Link para pagar o pedido #" + p.num }[tipo] || "Encomenda #" + p.num;
+  var txt = { novo: "A " + N.nome + " recebeu o seu pedido. Em breve ela confirma o valor final e o prazo pelo WhatsApp.", pronto: "Sua encomenda está prontinha. Combine a " + (/retir/i.test(p.tipo) ? "retirada" : "entrega") + " pelo WhatsApp.", rastreio: "Ela já está a caminho por " + p.tipo + ".", troca: "A " + N.nome + " vai analisar e te responder pelo WhatsApp." }[tipo] || "";
+  var px = pixNeg_(N); if (tipo === "novo" &amp;&amp; px &amp;&amp; (p.pagamento === "pix" || !p.pagamento) &amp;&amp; p.cobrar !== "" &amp;&amp; p.cobrar !== undefined &amp;&amp; p.cobrar !== null) txt = "Para confirmar, faça o Pix de " + brl_(p.cobrar) + (px.modo === "sinal" ? " (sinal)" : "") + " para a chave " + px.chave + (px.nome ? " (" + px.nome + ")" : "") + " e mande o comprovante pelo botão abaixo. A loja confere e confirma.";
+  if (tipo === "novo" &amp;&amp; /^(credito|debito|boleto)$/.test(String(p.pagamento))) txt = "Você escolheu pagar com " + FORMAS_PAG[p.pagamento].toLowerCase() + ". A loja vai te mandar o link de pagamento pelo app, e você recebe o aviso.";
+  if (tipo === "pagar") txt = "Toque no botão abaixo, abra o seu pedido e toque em Pagar agora. Depois, mande o comprovante por lá." + (p.link_pag ? " Link: " + p.link_pag : "");
+  if (p.rastreio &amp;&amp; (tipo === "rastreio" || tipo === "pronto" || tipo === "entregue")) txt += (txt ? " " : "") + "Código de rastreio: " + p.rastreio + (/^https?:/i.test(p.rastreio) ? "" : " (acompanhe no site dos Correios: rastreamento.correios.com.br ou da transportadora).");
   var lk = linkCli_(N, p);
-  enviar_(p.email, tit + &quot; · &quot; + N.nome,
-    &quot;&lt;p&gt;Olá, &quot; + esc_(String(p.cliente).split(&quot; &quot;)[0]) + &quot;!&lt;/p&gt;&lt;p&gt;&lt;b&gt;&quot; + esc_(tit) + &quot;&lt;/b&gt;&quot; + (txt ? &quot;&lt;br&gt;&quot; + esc_(txt) : &quot;&quot;) + &quot;&lt;/p&gt;&quot; + itensHtml_(p) +
-    (lk ? &quot;&lt;p&gt;&lt;a href=&#x27;&quot; + lk + &quot;&#x27; style=&#x27;background:#4E3D31;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold&#x27;&gt;Acompanhar meu pedido&lt;/a&gt;&lt;/p&gt;&quot; : &quot;&quot;) +
-    &quot;&lt;p style=&#x27;color:#8A7A6E&#x27;&gt;&quot; + esc_(N.nome) + (N.telefone ? &quot; · &quot; + esc_(N.telefone) : &quot;&quot;) + &quot;&lt;br&gt;Obrigada!&lt;/p&gt;&quot;, String(N.nome));
+  enviar_(p.email, tit + " · " + N.nome,
+    "&lt;p&gt;Olá, " + esc_(String(p.cliente).split(" ")[0]) + "!&lt;/p&gt;&lt;p&gt;&lt;b&gt;" + esc_(tit) + "&lt;/b&gt;" + (txt ? "&lt;br&gt;" + esc_(txt) : "") + "&lt;/p&gt;" + itensHtml_(p) +
+    (lk ? "&lt;p&gt;&lt;a href='" + lk + "' style='background:#4E3D31;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold'&gt;Acompanhar meu pedido&lt;/a&gt;&lt;/p&gt;" : "") +
+    "&lt;p style='color:#8A7A6E'&gt;" + esc_(N.nome) + (N.telefone ? " · " + esc_(N.telefone) : "") + "&lt;br&gt;Obrigada!&lt;/p&gt;", String(N.nome));
 }
 function enviar_(para, assunto, html, nome) {
-  try { if (MailApp.getRemainingDailyQuota() &lt; 1) return; MailApp.sendEmail({ to: para, subject: assunto, htmlBody: &quot;&lt;div style=&#x27;font-family:Arial,sans-serif;color:#3E322A;font-size:14px&#x27;&gt;&quot; + html + &quot;&lt;/div&gt;&quot;, name: nome || &quot;Catálogo Fácil&quot; }); }
-  catch (x) { console.log(&quot;e-mail não enviado: &quot; + x); }
+  try { if (MailApp.getRemainingDailyQuota() &lt; 1) return; MailApp.sendEmail({ to: para, subject: assunto, htmlBody: "&lt;div style='font-family:Arial,sans-serif;color:#3E322A;font-size:14px'&gt;" + html + "&lt;/div&gt;", name: nome || "Catálogo Fácil" }); }
+  catch (x) { console.log("e-mail não enviado: " + x); }
 }
 
 /* ---------------- negócio e licença ---------------- */
 function negocio_(n, semErro) {
-  n = String(n || &quot;&quot;).toLowerCase().trim();
-  var N = linhas_(&quot;Negocios&quot;).filter(function (x) { return String(x.n).toLowerCase() === n; })[0];
-  if (!N &amp;&amp; !semErro) throw new Error(&quot;Catálogo não encontrado. Confira o link.&quot;);
+  n = String(n || "").toLowerCase().trim();
+  var N = linhas_("Negocios").filter(function (x) { return String(x.n).toLowerCase() === n; })[0];
+  if (!N &amp;&amp; !semErro) throw new Error("Catálogo não encontrado. Confira o link.");
   if (N) N.n = String(N.n).toLowerCase();
   return N || null;
 }
 function liberado_(N) {
-  var s = String(N.situacao || &quot;&quot;).toLowerCase().trim();
-  if (s === &quot;cortesia&quot;) return { ok: true, situacao: s };
-  if (s === &quot;ativo&quot;) {
-    var v = dataDe_(N.vence), tol = Number(cfgVal_(&quot;dias_tolerancia&quot;) || 3);
-    if (!v) return { ok: true, situacao: &quot;ativo&quot;, vence: &quot;&quot; };               // pagamento único: sem vencimento
+  var s = String(N.situacao || "").toLowerCase().trim();
+  if (s === "cortesia") return { ok: true, situacao: s };
+  if (s === "ativo") {
+    var v = dataDe_(N.vence), tol = Number(cfgVal_("dias_tolerancia") || 3);
+    if (!v) return { ok: true, situacao: "ativo", vence: "" };               // pagamento único: sem vencimento
     var dias = Math.floor((v + DIA - Date.now()) / DIA);                       // dias até o vencimento (negativo = atrasado)
-    if (dias &lt; -tol) return { ok: false, situacao: &quot;vencido&quot;, vence: dataBr_(dataIso_(N.vence)), whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
-    return { ok: true, situacao: &quot;ativo&quot;, vence: dataBr_(dataIso_(N.vence)), dias_restantes: dias, tolerancia: tol, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+    if (dias &lt; -tol) return { ok: false, situacao: "vencido", vence: dataBr_(dataIso_(N.vence)), whatsapp: cfgVal_("whatsapp_dayia") };
+    return { ok: true, situacao: "ativo", vence: dataBr_(dataIso_(N.vence)), dias_restantes: dias, tolerancia: tol, whatsapp: cfgVal_("whatsapp_dayia") };
   }
-  if (s === &quot;suspenso&quot;) return { ok: false, situacao: s, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+  if (s === "suspenso") return { ok: false, situacao: s, whatsapp: cfgVal_("whatsapp_dayia") };
   var ate = dataDe_(N.teste_ate);
-  if (ate &amp;&amp; Date.now() &gt; ate + DIA) return { ok: false, situacao: &quot;teste_vencido&quot;, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
-  return { ok: true, situacao: &quot;teste&quot;, dias_restantes: ate ? Math.max(0, Math.floor((ate + DIA - Date.now()) / DIA)) : null, whatsapp: cfgVal_(&quot;whatsapp_dayia&quot;) };
+  if (ate &amp;&amp; Date.now() &gt; ate + DIA) return { ok: false, situacao: "teste_vencido", whatsapp: cfgVal_("whatsapp_dayia") };
+  return { ok: true, situacao: "teste", dias_restantes: ate ? Math.max(0, Math.floor((ate + DIA - Date.now()) / DIA)) : null, whatsapp: cfgVal_("whatsapp_dayia") };
 }
-/* formas de entrega: [{nome, taxa (número ou null = a combinar), retira (sem endereço)}] guardadas na coluna &quot;tipos&quot; */
+/* formas de entrega: [{nome, taxa (número ou null = a combinar), retira (sem endereço)}] guardadas na coluna "tipos" */
 function entregas_(N) {
-  var t = String(N.tipos || &quot;&quot;), l;
+  var t = String(N.tipos || ""), l;
   if (/^\s*\[/.test(t)) l = j_(t, []);
-  else l = (t || &quot;Retirada,Entrega,Correios&quot;).split(&quot;,&quot;).map(function (s) { s = s.trim(); var r = /retir/i.test(s); return { nome: s, taxa: r ? 0 : null, retira: r }; });
-  return l.map(function (e) { return { nome: lim_(e.nome, 40), taxa: e.taxa === null || e.taxa === &quot;&quot; || e.taxa === undefined ? null : Math.max(0, num_(e.taxa)), retira: !!e.retira }; }).filter(function (e) { return e.nome; });
+  else l = (t || "Retirada,Entrega,Correios").split(",").map(function (s) { s = s.trim(); var r = /retir/i.test(s); return { nome: s, taxa: r ? 0 : null, retira: r }; });
+  return l.map(function (e) { return { nome: lim_(e.nome, 40), taxa: e.taxa === null || e.taxa === "" || e.taxa === undefined ? null : Math.max(0, num_(e.taxa)), retira: !!e.retira }; }).filter(function (e) { return e.nome; });
 }
-function pixNeg_(N) { var ch = String(N.pix_chave || &quot;&quot;).trim(); if (!ch) return null; var m = [&quot;sinal&quot;, &quot;total&quot;, &quot;depois&quot;].indexOf(String(N.pix_modo)) &gt;= 0 ? String(N.pix_modo) : &quot;sinal&quot;;
-  return { chave: ch, nome: String(N.pix_nome || &quot;&quot;), banco: String(N.pix_banco || &quot;&quot;), modo: m, pct: Math.min(100, Math.max(10, Math.round(num_(N.pix_pct)) || 50)) }; }
-function pagNeg_(N) { var l = j_(N.pagtos, null), temPix = !!String(N.pix_chave || &quot;&quot;).trim();
-  if (!Array.isArray(l)) l = temPix ? [&quot;pix&quot;] : [];
-  l = l.filter(function (f) { return FORMAS_PAG[f] &amp;&amp; (f !== &quot;pix&quot; || temPix); });
-  var m = [&quot;sinal&quot;, &quot;total&quot;, &quot;depois&quot;].indexOf(String(N.pix_modo)) &gt;= 0 ? String(N.pix_modo) : &quot;sinal&quot;;
+function pixNeg_(N) { var ch = String(N.pix_chave || "").trim(); if (!ch) return null; var m = ["sinal", "total", "depois"].indexOf(String(N.pix_modo)) &gt;= 0 ? String(N.pix_modo) : "sinal";
+  return { chave: ch, nome: String(N.pix_nome || ""), banco: String(N.pix_banco || ""), modo: m, pct: Math.min(100, Math.max(10, Math.round(num_(N.pix_pct)) || 50)) }; }
+function pagNeg_(N) { var l = j_(N.pagtos, null), temPix = !!String(N.pix_chave || "").trim();
+  if (!Array.isArray(l)) l = temPix ? ["pix"] : [];
+  l = l.filter(function (f) { return FORMAS_PAG[f] &amp;&amp; (f !== "pix" || temPix); });
+  var m = ["sinal", "total", "depois"].indexOf(String(N.pix_modo)) &gt;= 0 ? String(N.pix_modo) : "sinal";
   return { formas: l, nomes: l.map(function (f) { return FORMAS_PAG[f]; }), modo: m, pct: Math.min(100, Math.max(10, Math.round(num_(N.pix_pct)) || 50)) }; }
-function cobrarDe_(N, total, forma) { var g = pagNeg_(N); if (!forma || forma === &quot;dinheiro&quot; || g.formas.indexOf(forma) &lt; 0 || g.modo === &quot;depois&quot;) return &quot;&quot;; return g.modo === &quot;total&quot; ? total : Math.round(total * g.pct) / 100; }
-function mkt_(N) { var m = j_(N.mkt, {}), o = {}; Object.keys(MKT_PADRAO).forEach(function (k) { o[k] = m[k] !== undefined &amp;&amp; m[k] !== &quot;&quot; ? m[k] : MKT_PADRAO[k]; }); return o; }
+function cobrarDe_(N, total, forma) { var g = pagNeg_(N); if (!forma || forma === "dinheiro" || g.formas.indexOf(forma) &lt; 0 || g.modo === "depois") return ""; return g.modo === "total" ? total : Math.round(total * g.pct) / 100; }
+function mkt_(N) { var m = j_(N.mkt, {}), o = {}; Object.keys(MKT_PADRAO).forEach(function (k) { o[k] = m[k] !== undefined &amp;&amp; m[k] !== "" ? m[k] : MKT_PADRAO[k]; }); return o; }
 function publicoNeg_(N) {
-  return { n: N.n, nome: String(N.nome), whats: soDig_(N.whatsapp), tel: String(N.telefone || &quot;&quot;), logo: String(N.logo || &quot;&quot;), titulo: String(N.titulo || &quot;&quot;), subtitulo: String(N.subtitulo || &quot;&quot;),
-    aviso: String(N.aviso || &quot;&quot;), cats: j_(N.cats, []), faixas: j_(N.faixas, FAIXAS_PADRAO), brinde: j_(N.brinde, {}), redes: j_(N.redes, {}),
-    trocas: String(N.trocas || &quot;&quot;) || TROCAS_PADRAO, pix: pixNeg_(N), pag: pagNeg_(N), entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
+  return { n: N.n, nome: String(N.nome), whats: soDig_(N.whatsapp), tel: String(N.telefone || ""), logo: String(N.logo || ""), titulo: String(N.titulo || ""), subtitulo: String(N.subtitulo || ""),
+    aviso: String(N.aviso || ""), cats: j_(N.cats, []), faixas: j_(N.faixas, FAIXAS_PADRAO), brinde: j_(N.brinde, {}), redes: j_(N.redes, {}),
+    trocas: String(N.trocas || "") || TROCAS_PADRAO, pix: pixNeg_(N), pag: pagNeg_(N), entregas: entregas_(N), tipos: entregas_(N).map(function (e) { return e.nome; }) };
 }
 function completoNeg_(N) {
-  var o = publicoNeg_(N); o.email_aviso = String(N.email_aviso || &quot;&quot;); o.whatsapp = String(N.whatsapp || &quot;&quot;); o.mkt = mkt_(N);
-  o.plano = { plano: String(N.plano || &quot;&quot;), valor: String(N.valor || &quot;&quot;), vence: N.vence ? dataBr_(dataIso_(N.vence) || String(N.vence)) : &quot;&quot;, link: String(N.link_pagto || &quot;&quot;), situacao: String(N.situacao || &quot;&quot;), teste_ate: N.teste_ate ? String(legivel_(dataDe_(N.teste_ate))).slice(0, 10) : &quot;&quot; };
+  var o = publicoNeg_(N); o.email_aviso = String(N.email_aviso || ""); o.whatsapp = String(N.whatsapp || ""); o.mkt = mkt_(N);
+  o.plano = { plano: String(N.plano || ""), valor: String(N.valor || ""), vence: N.vence ? dataBr_(dataIso_(N.vence) || String(N.vence)) : "", link: String(N.link_pagto || ""), situacao: String(N.situacao || ""), teste_ate: N.teste_ate ? String(legivel_(dataDe_(N.teste_ate))).slice(0, 10) : "" };
   return o;
 }
+/* segurança: no máximo 5 senhas erradas a cada 15 minutos (protege contra robôs) */
+function tentativa_(k) { if (Number(CacheService.getScriptCache().get("lf_" + k) || 0) &gt;= 5) throw new Error("Muitas tentativas erradas. Aguarde 15 minutos e tente de novo."); }
+function errou_(k) { var c = CacheService.getScriptCache(); c.put("lf_" + k, String(Number(c.get("lf_" + k) || 0) + 1), 900); }
+function acertou_(k) { CacheService.getScriptCache().remove("lf_" + k); }
 function confereSenha_(N, senha) {
-  var s = String(N.senha || &quot;&quot;);
+  var s = String(N.senha || "");
   if (/^[0-9a-f]{64}$/.test(s)) return hash_(senha) === s;
-  if (s !== &quot;&quot; &amp;&amp; s === senha) { atualizar_(&quot;Negocios&quot;, function (r) { return String(r.n).toLowerCase() === N.n; }, { senha: hash_(senha) }); return true; }
+  if (s !== "" &amp;&amp; s === senha) { atualizar_("Negocios", function (r) { return String(r.n).toLowerCase() === N.n; }, { senha: hash_(senha) }); return true; }
   return false;
 }
-function hash_(s) { var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, &quot;catalogofacil:&quot; + String(s), Utilities.Charset.UTF_8); return b.map(function (x) { return (&quot;0&quot; + ((x + 256) % 256).toString(16)).slice(-2); }).join(&quot;&quot;); }
+function hash_(s) { var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, "catalogofacil:" + String(s), Utilities.Charset.UTF_8); return b.map(function (x) { return ("0" + ((x + 256) % 256).toString(16)).slice(-2); }).join(""); }
 
 /* ---------------- peças, clientes, promoções ---------------- */
 function pecas_(n) {
-  return linhas_(&quot;Pecas&quot;).filter(function (p) { return String(p.negocio).toLowerCase() === n; }).map(function (p) {
-    return { id: String(p.id), ordem: Number(p.ordem) || 0, nome: String(p.nome), cat: String(p.cat), preco: Number(p.preco) || 0, desc: String(p.desc || &quot;&quot;), fotos: j_(p.fotos, []), videos: j_(p.videos, []),
-      campos: j_(p.campos, {}), ativo: !/^n/i.test(String(p.ativo)), shopee: String(p.shopee || &quot;&quot;), tiktok: String(p.tiktok || &quot;&quot;), criado: Number(p.criado) || 0 };
+  return linhas_("Pecas").filter(function (p) { return String(p.negocio).toLowerCase() === n; }).map(function (p) {
+    return { id: String(p.id), ordem: Number(p.ordem) || 0, nome: String(p.nome), cat: String(p.cat), preco: Number(p.preco) || 0, desc: String(p.desc || ""), fotos: j_(p.fotos, []), videos: j_(p.videos, []),
+      campos: j_(p.campos, {}), ativo: !/^n/i.test(String(p.ativo)), shopee: String(p.shopee || ""), tiktok: String(p.tiktok || ""), criado: Number(p.criado) || 0 };
   }).sort(function (a, b) { return (a.ordem || 9999) - (b.ordem || 9999) || b.criado - a.criado; });
 }
 function clientes_(n) {
-  return linhas_(&quot;Clientes&quot;).filter(function (c) { return String(c.negocio).toLowerCase() === n; }).map(function (c) {
-    return { id: String(c.id), nome: String(c.nome), tel: soDig_(c.tel), email: String(c.email || &quot;&quot;), aniv: String(c.aniv || &quot;&quot;), obs: String(c.obs || &quot;&quot;), origem: String(c.origem || &quot;&quot;), criado: Number(c.criado) || 0 };
+  return linhas_("Clientes").filter(function (c) { return String(c.negocio).toLowerCase() === n; }).map(function (c) {
+    return { id: String(c.id), nome: String(c.nome), tel: soDig_(c.tel), email: String(c.email || ""), aniv: String(c.aniv || ""), obs: String(c.obs || ""), origem: String(c.origem || ""), criado: Number(c.criado) || 0 };
   });
 }
 function clienteUpsert_(n, c, origem) {
@@ -679,20 +688,20 @@ function clienteUpsert_(n, c, origem) {
   var l = clientes_(n), x = l.filter(function (y) { return (tel &amp;&amp; y.tel === tel) || (!tel &amp;&amp; y.nome.toLowerCase() === nome.toLowerCase()); })[0];
   if (x) {
     var m = {}; if (tel) m.tel = tel; if (c.email) m.email = lim_(c.email, 120); if (c.aniv) m.aniv = c.aniv; if (nome &amp;&amp; /^\d+$/.test(x.nome)) m.nome = nome;
-    if (Object.keys(m).length) atualizar_(&quot;Clientes&quot;, function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === x.id; }, m);
+    if (Object.keys(m).length) atualizar_("Clientes", function (r) { return String(r.negocio).toLowerCase() === n &amp;&amp; String(r.id) === x.id; }, m);
     return x;
   }
-  var o = { negocio: n, id: &quot;c&quot; + uid_(), nome: nome, tel: tel, email: lim_(c.email, 120), aniv: c.aniv || &quot;&quot;, obs: &quot;&quot;, origem: origem, criado: Date.now() };
-  inserir_(&quot;Clientes&quot;, o); return o;
+  var o = { negocio: n, id: "c" + uid_(), nome: nome, tel: tel, email: lim_(c.email, 120), aniv: c.aniv || "", obs: "", origem: origem, criado: Date.now() };
+  inserir_("Clientes", o); return o;
 }
 function promos_(n) {
-  return linhas_(&quot;Promocoes&quot;).filter(function (r) { return String(r.negocio).toLowerCase() === n; }).map(function (r) {
-    return { id: String(r.id), titulo: String(r.titulo), desc: Number(r.desc) || 0, alvo: String(r.alvo || &quot;todas&quot;), ate: dataIso_(r.ate), ativa: !/^n/i.test(String(r.ativa)) };
+  return linhas_("Promocoes").filter(function (r) { return String(r.negocio).toLowerCase() === n; }).map(function (r) {
+    return { id: String(r.id), titulo: String(r.titulo), desc: Number(r.desc) || 0, alvo: String(r.alvo || "todas"), ate: dataIso_(r.ate), ativa: !/^n/i.test(String(r.ativa)) };
   });
 }
 function promosAtivas_(n) { var h = hojeIso_(); return promos_(n).filter(function (r) { return r.ativa &amp;&amp; r.ate &gt;= h; }); }
-function envioRaw_(n) { var e = {}; try { e = JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;EV_&quot; + n) || &quot;{}&quot;); } catch (x) {} e.n = e.n || 0; return e; }
-function enviados_(n) { var o = {}; linhas_(&quot;Envios&quot;).forEach(function (r) { if (String(r.negocio).toLowerCase() === n) o[String(r.chave) + &quot;|&quot; + String(r.cliente)] = dataIso_(r.dia) || String(r.dia); }); return o; }
+function envioRaw_(n) { var e = {}; try { e = JSON.parse(PropertiesService.getScriptProperties().getProperty("EV_" + n) || "{}"); } catch (x) {} e.n = e.n || 0; return e; }
+function enviados_(n) { var o = {}; linhas_("Envios").forEach(function (r) { if (String(r.negocio).toLowerCase() === n) o[String(r.chave) + "|" + String(r.cliente)] = dataIso_(r.dia) || String(r.dia); }); return o; }
 function envioEstado_(n, N) {
   var e = envioRaw_(n), m = mkt_(N), hoje = hojeIso_(), hr = Math.floor(minutosHoje_(Date.now()) / 60);
   return { n: e.dia === hoje ? e.n : 0, limite: m.limite, hIni: m.hIni, hFim: m.hFim, noHorario: hr &gt;= m.hIni &amp;&amp; hr &lt; m.hFim, ultimo: e.ultimo || 0, env: enviados_(n) };
@@ -700,35 +709,35 @@ function envioEstado_(n, N) {
 
 /* ---------------- pedidos ---------------- */
 function pedidos_(n) {
-  return linhas_(&quot;Pedidos&quot;).filter(function (p) { return String(p.negocio).toLowerCase() === n; }).map(function (p) {
+  return linhas_("Pedidos").filter(function (p) { return String(p.negocio).toLowerCase() === n; }).map(function (p) {
     p.id = Number(p.id); p.num = Number(p.num); p.criado = Number(p.criado); p.total = Number(p.total) || 0; p.sinal = Number(p.sinal) || 0; p.status = String(p.status); return p; });
 }
-function itens_(p) { try { return JSON.parse(p.itens || &quot;[]&quot;); } catch (x) { return []; } }
+function itens_(p) { try { return JSON.parse(p.itens || "[]"); } catch (x) { return []; } }
 function proximoNum_(n) { var mx = 100; pedidos_(n).forEach(function (p) { if (p.num &gt; mx) mx = p.num; }); return mx + 1; }
-function doCliente_(N, x) { var p = pedidos_(N.n).filter(function (y) { return y.id === Number(x.id); })[0]; if (!p || !x.chave || String(p.chave) !== String(x.chave)) throw new Error(&quot;Pedido não encontrado.&quot;); return p; }
-function trocaPub_(p) { var t = j_(p.troca, null); if (!t || !t.motivo) return null; return { motivo: t.motivo, nome: MOTIVOS_TROCA[t.motivo] || t.motivo, txt: String(t.txt || &quot;&quot;), foto: !!t.foto_id, t: t.t }; }
-function hist_(p) { try { return JSON.parse(p.historico || &quot;[]&quot;); } catch (x) { return []; } }
+function doCliente_(N, x) { var p = pedidos_(N.n).filter(function (y) { return y.id === Number(x.id); })[0]; if (!p || !x.chave || String(p.chave) !== String(x.chave)) throw new Error("Pedido não encontrado."); return p; }
+function trocaPub_(p) { var t = j_(p.troca, null); if (!t || !t.motivo) return null; return { motivo: t.motivo, nome: MOTIVOS_TROCA[t.motivo] || t.motivo, txt: String(t.txt || ""), foto: !!t.foto_id, t: t.t }; }
+function hist_(p) { try { return JSON.parse(p.historico || "[]"); } catch (x) { return []; } }
 function publico_(p, painel) {
   var its = itens_(p).map(function (i) { var o = JSON.parse(JSON.stringify(i)); o.foto = !!o.foto_id; delete o.foto_id; return o; });
   var o = { id: p.id, num: p.num, criado: p.criado, cliente: String(p.cliente), tipo: String(p.tipo), entrega: dataIso_(p.entrega), itens: its, total: p.total, sinal: p.sinal,
-    pago: sim_(p.pago), status: p.status, obs: String(p.obs || &quot;&quot;), historico: hist_(p), origem: String(p.origem || &quot;&quot;),
-    endereco: String(p.endereco || &quot;&quot;), cep: String(p.cep || &quot;&quot;), rastreio: String(p.rastreio || &quot;&quot;), troca: trocaPub_(p), cobrar: p.cobrar === &quot;&quot; || p.cobrar === undefined || p.cobrar === null ? null : Number(p.cobrar), comprovante: !!p.comprovante, comp_em: Number(p.comp_em) || 0, pagamento: String(p.pagamento || &quot;&quot;), pagNome: FORMAS_PAG[p.pagamento] || &quot;&quot;, link_pag: String(p.link_pag || &quot;&quot;), taxa: p.taxa === &quot;&quot; || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
-  if (painel) { o.tel = soDig_(p.tel); o.email = String(p.email || &quot;&quot;); o.aniv = String(p.aniv || &quot;&quot;); o.anot = String(p.anot || &quot;&quot;); o.cliente_id = String(p.cliente_id || &quot;&quot;); }
+    pago: sim_(p.pago), status: p.status, obs: String(p.obs || ""), historico: hist_(p), origem: String(p.origem || ""),
+    endereco: String(p.endereco || ""), cep: String(p.cep || ""), rastreio: String(p.rastreio || ""), troca: trocaPub_(p), cobrar: p.cobrar === "" || p.cobrar === undefined || p.cobrar === null ? null : Number(p.cobrar), comprovante: !!p.comprovante, comp_em: Number(p.comp_em) || 0, pagamento: String(p.pagamento || ""), pagNome: FORMAS_PAG[p.pagamento] || "", link_pag: String(p.link_pag || ""), taxa: p.taxa === "" || p.taxa === undefined || p.taxa === null ? null : Number(p.taxa) };
+  if (painel) { o.tel = soDig_(p.tel); o.email = String(p.email || ""); o.aniv = String(p.aniv || ""); o.anot = String(p.anot || ""); o.cliente_id = String(p.cliente_id || ""); }
   return o;
 }
-function linkNeg_(N) { var b = cfgVal_(&quot;link_base&quot;); return b ? b + &quot;?n=&quot; + encodeURIComponent(N.n) : &quot;&quot;; }
-function linkPainel_(N) { var l = linkNeg_(N); return l ? l + &quot;#painel&quot; : &quot;&quot;; }
-function linkCli_(N, p) { var l = linkNeg_(N); return l ? l + &quot;&amp;p=&quot; + p.id + &quot;&amp;k=&quot; + p.chave : &quot;&quot;; }
+function linkNeg_(N) { var b = cfgVal_("link_base"); return b ? b + "?n=" + encodeURIComponent(N.n) : ""; }
+function linkPainel_(N) { var l = linkNeg_(N); return l ? l + "#painel" : ""; }
+function linkCli_(N, p) { var l = linkNeg_(N); return l ? l + "&amp;p=" + p.id + "&amp;k=" + p.chave : ""; }
 
 /* ---------------- planilha ---------------- */
-function planilha_() { var id = PropertiesService.getScriptProperties().getProperty(&quot;PLANILHA&quot;); return id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(); }
+function planilha_() { var id = PropertiesService.getScriptProperties().getProperty("PLANILHA"); return id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(); }
 var MIG_ = {};
 function aba_(n) {
-  var sh = planilha_().getSheetByName(n); if (!sh) throw new Error(&quot;A aba &quot; + n + &quot; não existe. Rode a função configurar.&quot;);
+  var sh = planilha_().getSheetByName(n); if (!sh) throw new Error("A aba " + n + " não existe. Rode a função configurar.");
   if (!MIG_[n] &amp;&amp; ABAS[n] &amp;&amp; sh.getLastRow() &gt; 0) {   // coluna nova no sistema? cria sozinha no fim do cabeçalho
     MIG_[n] = 1; var lc = Math.max(1, sh.getLastColumn()), cab = sh.getRange(1, 1, 1, lc).getValues()[0].map(String);
     var falta = ABAS[n].filter(function (c) { return cab.indexOf(c) &lt; 0; });
-    if (falta.length) { sh.getRange(1, lc + 1, 1, falta.length).setValues([falta]).setFontWeight(&quot;bold&quot;).setBackground(&quot;#4E3D31&quot;).setFontColor(&quot;#FFFFFF&quot;); delete CAB_[n]; delete LIN_[n]; }
+    if (falta.length) { sh.getRange(1, lc + 1, 1, falta.length).setValues([falta]).setFontWeight("bold").setBackground("#4E3D31").setFontColor("#FFFFFF"); delete CAB_[n]; delete LIN_[n]; }
   }
   return sh;
 }
@@ -736,15 +745,15 @@ var LIN_ = {};
 function linhas_(n) {
   if (LIN_[n]) return LIN_[n].map(function (o) { return Object.assign({}, o); });
   var v = aba_(n).getDataRange().getValues(), cab = v.shift();
-  LIN_[n] = v.filter(function (r) { return r.join(&quot;&quot;) !== &quot;&quot;; }).map(function (r) { var o = {}; cab.forEach(function (c, i) { o[c] = r[i]; }); return o; });
+  LIN_[n] = v.filter(function (r) { return r.join("") !== ""; }).map(function (r) { var o = {}; cab.forEach(function (c, i) { o[c] = r[i]; }); return o; });
   return LIN_[n].map(function (o) { return Object.assign({}, o); });
 }
 var CAB_ = {};
 function cab_(n) { if (!CAB_[n]) { var sh = aba_(n); CAB_[n] = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String); } return CAB_[n]; }
-function inserir_(n, o) { delete LIN_[n]; aba_(n).appendRow(txtRow_(cab_(n).map(function (c) { return o[c] === undefined || o[c] === null ? &quot;&quot; : o[c]; }))); }
+function inserir_(n, o) { delete LIN_[n]; aba_(n).appendRow(txtRow_(cab_(n).map(function (c) { return o[c] === undefined || o[c] === null ? "" : o[c]; }))); }
 function inserirVarios_(n, lista) {
   if (!lista.length) return; delete LIN_[n];
-  var cab = cab_(n), sh = aba_(n), rows = lista.map(function (o) { return txtRow_(cab.map(function (c) { return o[c] === undefined || o[c] === null ? &quot;&quot; : o[c]; })); });
+  var cab = cab_(n), sh = aba_(n), rows = lista.map(function (o) { return txtRow_(cab.map(function (c) { return o[c] === undefined || o[c] === null ? "" : o[c]; })); });
   sh.getRange(sh.getLastRow() + 1, 1, rows.length, cab.length).setValues(rows);
 }
 function atualizar_(aba, filtro, campos) {
@@ -760,105 +769,105 @@ function excluir_(aba, filtro) {
   var sh = aba_(aba), v = sh.getDataRange().getValues(), cab = v[0];
   for (var i = v.length - 1; i &gt;= 1; i--) { var o = {}; cab.forEach(function (c, k) { o[c] = v[i][k]; }); if (filtro(o)) sh.deleteRow(i + 1); }
 }
-function cfgVal_(k) { var r = linhas_(&quot;Config&quot;).filter(function (x) { return x.chave === k; })[0]; return r ? String(r.valor) : &quot;&quot;; }
+function cfgVal_(k) { var r = linhas_("Config").filter(function (x) { return x.chave === k; })[0]; return r ? String(r.valor) : ""; }
 function setCfg_(k, v) {
   delete LIN_.Config;
-  var sh = aba_(&quot;Config&quot;), d = sh.getDataRange().getValues();
+  var sh = aba_("Config"), d = sh.getDataRange().getValues();
   for (var i = 1; i &lt; d.length; i++) if (d[i][0] === k) { sh.getRange(i + 1, 2).setValue(txt_(String(v))); return; }
-  sh.appendRow([k, txt_(String(v)), &quot;&quot;]);
+  sh.appendRow([k, txt_(String(v)), ""]);
 }
-function proximoId_() { var id = Number(cfgVal_(&quot;proximo_id&quot;)) || 1; setCfg_(&quot;proximo_id&quot;, id + 1); return id; }
+function proximoId_() { var id = Number(cfgVal_("proximo_id")) || 1; setCfg_("proximo_id", id + 1); return id; }
 
 /* ---------------- tempo ---------------- */
 var FUSO_CACHE = null;
-function fuso_() { if (FUSO_CACHE === null) FUSO_CACHE = Number(cfgVal_(&quot;fuso_minutos&quot;)) || -180; return FUSO_CACHE; }
+function fuso_() { if (FUSO_CACHE === null) FUSO_CACHE = Number(cfgVal_("fuso_minutos")) || -180; return FUSO_CACHE; }
 function inicioDia_(t) { var off = fuso_() * MIN; return Math.floor((t + off) / DIA) * DIA - off; }
 function minutosHoje_(t) { return Math.floor((t - inicioDia_(t)) / MIN); }
 function hojeIso_() { return new Date(Date.now() + fuso_() * MIN).toISOString().slice(0, 10); }
-function legivel_(t) { var d = new Date(t + fuso_() * MIN); var z = function (x) { return (&quot;0&quot; + x).slice(-2); }; return z(d.getUTCDate()) + &quot;/&quot; + z(d.getUTCMonth() + 1) + &quot;/&quot; + d.getUTCFullYear() + &quot; &quot; + z(d.getUTCHours()) + &quot;:&quot; + z(d.getUTCMinutes()); }
+function legivel_(t) { var d = new Date(t + fuso_() * MIN); var z = function (x) { return ("0" + x).slice(-2); }; return z(d.getUTCDate()) + "/" + z(d.getUTCMonth() + 1) + "/" + d.getUTCFullYear() + " " + z(d.getUTCHours()) + ":" + z(d.getUTCMinutes()); }
 function dataDe_(v) {
   if (!v) return 0; if (v instanceof Date) return v.getTime();
   var m = String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return Date.UTC(+m[3], +m[2] - 1, +m[1]) - fuso_() * MIN;
   var t = Date.parse(v); return isNaN(t) ? 0 : t;
 }
 function dataIso_(v) {
-  if (!v) return &quot;&quot;; if (v instanceof Date) return new Date(v.getTime() + fuso_() * MIN).toISOString().slice(0, 10);
+  if (!v) return ""; if (v instanceof Date) return new Date(v.getTime() + fuso_() * MIN).toISOString().slice(0, 10);
   var s = String(v).trim(), m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + &quot;-&quot; + (&quot;0&quot; + m[2]).slice(-2) + &quot;-&quot; + (&quot;0&quot; + m[1]).slice(-2);
-  return &quot;&quot;;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
+  return "";
 }
-function dataBr_(iso) { var m = String(iso || &quot;&quot;).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + &quot;/&quot; + m[2] + &quot;/&quot; + m[1] : String(iso || &quot;&quot;); }
-function anivDe_(t) { t = String(t || &quot;&quot;); if (/^\d{2}-\d{2}$/.test(t)) return t; var m = t.match(/(\d{1,2})\D+(\d{1,2})/); if (!m) return &quot;&quot;; var d = +m[1], mo = +m[2]; if (d &lt; 1 || d &gt; 31 || mo &lt; 1 || mo &gt; 12) return &quot;&quot;; return (&quot;0&quot; + mo).slice(-2) + &quot;-&quot; + (&quot;0&quot; + d).slice(-2); }
+function dataBr_(iso) { var m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + "/" + m[2] + "/" + m[1] : String(iso || ""); }
+function anivDe_(t) { t = String(t || ""); if (/^\d{2}-\d{2}$/.test(t)) return t; var m = t.match(/(\d{1,2})\D+(\d{1,2})/); if (!m) return ""; var d = +m[1], mo = +m[2]; if (d &lt; 1 || d &gt; 31 || mo &lt; 1 || mo &gt; 12) return ""; return ("0" + mo).slice(-2) + "-" + ("0" + d).slice(-2); }
 
 /* ---------------- sessão, versão e trava ---------------- */
 var SESSAO_DIAS = 60;
-function novoToken_(n) { var t = Utilities.getUuid(); PropertiesService.getScriptProperties().setProperty(&quot;SS_&quot; + t, JSON.stringify({ v: n, exp: Date.now() + SESSAO_DIAS * DIA })); return t; }
+function novoToken_(n) { var t = Utilities.getUuid(); PropertiesService.getScriptProperties().setProperty("SS_" + t, JSON.stringify({ v: n, exp: Date.now() + SESSAO_DIAS * DIA })); return t; }
 function sessao_(d) {
-  var t = String(d.token || &quot;&quot;), raw = t &amp;&amp; PropertiesService.getScriptProperties().getProperty(&quot;SS_&quot; + t);
-  if (!raw) throw new Error(&quot;SESSAO&quot;);
-  var o = JSON.parse(raw); if (!(o.exp &gt; Date.now())) throw new Error(&quot;SESSAO&quot;);
+  var t = String(d.token || ""), raw = t &amp;&amp; PropertiesService.getScriptProperties().getProperty("SS_" + t);
+  if (!raw) throw new Error("SESSAO");
+  var o = JSON.parse(raw); if (!(o.exp &gt; Date.now())) throw new Error("SESSAO");
   return o.v;
 }
 function limparSessoes_() {
   var P = PropertiesService.getScriptProperties(), all = P.getProperties(), agora = Date.now();
-  Object.keys(all).forEach(function (k) { if (k.indexOf(&quot;SS_&quot;) === 0) { try { if (!(JSON.parse(all[k]).exp &gt; agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); } } });
+  Object.keys(all).forEach(function (k) { if (k.indexOf("SS_") === 0) { try { if (!(JSON.parse(all[k]).exp &gt; agora)) P.deleteProperty(k); } catch (x) { P.deleteProperty(k); } } });
 }
-function admin_(d) { if (sessao_(d) !== &quot;#dayia&quot;) throw new Error(&quot;SESSAO&quot;); }
-function encerrarSessao_(t) { if (t) PropertiesService.getScriptProperties().deleteProperty(&quot;SS_&quot; + t); }
-function versao_(n) { return Number(PropertiesService.getScriptProperties().getProperty(&quot;V_&quot; + n) || 1); }
-function mudou_(n) { PropertiesService.getScriptProperties().setProperty(&quot;V_&quot; + n, String(Date.now())); }
-function comTrava_(fn) { var l = LockService.getScriptLock(); if (!l.tryLock(20000)) throw new Error(&quot;Muitas pessoas usando agora. Tente de novo em alguns segundos.&quot;); try { return fn(); } finally { SpreadsheetApp.flush(); l.releaseLock(); } }
+function admin_(d) { if (sessao_(d) !== "#dayia") throw new Error("SESSAO"); }
+function encerrarSessao_(t) { if (t) PropertiesService.getScriptProperties().deleteProperty("SS_" + t); }
+function versao_(n) { return Number(PropertiesService.getScriptProperties().getProperty("V_" + n) || 1); }
+function mudou_(n) { PropertiesService.getScriptProperties().setProperty("V_" + n, String(Date.now())); }
+function comTrava_(fn) { var l = LockService.getScriptLock(); if (!l.tryLock(20000)) throw new Error("Muitas pessoas usando agora. Tente de novo em alguns segundos."); try { return fn(); } finally { SpreadsheetApp.flush(); l.releaseLock(); } }
 
 /* ---------------- avisos no celular (OneSignal, o mesmo app da Agenda Fácil) ---------------- */
-var ONESIGNAL_APP = &quot;7a1178de-2e8b-4205-aeb9-8171f97fb614&quot;;
-function subOk_(sub) { sub = String(sub || &quot;&quot;).trim(); if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error(&quot;Aparelho inválido.&quot;); return sub; }
+var ONESIGNAL_APP = "7a1178de-2e8b-4205-aeb9-8171f97fb614";
+function subOk_(sub) { sub = String(sub || "").trim(); if (!/^[0-9a-zA-Z-]{20,80}$/.test(sub)) throw new Error("Aparelho inválido."); return sub; }
 function pushGuardar_(chave, sub) {
   sub = subOk_(sub);
-  var P = PropertiesService.getScriptProperties(), k = &quot;PS_&quot; + chave, o = { s: [] };
-  try { o = JSON.parse(P.getProperty(k) || &#x27;{&quot;s&quot;:[]}&#x27;); } catch (x) {}
+  var P = PropertiesService.getScriptProperties(), k = "PS_" + chave, o = { s: [] };
+  try { o = JSON.parse(P.getProperty(k) || '{"s":[]}'); } catch (x) {}
   var l = (o.s || []).filter(function (s) { return s !== sub; }); l.push(sub);
   P.setProperty(k, JSON.stringify({ s: l.slice(-5), t: Date.now() }));
 }
-function pushChave_() { return String(cfgVal_(&quot;push_chave&quot;) || &quot;&quot;).trim(); }
+function pushChave_() { return String(cfgVal_("push_chave") || "").trim(); }
 function push_(chaves, titulo, texto, url) {
   try {
     var key = pushChave_(); if (!key) return;
-    var subs = []; chaves.forEach(function (c) { try { (JSON.parse(PropertiesService.getScriptProperties().getProperty(&quot;PS_&quot; + c) || &#x27;{&quot;s&quot;:[]}&#x27;).s || []).forEach(function (s) { if (subs.indexOf(s) &lt; 0) subs.push(s); }); } catch (x) {} });
+    var subs = []; chaves.forEach(function (c) { try { (JSON.parse(PropertiesService.getScriptProperties().getProperty("PS_" + c) || '{"s":[]}').s || []).forEach(function (s) { if (subs.indexOf(s) &lt; 0) subs.push(s); }); } catch (x) {} });
     pushSubs_(subs, titulo, texto, url);
-  } catch (x) { console.log(&quot;aviso push não enviado: &quot; + x); }
+  } catch (x) { console.log("aviso push não enviado: " + x); }
 }
 function pushSubs_(subs, titulo, texto, url) {
   try {
     var key = pushChave_(); if (!key || !subs || !subs.length) return;
-    var corpo = { app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
-      chrome_web_icon: FOTOS_BASE + &quot;icon-192.png&quot;, ttl: 86400 };
+    var corpo = { app_id: ONESIGNAL_APP, target_channel: "push", include_subscription_ids: subs, headings: { en: String(titulo).slice(0, 80) }, contents: { en: String(texto).slice(0, 200) },
+      chrome_web_icon: FOTOS_BASE + "icon-192.png", ttl: 86400 };
     if (url) corpo.url = url;
-    var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
-      headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key }, payload: JSON.stringify(corpo) });
-    if (r.getResponseCode() &gt;= 300) console.log(&quot;aviso push recusado: &quot; + r.getResponseCode() + &quot; &quot; + r.getContentText().slice(0, 300));
-  } catch (x) { console.log(&quot;aviso push não enviado: &quot; + x); }
+    var r = UrlFetchApp.fetch("https://api.onesignal.com/notifications?c=push", { method: "post", contentType: "application/json", muteHttpExceptions: true,
+      headers: { Authorization: (/^os_v2_/.test(key) ? "Key " : "Basic ") + key }, payload: JSON.stringify(corpo) });
+    if (r.getResponseCode() &gt;= 300) console.log("aviso push recusado: " + r.getResponseCode() + " " + r.getContentText().slice(0, 300));
+  } catch (x) { console.log("aviso push não enviado: " + x); }
 }
 function testarAviso() {
-  var key = pushChave_(); if (!key) { console.log(&quot;❌ Falta colar a chave do OneSignal na aba Config (linha push_chave, coluna valor).&quot;); return &quot;falta a chave&quot;; }
-  var r = UrlFetchApp.fetch(&quot;https://api.onesignal.com/notifications?c=push&quot;, { method: &quot;post&quot;, contentType: &quot;application/json&quot;, muteHttpExceptions: true,
-    headers: { Authorization: (/^os_v2_/.test(key) ? &quot;Key &quot; : &quot;Basic &quot;) + key }, payload: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: &quot;push&quot;, include_subscription_ids: [&quot;00000000-0000-0000-0000-000000000000&quot;], contents: { en: &quot;teste&quot; } }) });
-  var c = r.getResponseCode(), msg = (c === 401 || c === 403) ? &quot;❌ A chave não foi aceita (&quot; + c + &quot;). Confira se copiou inteira.&quot; : &quot;✅ Chave do OneSignal funcionando!&quot;;
+  var key = pushChave_(); if (!key) { console.log("❌ Falta colar a chave do OneSignal na aba Config (linha push_chave, coluna valor)."); return "falta a chave"; }
+  var r = UrlFetchApp.fetch("https://api.onesignal.com/notifications?c=push", { method: "post", contentType: "application/json", muteHttpExceptions: true,
+    headers: { Authorization: (/^os_v2_/.test(key) ? "Key " : "Basic ") + key }, payload: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: "push", include_subscription_ids: ["00000000-0000-0000-0000-000000000000"], contents: { en: "teste" } }) });
+  var c = r.getResponseCode(), msg = (c === 401 || c === 403) ? "❌ A chave não foi aceita (" + c + "). Confira se copiou inteira." : "✅ Chave do OneSignal funcionando!";
   console.log(msg); return msg;
 }
 
 /* ---------------- utilidades ---------------- */
-function txt_(v) { return (typeof v === &quot;string&quot; &amp;&amp; v !== &quot;&quot;) ? &quot;&#x27;&quot; + v : v; }
+function txt_(v) { return (typeof v === "string" &amp;&amp; v !== "") ? "'" + v : v; }
 function txtRow_(r) { return r.map(txt_); }
 function sim_(v) { return /^s/i.test(String(v).trim()); }
-function lim_(v, n) { return String(v === undefined || v === null ? &quot;&quot; : v).trim().slice(0, n); }
-function soDig_(t) { return String(t || &quot;&quot;).replace(/\D/g, &quot;&quot;); }
-function telNorm_(t) { var n = soDig_(t).replace(/^0+/, &quot;&quot;); if (n.length === 10 || n.length === 11) n = &quot;55&quot; + n; return n.slice(0, 15); }
-function num_(v) { var s = String(v === undefined || v === null ? &quot;&quot; : v).trim(); if (/,/.test(s)) s = s.replace(/\./g, &quot;&quot;).replace(&quot;,&quot;, &quot;.&quot;); return Number(s) || 0; }
-function url_(u) { u = lim_(u, 400); if (!u || u === &quot;#demo&quot;) return &quot;&quot;; return /^https?:\/\//i.test(u) ? u : &quot;https://&quot; + u; }
-function uid_() { return Utilities.getUuid().replace(/-/g, &quot;&quot;).slice(0, 8); }
-function j_(s, def) { try { var v = JSON.parse(s); return v === null || v === undefined || v === &quot;&quot; ? def : v; } catch (x) { return def; } }
-function brl_(v) { return &quot;R$ &quot; + (Number(v) || 0).toFixed(2).replace(&quot;.&quot;, &quot;,&quot;); }
-function esc_(s) { return String(s === undefined || s === null ? &quot;&quot; : s).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g, function (c) { return { &quot;&amp;&quot;: &quot;&amp;amp;&quot;, &quot;&lt;&quot;: &quot;&amp;lt;&quot;, &quot;&gt;&quot;: &quot;&amp;gt;&quot;, &#x27;&quot;&#x27;: &quot;&amp;quot;&quot;, &quot;&#x27;&quot;: &quot;&amp;#39;&quot; }[c]; }); }
+function lim_(v, n) { return String(v === undefined || v === null ? "" : v).trim().slice(0, n); }
+function soDig_(t) { return String(t || "").replace(/\D/g, ""); }
+function telNorm_(t) { var n = soDig_(t).replace(/^0+/, ""); if (n.length === 10 || n.length === 11) n = "55" + n; return n.slice(0, 15); }
+function num_(v) { var s = String(v === undefined || v === null ? "" : v).trim(); if (/,/.test(s)) s = s.replace(/\./g, "").replace(",", "."); return Number(s) || 0; }
+function url_(u) { u = lim_(u, 400); if (!u || u === "#demo") return ""; return /^https?:\/\//i.test(u) ? u : "https://" + u; }
+function uid_() { return Utilities.getUuid().replace(/-/g, "").slice(0, 8); }
+function j_(s, def) { try { var v = JSON.parse(s); return v === null || v === undefined || v === "" ? def : v; } catch (x) { return def; } }
+function brl_(v) { return "R$ " + (Number(v) || 0).toFixed(2).replace(".", ","); }
+function esc_(s) { return String(s === undefined || s === null ? "" : s).replace(/[&amp;&lt;&gt;"']/g, function (c) { return { "&amp;": "&amp;amp;", "&lt;": "&amp;lt;", "&gt;": "&amp;gt;", '"': "&amp;quot;", "'": "&amp;#39;" }[c]; }); }
 </textarea></main>
 <script>var b=document.getElementById("b"),t=document.getElementById("t");
 b.onclick=function(){t.select();var ok=function(){b.textContent="✅ Copiado! Agora cole no Apps Script";b.className="ok"};

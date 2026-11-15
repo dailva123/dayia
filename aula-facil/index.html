@@ -1056,6 +1056,13 @@ function finalizarDitado(st,avisar){
   if(ditadoAtivo===st)ditadoAtivo=null;
   if(avisar&&(st.final||st.parcial))toast("Pronto! Confira o que ficou escrito.");
 }
+function comoDitarTeclado(){
+  const ua=navigator.userAgent;
+  if(/iphone|ipad|ipod/i.test(ua))return `<b>No iPhone:</b><ol><li>Toque no campo onde quer escrever.</li><li>No teclado, toque no <b>microfone 🎤</b>, que fica <b>embaixo, à direita</b> (perto do espaço).</li><li>Fale normalmente. Para terminar, toque no ⌨️ ou no microfone de novo.</li></ol>`;
+  if(/android/i.test(ua))return `<b>No Android:</b><ol><li>Toque no campo onde quer escrever.</li><li>No teclado, procure o <b>microfone 🎤</b>:<br>• teclado do Google (Gboard): fica <b>no alto, à direita</b>, acima das letras;<br>• teclado da Samsung: fica <b>no alto</b> (ou segure a tecla da <b>vírgula</b> e escolha o 🎤).</li><li>Fale normalmente. O texto aparece sozinho.</li></ol>`;
+  if(/mac/i.test(ua))return `<b>No Mac:</b><ol><li>Clique no campo onde quer escrever.</li><li>Aperte <b>duas vezes a tecla Fn</b> (ou a tecla 🌐).</li><li>Fale normalmente. Para terminar, aperte Fn de novo.</li></ol>`;
+  return `<b>No computador (Windows):</b><ol><li>Clique no campo onde quer escrever.</li><li>Aperte as teclas <b>Windows + H</b> juntas.</li><li>Vai aparecer um microfone azul: fale normalmente. Para pontuar, fale "vírgula", "ponto" ou "ponto de interrogação".</li></ol>`;
+}
 function ajudaMicrofone(bloqueado){
   $("#toast").classList.remove("on");clearTimeout(toast._t);
   const ios=/iphone|ipad|ipod/i.test(navigator.userAgent),inst=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone;
@@ -1063,7 +1070,7 @@ function ajudaMicrofone(bloqueado){
     :inst?`<ol><li>Saia do Aula Fácil e <b>segure o dedo no ícone</b> dele na tela do celular.</li><li>Toque em <b>"Informações do app"</b> (ou no ⓘ).</li><li>Toque em <b>Permissões</b> → <b>Microfone</b> → <b>Permitir</b>.</li><li>Abra o Aula Fácil de novo e toque em <b>Falar</b>.</li></ol>`
     :`<ol><li>Lá em cima, ao lado do endereço do site, toque no <b>cadeado 🔒</b> (ou no ícone de ajustes).</li><li>Toque em <b>Permissões</b> (ou "Configurações do site").</li><li>Em <b>Microfone</b>, escolha <b>Permitir</b>.</li><li>Toque em <b>Falar</b> de novo.</li></ol>`;
   abrirModal(`<h3>🎙️ O microfone está bloqueado</h3><p>${bloqueado?"O celular não deixou o app usar o microfone.":""} Você pode liberar assim:</p>${passos}
-  <div class="ajuste" style="margin-top:10px"><b>Mais fácil:</b> use o microfone do <b>teclado</b>, que funciona sem liberar nada. Toque no campo e, no teclado, toque no <b>🎤</b>. Depois é só falar.</div>
+  <div class="ajuste" style="margin-top:10px"><b>Mais fácil:</b> falar pelo próprio teclado, que funciona sem liberar nada.<br><br>${comoDitarTeclado()}</div>
   <button class="btn btn-pri btn-bloco" style="margin-top:12px" onclick="fecharModal()">Entendi</button>`);
 }
 function pararDitado(){if(ditadoAtivo)finalizarDitado(ditadoAtivo,false)}
@@ -1079,8 +1086,7 @@ function ditar(btn,alvo){
   if(ditadoAtivo&&ditadoAtivo.btn===btn){finalizarDitado(ditadoAtivo,true);return}   // 2º toque: para na hora
   pararDitado();
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){abrirModal(`<h3>🎙️ Falar em vez de escrever</h3><p>Este navegador não deixa o app ouvir direto. Mas você pode usar o <b>microfone do teclado</b> do celular:</p>
-    <ol><li>Toque no campo onde quer escrever.</li><li>No teclado, toque no <b>microfone 🎤</b> (no Android fica no canto de cima do teclado; no iPhone, embaixo à direita).</li><li>Fale normalmente: o texto aparece sozinho.</li></ol>
+  if(!SR){abrirModal(`<h3>🎙️ Falar em vez de escrever</h3><p>Aqui o app não consegue ouvir direto, mas dá para falar pelo próprio teclado:</p>${comoDitarTeclado()}
     <button class="btn btn-pri btn-bloco" onclick="fecharModal()">Entendi</button>`);return}
   if(!navigator.onLine){toast("Para ouvir sua voz o celular precisa de internet. Use o microfone do teclado.");return}
   const rec=new SR();rec.lang="pt-BR";rec.continuous=false;rec.interimResults=true;rec.maxAlternatives=1;

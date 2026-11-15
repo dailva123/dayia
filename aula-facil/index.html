@@ -1045,26 +1045,42 @@ function copiarAntigo(txt,ok){const t=document.createElement("textarea");t.value
 let ditadoAtivo=null;
 function micBtn(alvo){return `<button type="button" class="btn-mic" data-mic='${alvo}' aria-label="Falar em vez de escrever">👩‍🏫🎙️ Falar</button>`}
 function ligarMics(raiz){(raiz||document).querySelectorAll("[data-mic]").forEach(b=>b.onclick=e=>{e.preventDefault();ditar(b,document.querySelector(b.dataset.mic))})}
-function pararDitado(){if(ditadoAtivo){try{ditadoAtivo.rec.stop()}catch(e){}}}
+// Termina o ditado na hora (não espera o celular), e só uma vez
+function finalizarDitado(st,avisar){
+  if(!st||st.fim)return;st.fim=true;
+  try{st.rec.onresult=null;st.rec.onend=null;st.rec.onerror=null;st.rec.stop()}catch(e){}
+  setTimeout(()=>{try{st.rec.abort()}catch(e){}},300);
+  st.btn.classList.remove("ouvindo");st.btn.innerHTML=st.rotulo;
+  const txt=[st.base,st.final,st.parcial].filter(Boolean).join(" ").replace(/\s+/g," ").trim();
+  st.alvo.value=txt;st.alvo.dispatchEvent(new Event("input"));
+  if(ditadoAtivo===st)ditadoAtivo=null;
+  if(avisar&&(st.final||st.parcial))toast("Pronto! Confira o que ficou escrito.");
+}
+function pararDitado(){if(ditadoAtivo)finalizarDitado(ditadoAtivo,false)}
 function ditar(btn,alvo){
   if(!alvo)return;
-  if(ditadoAtivo&&ditadoAtivo.btn===btn){pararDitado();return}
+  if(ditadoAtivo&&ditadoAtivo.btn===btn){finalizarDitado(ditadoAtivo,true);return}   // 2º toque: para na hora
   pararDitado();
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){abrirModal(`<h3>🎙️ Falar em vez de escrever</h3><p>Este navegador não deixa o app ouvir direto. Mas você pode usar o <b>microfone do teclado</b> do celular:</p>
     <ol><li>Toque no campo onde quer escrever.</li><li>No teclado, toque no <b>microfone 🎤</b> (no Android fica no canto de cima do teclado; no iPhone, embaixo à direita).</li><li>Fale normalmente: o texto aparece sozinho.</li></ol>
     <button class="btn btn-pri btn-bloco" onclick="fecharModal()">Entendi</button>`);return}
   if(!navigator.onLine){toast("Para ouvir sua voz o celular precisa de internet. Use o microfone do teclado.");return}
-  const rec=new SR();rec.lang="pt-BR";rec.continuous=true;rec.interimResults=true;
-  const base=alvo.value.trim();let final="";
-  const rotulo=btn.innerHTML;btn.classList.add("ouvindo");btn.innerHTML="🔴 Ouvindo… toque para parar";
-  ditadoAtivo={rec,btn};
-  rec.onresult=ev=>{let inter="";for(let i=ev.resultIndex;i<ev.results.length;i++){const r=ev.results[i];if(r.isFinal)final+=(final?" ":"")+r[0].transcript.trim();else inter+=r[0].transcript}
-    alvo.value=[base,final,inter.trim()].filter(Boolean).join(base||final?" ":"");alvo.dispatchEvent(new Event("input"))};
-  rec.onerror=ev=>{if(ev.error==="not-allowed"||ev.error==="service-not-allowed")toast("Libere o microfone para o app nas permissões do celular.");else if(ev.error!=="no-speech"&&ev.error!=="aborted")toast("Não consegui ouvir. Tente de novo.")};
-  rec.onend=()=>{btn.classList.remove("ouvindo");btn.innerHTML=rotulo;if(ditadoAtivo&&ditadoAtivo.rec===rec)ditadoAtivo=null;
-    alvo.value=[base,final].filter(Boolean).join(" ");alvo.dispatchEvent(new Event("input"));if(final)toast("Pronto! Confira o que ficou escrito.")};
-  try{rec.start();toast("Pode falar 🙂")}catch(e){btn.classList.remove("ouvindo");btn.innerHTML=rotulo;ditadoAtivo=null}
+  const rec=new SR();rec.lang="pt-BR";rec.continuous=false;rec.interimResults=true;rec.maxAlternatives=1;
+  const st={rec,btn,alvo,base:alvo.value.trim(),final:"",parcial:"",rotulo:btn.innerHTML,fim:false};
+  ditadoAtivo=st;btn.classList.add("ouvindo");btn.innerHTML="🔴 Ouvindo… toque para parar";
+  rec.onresult=ev=>{if(st.fim)return;let fin="",par="";
+    for(let i=0;i<ev.results.length;i++){const r=ev.results[i];if(r.isFinal)fin+=" "+r[0].transcript;else par+=" "+r[0].transcript}
+    st.final=fin.trim();st.parcial=par.trim();
+    alvo.value=[st.base,st.final,st.parcial].filter(Boolean).join(" ").replace(/\s+/g," ");};
+  rec.onerror=ev=>{if(st.fim)return;
+    if(ev.error==="not-allowed"||ev.error==="service-not-allowed")toast("Libere o microfone para o app nas permissões do celular.");
+    else if(ev.error==="no-speech")toast("Não ouvi nada. Toque em Falar e fale perto do celular.");
+    else if(ev.error!=="aborted")toast("Não consegui ouvir. Tente de novo.");
+    finalizarDitado(st,false)};
+  rec.onend=()=>finalizarDitado(st,true);           // para sozinho quando ela termina de falar
+  setTimeout(()=>{if(!st.fim)finalizarDitado(st,true)},60000); // segurança: no máximo 1 minuto
+  try{rec.start();toast("Pode falar 🙂 Quando terminar, é só parar de falar ou tocar no botão.")}catch(e){finalizarDitado(st,false)}
 }
 
 /* ============ IA DE VERDADE (via Apps Script) ============ */

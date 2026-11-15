@@ -112,6 +112,16 @@ p{line-height:1.45}
 .rotulo-mic label{margin:0!important}
 .ajuste{background:var(--amarelo-l);border:1px solid #F3DA8A;border-radius:16px;padding:12px;margin-top:12px}
 .ajuste textarea{min-height:64px}
+.chat{display:flex;flex-direction:column;gap:10px;max-height:56vh;overflow:auto;padding:4px 2px 10px;margin-bottom:10px}
+.bolha{max-width:88%;padding:12px 14px;border-radius:18px;line-height:1.45;font-size:15px}
+.bolha.eu{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:6px}
+.bolha.ia{align-self:flex-start;background:#fff;border:1px solid var(--linha);border-bottom-left-radius:6px}
+.bolha ol,.bolha ul{padding-left:20px}
+.acoes-bolha{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.acoes-bolha button{border:0;background:var(--azul-l);color:var(--navy);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700}
+.sug{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.chip-sug{border:1px solid var(--linha);background:var(--azul-l);color:var(--navy);border-radius:12px;padding:8px 10px;text-align:left;font-size:13px;font-weight:600}
+.caixa-chat{background:#fff;border:1px solid var(--linha);border-radius:18px;padding:12px}
 /* listas */
 .busca{position:relative;margin-bottom:12px}
 .busca input{width:100%;border:1px solid var(--linha);background:#fff;border-radius:14px;padding:13px 14px 13px 42px;font-size:16px}
@@ -363,8 +373,8 @@ function render(){
   $("#lblTurmas").textContent=md.turmas;
   document.querySelectorAll(".menu button").forEach(b=>b.classList.toggle("on",b.dataset.aba===aba));
   garantirOrg();
-  const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes}[aba]||telaInicio;
-  pararDitado();$("#tela").innerHTML="";fn($("#tela"));window.scrollTo(0,0);
+  const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes,guia:telaGuia}[aba]||telaInicio;
+  pararDitado();if(aba!=="guia")pararVoz();$("#tela").innerHTML="";fn($("#tela"));window.scrollTo(0,0);
   if(buscaInicial){const b=$("#"+buscaInicial.id);if(b){b.value=buscaInicial.q;b.dispatchEvent(new Event("input"))}buscaInicial=null}
 }
 let buscaInicial=null,ultimaBusca="";
@@ -458,6 +468,7 @@ function telaInicio(el){
     <button onclick="ir('avaliacoes')"><span class="ic">📝</span>Avaliações</button>
     <button onclick="ir('salvos')"><span class="ic">📂</span>Salvos</button>
   </div>
+  <button class="card" style="width:100%;text-align:left;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#0E2238,#17345A);color:#fff;border:0" onclick="ir('guia')"><span style="font-size:40px">🧑‍🏫</span><span><b style="font-size:17px">Mentora do Professor</b><br><span style="color:#CFE2F2;font-size:13px">Converse por voz sobre a sua aula e veja o guia com ideias prontas</span></span></button>
   ${cardAvaliacoes()}
   ${cardPendencias()}
   ${pag}
@@ -891,6 +902,7 @@ function listaSalvos(){
       L.push({tipo:"cham",ic:"✅",titulo:"Chamada"+(DB.modo==="aulas"?"":" – "+t.nome),det:(t.alunos.length-f)+" presentes · "+f+(f===1?" falta":" faltas"),data:d,busca:"chamada "+t.nome,acao:{a:"vercham",t:t.id,d}})});
     (m.entregas[t.id]||[]).forEach(e=>L.push({tipo:"ent",ic:"📥",titulo:e.nome,det:(nT(t)?nT(t)+" · ":"")+e.entregues.length+" entregaram",data:e.data,busca:e.nome,acao:{a:"entregas",t:t.id,id:e.id}}));
   });
+  (m.mentorChat||[]).forEach(c=>{if(c.plano)L.push({tipo:"plano",ic:"🧑‍🏫",titulo:"Plano da mentora – "+(c.plano.tema||""),det:"4 pilares",data:c.data||"",busca:tirarTags(htmlPlanoMentor(c.plano)),acao:{a:"guia"}})});
   (m.avaliacoes||[]).forEach(a=>L.push({tipo:"aval",ic:"📝",titulo:a.tipo+" – "+a.materia,det:(DB.modo==="aulas"?"":nomeTurma(a.turmaId)+" · ")+a.conteudo,data:a.data,busca:[a.tipo,a.materia,a.conteudo,nomeTurma(a.turmaId)].join(" "),acao:{a:"avaliacoes",b:"bAval",q:a.materia}}));
   m.atividades.forEach(a=>L.push({tipo:"ativ",ic:"✨",titulo:a.titulo,det:IDADES[a.idade],data:a.data,busca:a.titulo+" "+tirarTags(a.html),acao:{a:"atividade",id:a.id}}));
   m.planos.forEach(p=>L.push({tipo:"plano",ic:"📚",titulo:"Plano – "+p.tema,det:IDADES[p.idade],data:p.data,busca:[p.tema,p.obj,p.passos,p.mat].join(" "),acao:{a:"plano",id:p.id}}));
@@ -1290,6 +1302,144 @@ function gerarPronto(at){
   if(at.tipo==="contas")r=contas(at);else if(at.tipo==="conte")r=conteEscreva(at);else if(at.tipo==="dinheiro")r=dinheiro(at);
   else if(at.tipo==="ingles")r=inglesFiguras(at);else if(at.tipo==="emocoes")r=emocoes(at);else r=autoavaliacao(at);
   return cabecalho(at,titulo)+r.html+(r.gab.length?gabarito(r.gab):"");
+}
+
+/* ============ GUIA DO BOM PROFESSOR (pronto, sem internet) ============ */
+const GUIA={
+"1a3":{nome:"👶 1 a 3 anos",
+ ativ:[
+  {n:"Caixa dos sentidos",m:"Caixa de sapato, objetos seguros com texturas diferentes (esponja, pano, tampinha grande, algodão, escova)",p:["Coloque os objetos dentro da caixa com um furo para a mão.","Sente com as crianças em roda e deixe uma de cada vez colocar a mão.","Pergunte: \"É macio ou duro? Gelado ou quentinho?\"","Tire o objeto e nomeie junto com a criança."],e:"Sentidos, linguagem (novas palavras), curiosidade e coordenação das mãos."},
+  {n:"Pintura com as mãos e pés",m:"Papel grande no chão (pardo ou kraft), tinta guache atóxica, pano úmido",p:["Forre o chão e deixe as crianças descalças.","Ofereça 2 ou 3 cores de cada vez.","Deixe pisar, carimbar a mão e misturar cores.","Pergunte: \"Que cor apareceu quando misturou?\""],e:"Coordenação motora grossa, percepção das cores, criatividade e autoestima."},
+  {n:"Cesto do tesouro",m:"Cesto com objetos do dia a dia seguros (colher de pau, pote, chocalho, pinha, bola)",p:["Coloque o cesto no meio da roda.","Deixe explorar livremente, sem ensinar \"o jeito certo\".","Observe e narre: \"Você bateu a colher no pote e fez barulho!\"","Ao final, guardem juntos cantando."],e:"Exploração, atenção, causa e efeito, autonomia."},
+  {n:"Música com movimento",m:"Músicas infantis, lenços coloridos",p:["Coloque uma música animada e balance os lenços.","Pare a música: todos \"viram estátua\".","Troque o ritmo: rápido (corre no lugar), lento (anda devagar).","Termine com uma música calma e respiração."],e:"Coordenação, escuta, autocontrole e expressão corporal."}],
+ perg:["\"O que você acha que tem aqui dentro?\"","\"Como você fez isso?\"","\"E se a gente fizer de outro jeito?\"","\"Que barulho isso faz?\"","\"Onde você acha que a bolinha foi parar?\""],
+ erro:"Nessa idade não existe \"erro\": existe tentativa. Se a criança empilhou e caiu, comemore a tentativa (\"Caiu! Vamos de novo?\") e mostre uma pista, sem fazer por ela.",
+ disp:"Bebês e crianças pequenas prestam atenção poucos minutos. Planeje atividades curtas (5 a 10 min), mude de lugar ou de ritmo, use músicas de transição e chame pelo nome com carinho. Firmeza é rotina: sempre a mesma sequência (chegada, roda, atividade, lanche, parque).",
+ rot:{ini:"Música de chegada e roda: cumprimente cada criança pelo nome (5 min).",meio:"Uma experiência sensorial ou de movimento, com a professora junto, narrando o que acontece (10 a 15 min).",fim:"Guardar juntos com música, relembrar o que fizeram com fotos ou objetos e um momento calmo (5 min)."}},
+"4a6":{nome:"🧒 4 a 6 anos",
+ ativ:[
+  {n:"Detetives da natureza",m:"Lupa (ou tampa de garrafa como \"lupa\"), saquinho, papel e giz de cera",p:["Leve a turma ao pátio com uma missão: encontrar 3 coisas da natureza.","Cada dupla coleta folhas, pedrinhas, gravetos.","Na sala, separem por cor, tamanho e textura.","Desenhem o que acharam e contem para a turma."],e:"Observação, classificação (raciocínio lógico), cooperação e linguagem oral."},
+  {n:"Mercadinho da turma",m:"Embalagens vazias, papel para dinheiro de brincadeira, cestinhas",p:["Montem juntos um \"mercado\" com as embalagens e etiquetas de preço (1 a 10).","Metade compra, metade vende; depois trocam.","O vendedor conta as moedas; o comprador confere o troco.","No fim, conversem: \"O que você precisava e o que você só queria?\""],e:"Números, educação financeira, faz de conta, comunicação e cooperação."},
+  {n:"História maluca coletiva",m:"Cartões com desenhos (animal, lugar, objeto) ou figuras de revista",p:["Sorteie 3 cartões e comece: \"Era uma vez...\".","Cada criança continua a história usando um cartão.","A professora escreve no quadro ou grava no celular.","Desenhem o final que mais gostaram."],e:"Criatividade, oralidade, sequência lógica e escuta do colega."},
+  {n:"Circuito de movimento",m:"Cordas, cones (ou garrafas), bambolês, almofadas",p:["Monte um percurso: pular, passar por baixo, equilibrar.","Explique com o próprio corpo, não só falando.","Cada criança faz e depois ajuda a montar um novo desafio.","Terminem com alongamento e respiração."],e:"Coordenação motora, noção de espaço, persistência e autorregulação."}],
+ perg:["\"Por que você acha que isso aconteceu?\"","\"Como você descobriu?\"","\"O que aconteceria se...?\"","\"Tem outro jeito de fazer?\"","\"O que você sentiu quando...?\"","\"Como podemos resolver isso juntos?\""],
+ erro:"Troque \"está errado\" por \"vamos conferir juntos?\". Peça para a criança explicar como pensou: muitas vezes ela mesma percebe. Valorize o caminho: \"Você tentou contar nos dedos, que boa ideia! Vamos contar de novo devagar?\"",
+ disp:"Combine as regras com a turma (e desenhem um cartaz). Use sinais combinados (bater palmas no ritmo, música do silêncio). Ofereça escolhas (\"Quer fazer com giz ou lápis?\"). Se alguém se desconecta, dê uma tarefa especial (ajudante do dia). Seja firme e gentil: \"Eu entendo que você quer brincar agora. Primeiro terminamos aqui, depois vamos ao parque.\"",
+ rot:{ini:"Roda de conversa com uma pergunta curiosa ou um objeto misterioso para despertar a vontade de saber (10 min).",meio:"Atividade mão na massa em grupos pequenos; a professora circula fazendo perguntas, sem dar respostas prontas (20 min).",fim:"Cada grupo mostra o que fez; perguntem \"O que aprendemos hoje?\" e registrem com desenho (10 min)."}},
+"7a10":{nome:"📚 7 a 10 anos",
+ ativ:[
+  {n:"Laboratório da cozinha",m:"Copos, água, sal, açúcar, óleo, corante (ou suco em pó)",p:["Lance o desafio: \"O que se mistura com a água e o que não se mistura?\"","Cada grupo anota o palpite antes (hipótese).","Testem e registrem numa tabela simples.","Comparem: o palpite estava certo? Por quê?"],e:"Método científico, raciocínio lógico, registro e trabalho em equipe."},
+  {n:"Jornal da turma",m:"Folhas, canetinhas, celular para fotos (opcional)",p:["Divida a turma em \"redação\": repórteres, fotógrafos, desenhistas, editores.","Cada grupo escolhe uma notícia da escola ou do bairro.","Façam entrevistas, escrevam e revisem juntos.","Montem o jornal e leiam para outra turma."],e:"Leitura, escrita com sentido, argumentação, cooperação e responsabilidade."},
+  {n:"Matemática do lanche",m:"Folheto de mercado ou cardápio de lanchonete, dinheiro de brincadeira",p:["Cada grupo tem um valor (ex.: R$ 30) para montar o lanche da turma.","Escolhem itens, somam, conferem se dá e calculam o troco.","Apresentam as escolhas e justificam.","Discutam: qual grupo economizou mais? Como?"],e:"Operações, estimativa, educação financeira, tomada de decisão."},
+  {n:"Debate do bem",m:"Uma pergunta polêmica leve (\"Devemos ter dever de casa?\")",p:["Divida em dois grupos (a favor e contra), por sorteio.","Cada grupo prepara 3 argumentos.","Debatam com regras: falar na sua vez, respeitar o colega.","No fim, cada um diz se mudou de ideia e por quê."],e:"Pensamento crítico, oralidade, escuta respeitosa e empatia."}],
+ perg:["\"Como você chegou a essa resposta?\"","\"Você consegue explicar para um colega?\"","\"Que provas você tem disso?\"","\"O que você faria diferente?\"","\"Onde isso aparece na sua vida?\"","\"Qual foi a parte mais difícil e como você venceu?\""],
+ erro:"Use o erro como material de aula: copie no quadro (sem o nome) e pergunte à turma \"Onde está o pulo do gato aqui?\". Mostre que todo cientista erra antes de acertar. Peça para o aluno corrigir o próprio erro explicando o que mudou.",
+ disp:"Varie o formato a cada 15 a 20 minutos (explicação, dupla, movimento). Dê papéis nos grupos (líder do tempo, redator, porta-voz). Converse em particular com quem está desligado: \"Percebi que você não está bem hoje. Como posso te ajudar?\" Combine consequências claras e cumpra sempre, com calma.",
+ rot:{ini:"Desafio ou pergunta-problema ligada ao dia a dia dos alunos e retomada do que já sabem (10 min).",meio:"Investigação em grupos com papéis definidos; o professor faz perguntas e dá pistas (25 min).",fim:"Socialização dos grupos, registro individual (\"o que aprendi\") e uma pergunta para a próxima aula (10 min)."}},
+"adol":{nome:"🧑 Adolescentes (11 a 17)",
+ ativ:[
+  {n:"Sala de aula invertida",m:"Vídeo curto ou texto para ver antes, celular ou cópia impressa",p:["Peça para verem o conteúdo antes da aula.","Na aula, comecem por um quiz rápido ou dúvidas.","Use o tempo para resolver problemas em grupo.","Feche com um resumo feito pelos próprios alunos."],e:"Autonomia, responsabilidade, aplicação do conteúdo e colaboração."},
+  {n:"Projeto que resolve um problema real",m:"Papel, cartolina ou celular",p:["Os alunos escolhem um problema da escola ou do bairro (lixo, desperdício, segurança).","Pesquisam causas e pensam em soluções.","Criam um protótipo, campanha ou cartaz.","Apresentam para a turma ou para a direção."],e:"Protagonismo, pensamento crítico, criatividade, cidadania e projeto de vida."},
+  {n:"Júri simulado",m:"Um caso para discutir (histórico, científico ou ético)",p:["Divida em acusação, defesa, testemunhas e júri.","Cada grupo pesquisa e prepara argumentos com provas.","Façam o julgamento com tempo para cada fala.","O júri decide e explica o motivo."],e:"Argumentação, pesquisa, oratória, ética e respeito a opiniões diferentes."},
+  {n:"Gincana do conhecimento",m:"Perguntas no celular ou em cartões, placar no quadro",p:["Monte equipes misturando perfis.","Use perguntas de níveis diferentes e desafios práticos.","Cada equipe pode \"pedir ajuda\" uma vez a outra equipe.","No fim, revisem as perguntas mais erradas."],e:"Revisão divertida, cooperação, raciocínio rápido e motivação."}],
+ perg:["\"Você concorda? Por quê?\"","\"Qual é o outro lado dessa história?\"","\"Como você provaria isso?\"","\"Onde isso se aplica no mundo real?\"","\"O que você faria se estivesse no lugar dele?\"","\"Qual a sua opinião e em que você se baseia?\""],
+ erro:"Adolescentes têm medo de errar na frente dos outros. Corrija em particular ou de forma coletiva e anônima. Diga \"esse erro é comum e mostra que você está pensando\". Peça para revisarem os próprios trabalhos com uma lista de critérios.",
+ disp:"Mostre para que serve o conteúdo na vida deles. Dê escolhas (tema do projeto, forma de apresentar). Use celular a favor (pesquisa, quiz). Converse olho no olho, sem expor: \"Conto com você nessa parte.\" Limites claros e respeito mútuo: eles respondem bem a quem é justo e coerente.",
+ rot:{ini:"Gancho: notícia, vídeo curto, pergunta polêmica ou situação real (10 min).",meio:"Desafio em grupo ou projeto com entrega concreta; o professor orienta e provoca (30 min).",fim:"Apresentação rápida, autoavaliação e conexão com a vida ou com a próxima aula (10 min)."}},
+"adul":{nome:"👩 Adultos (EJA, alfabetização e aula particular)",
+ ativ:[
+  {n:"Aprender com a própria vida",m:"Papel e caneta, objetos do dia a dia (contas de luz, receitas, embalagens)",p:["Comece perguntando sobre o trabalho e a rotina do aluno.","Use materiais reais: ler uma conta de luz, uma receita, um contracheque.","Resolvam juntos uma situação do dia a dia (calcular, escrever um recado).","O aluno explica o que aprendeu com as palavras dele."],e:"Sentido prático, autoestima, leitura funcional e autonomia."},
+  {n:"Roda de conversa com tema",m:"Uma notícia, música ou imagem",p:["Apresente o material e pergunte o que cada um pensa.","Anote as palavras-chave que surgirem.","Usem essas palavras para ler, escrever ou calcular.","Fechem com uma frase de cada um sobre o tema."],e:"Expressão, pensamento crítico, vocabulário e sentimento de pertencimento."},
+  {n:"Desafio em dupla",m:"Problema prático impresso",p:["Forme duplas com níveis diferentes.","Um explica, o outro confere; depois invertem.","Compartilhem estratégias diferentes para o mesmo problema.","Registrem a melhor estratégia no caderno."],e:"Cooperação, metacognição (pensar sobre como pensa) e confiança."}],
+ perg:["\"Como você faz isso no seu dia a dia?\"","\"O que você já sabe sobre isso?\"","\"Como você explicaria isso para alguém da sua família?\"","\"Onde você usaria isso amanhã?\"","\"O que ainda não ficou claro?\""],
+ erro:"Adultos muitas vezes carregam vergonha de errar. Normalize: \"Todo mundo aprende errando, inclusive eu\". Mostre o progresso concreto (\"Na semana passada você não lia essa palavra, hoje leu!\").",
+ disp:"Respeite o cansaço de quem trabalhou o dia todo: aulas com pausas, café, conversa e conteúdo útil. Conecte tudo à vida real. Valorize a experiência deles e peça opiniões. Seja acolhedor, mas mantenha combinados de horário e respeito.",
+ rot:{ini:"Acolhimento e conversa sobre a semana, ligando ao tema da aula (10 min).",meio:"Atividade prática com material real, em dupla ou individual com apoio (30 min).",fim:"O que aprendi e onde vou usar; elogio sincero do progresso (10 min)."}}
+};
+const CHECKLIST=["Os alunos falaram mais do que eu? Eles perguntaram, testaram e explicaram?","Fiz perguntas abertas, em vez de só dar respostas prontas?","Todos participaram, inclusive os mais tímidos e os que têm mais dificuldade?","O que foi ensinado tem ligação com a vida real dos alunos?","Os alunos sabem dizer o que aprenderam hoje (e eu sei como vou continuar na próxima aula)?"];
+function htmlGuia(k){const g=GUIA[k];
+  return `<h3 style="margin-top:6px">1️⃣ Atividades mão na massa</h3>${g.ativ.map(a=>`<div class="card guia-item" data-busca="${esc(a.n+" "+a.m+" "+a.p.join(" ")+" "+a.e)}"><h3>🎯 ${esc(a.n)}</h3><p><b>Material:</b> ${esc(a.m)}</p><b>Como aplicar:</b><ol>${a.p.map(x=>"<li>"+esc(x)+"</li>").join("")}</ol><p class="ajuste" style="margin:8px 0 0"><b>O que estimula:</b> ${esc(a.e)}</p></div>`).join("")}
+  <h3>2️⃣ O jeito certo de conduzir a aula</h3>
+  <div class="card guia-item" data-busca="perguntas abertas ${esc(g.perg.join(" "))}"><h3>❓ Perguntas abertas que fazem pensar</h3><ul>${g.perg.map(x=>"<li>"+esc(x)+"</li>").join("")}</ul></div>
+  <div class="card guia-item" data-busca="erro errar ${esc(g.erro)}"><h3>🌱 Quando o aluno erra</h3><p>${esc(g.erro)}</p></div>
+  <div class="card guia-item" data-busca="dispersão desinteresse bagunça disciplina ${esc(g.disp)}"><h3>🧭 Dispersão e falta de interesse</h3><p>${esc(g.disp)}</p></div>
+  <h3>3️⃣ Roteiro de uma aula engajadora</h3>
+  <div class="card guia-item" data-busca="roteiro aula início meio fim ${esc(g.rot.ini+" "+g.rot.meio+" "+g.rot.fim)}"><p><b>🟢 Início:</b> ${esc(g.rot.ini)}</p><p><b>🟡 Meio:</b> ${esc(g.rot.meio)}</p><p><b>🔵 Fim:</b> ${esc(g.rot.fim)}</p></div>
+  <h3>4️⃣ Checklist do bom professor</h3>
+  <div class="card guia-item" data-busca="checklist avaliar ${esc(CHECKLIST.join(" "))}">${CHECKLIST.map(x=>`<label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" style="width:22px;height:22px;flex:none"> <span>${esc(x)}</span></label>`).join("")}</div>`;
+}
+
+/* ============ MENTORA DO PROFESSOR (conversa com IA + voz) ============ */
+const FAIXAS={"1a3":"1 a 3 anos","4a6":"4 a 6 anos","7a10":"7 a 10 anos",adol:"adolescentes (11 a 17 anos)",adul:"adultos (EJA, alfabetização, aula particular)"};
+let guiaAba="mentora",guiaFaixa=null;
+function faixaPadrao(){return DB.mentorFaixa||(DB.modo==="particular"?"4a6":DB.modo==="aulas"?"7a10":"7a10")}
+function vozFeminina(){const vs=(window.speechSynthesis&&speechSynthesis.getVoices())||[];const pt=vs.filter(v=>/^pt(-|_)BR/i.test(v.lang)||/portugu[eê]s.*brasil/i.test(v.name));
+  return pt.find(v=>/luciana|francisca|maria|vit[oó]ria|camila|female|feminin|google português do brasil/i.test(v.name))||pt[0]||vs.find(v=>/^pt/i.test(v.lang))||null}
+if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{};
+function falarTexto(txt){try{if(!window.speechSynthesis||DB.vozMentora===false)return;speechSynthesis.cancel();
+  const limpo=String(txt).replace(/<[^>]+>/g," ").replace(/[*#_>`]/g,"").replace(/https?:\S+/g,"").slice(0,2500);
+  const partes=limpo.match(/[^.!?\n]+[.!?]?/g)||[limpo];const v=vozFeminina();
+  partes.forEach(f=>{const u=new SpeechSynthesisUtterance(f.trim());u.lang="pt-BR";if(v)u.voice=v;u.rate=1.02;u.pitch=1.05;speechSynthesis.speak(u)});}catch(e){}}
+function pararVoz(){try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}}
+function chatMentora(){const m=M();if(!m.mentorChat)m.mentorChat=[];return m.mentorChat}
+function htmlPlanoMentor(r){const arr=x=>Array.isArray(x)?x.filter(Boolean):[];
+  return `<div><b>📋 Plano nos 4 pilares${r.tema?" – "+esc(r.tema):""}</b>
+  <h4 style="margin:10px 0 4px">1️⃣ Atividades mão na massa</h4>${arr(r.atividades).map(a=>`<div style="margin-bottom:8px"><b>🎯 ${esc(a.nome||"")}</b><br><i>Material:</i> ${esc(a.material||"")}<ol style="margin:4px 0">${arr(a.passos).map(x=>"<li>"+esc(x)+"</li>").join("")}</ol><i>Estimula:</i> ${esc(a.estimula||"")}</div>`).join("")}
+  <h4 style="margin:10px 0 4px">2️⃣ Como conduzir</h4><b>Perguntas abertas:</b><ul style="margin:4px 0">${arr(r.perguntas).map(x=>"<li>"+esc(x)+"</li>").join("")}</ul><b>Quando o aluno erra:</b> ${esc(r.erro||"")}<br><b>Dispersão:</b> ${esc(r.dispersao||"")}
+  <h4 style="margin:10px 0 4px">3️⃣ Roteiro da aula</h4>🟢 <b>Início:</b> ${esc((r.roteiro||{}).inicio||"")}<br>🟡 <b>Meio:</b> ${esc((r.roteiro||{}).meio||"")}<br>🔵 <b>Fim:</b> ${esc((r.roteiro||{}).fim||(r.roteiro||{}).fundo||(r.roteiro||{}).final||"")}
+  <h4 style="margin:10px 0 4px">4️⃣ Checklist</h4><ul style="margin:4px 0">${arr(r.checklist).map(x=>"<li>☐ "+esc(x)+"</li>").join("")}</ul></div>`}
+function telaGuia(el){
+  const fx=guiaFaixa||faixaPadrao();
+  el.innerHTML=`<h2>🧑‍🏫 Mentora do Professor</h2><p class="sub">Converse por voz ou por escrita sobre a sua aula, ou consulte o guia com ideias prontas.</p>
+  <div class="seg"><button data-ga="mentora" class="${guiaAba==="mentora"?"on":""}">💬 Conversar</button><button data-ga="guia" class="${guiaAba==="guia"?"on":""}">📘 Guia</button></div>
+  <div class="chips">${Object.keys(FAIXAS).map(k=>`<button data-fx="${k}" class="${fx===k?"on":""}">${GUIA[k].nome}</button>`).join("")}</div>
+  <div id="guiaCorpo"></div>`;
+  el.querySelectorAll("[data-ga]").forEach(b=>b.onclick=()=>{guiaAba=b.dataset.ga;pararVoz();render()});
+  el.querySelectorAll("[data-fx]").forEach(b=>b.onclick=()=>{guiaFaixa=b.dataset.fx;DB.mentorFaixa=b.dataset.fx;salvar();render()});
+  const C=$("#guiaCorpo");
+  if(guiaAba==="guia"){
+    C.innerHTML=`${campoBusca("bGuia","Buscar no guia (ex.: erro, dispersão, perguntas, música)")}<div class="linha-btns" style="margin-bottom:12px"><button class="btn btn-sec" id="impGuia">🖨️ Imprimir</button><button class="btn btn-sec" id="ouvGuia">🔊 Ouvir</button></div><div id="gConteudo">${htmlGuia(fx)}</div>`;
+    ligarBusca("bGuia","#gConteudo .guia-item");
+    $("#impGuia").onclick=()=>imprimir(`<h2>Guia do Bom Professor – ${esc(GUIA[fx].nome)}</h2>`+htmlGuia(fx).replace(/<input[^>]*>/g,"☐"));
+    $("#ouvGuia").onclick=()=>{if(DB.vozMentora===false){DB.vozMentora=true;salvar()}falarTexto($("#gConteudo").innerText)};
+    return;
+  }
+  const ch=chatMentora();
+  C.innerHTML=`<div class="chat" id="chat">${ch.length?"":`<div class="bolha ia">Olá, professora! 👋 Sou a sua mentora. Me conte sobre a sua turma ou a aula que você vai dar, e eu te ajudo com ideias práticas. Pode falar no 🎙️ ou escrever.<div class="sug">${["Minha turma está muito agitada, o que eu faço?","Ideias para ensinar frações de um jeito divertido","Como ajudar um aluno que não quer participar?","Uma aula sobre o ciclo da água mão na massa"].map(s=>`<button class="chip-sug">${s}</button>`).join("")}</div></div>`}
+    ${ch.map((c,i)=>`<div class="bolha ${c.de==="prof"?"eu":"ia"}">${c.plano?htmlPlanoMentor(c.plano):esc(c.txt).replace(/\n/g,"<br>")}${c.de==="ia"?`<div class="acoes-bolha"><button data-ouvir="${i}">🔊 Ouvir</button><button data-copiar="${i}">📋 Copiar</button>${c.plano?`<button data-impplano="${i}">🖨️ Imprimir</button>`:""}</div>`:""}</div>`).join("")}</div>
+  <div class="caixa-chat">
+    <textarea id="msgM" placeholder="Escreva ou toque em 🎙️ para falar com a mentora"></textarea>
+    <div class="linha-btns" style="margin-top:8px">${micBtn("#msgM")}<button class="btn btn-pri" id="envM">➤ Enviar</button></div>
+    <div class="linha-btns" style="margin-top:8px"><button class="btn btn-ama" id="planoM">📋 Montar plano nos 4 pilares</button></div>
+    <div class="linha-btns" style="margin-top:8px"><button class="btn btn-sec" id="vozM">${DB.vozMentora===false?"🔇 Voz desligada":"🔊 Voz ligada"}</button><button class="btn btn-sec" id="pararM">⏹️ Parar de falar</button><button class="btn btn-sec" id="limparM">🧹 Nova conversa</button></div>
+    <p class="privac">🔒 Não coloque nomes de alunos na conversa. A mentora é uma IA: confira as ideias antes de usar.</p>
+  </div>`;
+  ligarMics(C);
+  const ch2=$("#chat");ch2.scrollTop=ch2.scrollHeight;
+  C.querySelectorAll(".chip-sug").forEach(b=>b.onclick=()=>{$("#msgM").value=b.textContent;enviarMentora()});
+  C.querySelectorAll("[data-ouvir]").forEach(b=>b.onclick=()=>{if(DB.vozMentora===false){DB.vozMentora=true;salvar();$("#vozM").textContent="🔊 Voz ligada"}const c=ch[+b.dataset.ouvir];falarTexto(c.plano?tirarTags(htmlPlanoMentor(c.plano)):c.txt)});
+  C.querySelectorAll("[data-copiar]").forEach(b=>b.onclick=()=>{const c=ch[+b.dataset.copiar];copiar(c.plano?tirarTags(htmlPlanoMentor(c.plano)).replace(/\s+\n/g,"\n"):c.txt)});
+  C.querySelectorAll("[data-impplano]").forEach(b=>b.onclick=()=>imprimir(htmlPlanoMentor(ch[+b.dataset.impplano].plano)));
+  $("#envM").onclick=()=>enviarMentora();
+  $("#planoM").onclick=()=>enviarMentora(true);
+  $("#vozM").onclick=()=>{DB.vozMentora=DB.vozMentora===false;salvar();if(DB.vozMentora===false)pararVoz();$("#vozM").textContent=DB.vozMentora===false?"🔇 Voz desligada":"🔊 Voz ligada"};
+  $("#pararM").onclick=pararVoz;
+  $("#limparM").onclick=()=>{if(!confirm("Começar uma conversa nova? A conversa atual será apagada."))return;M().mentorChat=[];salvar();pararVoz();render()};
+}
+function enviarMentora(plano){
+  pararDitado();const box=$("#msgM"),ch=chatMentora();let txt=box.value.trim();
+  if(plano&&!txt){const ult=[...ch].reverse().find(c=>c.de==="prof");if(!ult){toast("Escreva ou fale o tema da aula para montar o plano.");box.focus();return}txt=ult.txt}
+  if(!txt){toast("Escreva ou fale a sua pergunta.");box.focus();return}
+  const fx=guiaFaixa||faixaPadrao();
+  ch.push({de:"prof",txt:plano?"📋 Monte o plano nos 4 pilares: "+txt:txt,data:hojeISO()});box.value="";salvar();render();
+  const C=$("#chat");C.insertAdjacentHTML("beforeend",`<div class="bolha ia" id="pensando">✍️ A mentora está pensando...</div>`);C.scrollTop=C.scrollHeight;
+  const hist=ch.slice(-10,-1).map(c=>({de:c.de,txt:c.plano?"(enviou um plano nos 4 pilares)":c.txt.slice(0,800)}));
+  pedirIA({tipo:"mentor",modo:plano?"plano":"conversa",faixa:FAIXAS[fx],mensagem:txt,historico:hist}).then(r=>{
+    if(plano&&r&&typeof r==="object"&&r.atividades){r.tema=txt.slice(0,60);ch.push({de:"ia",plano:r,data:hojeISO()});salvar();render();falarTexto("Prontinho! Montei o plano da sua aula nos quatro pilares. Está aqui na tela para você conferir, imprimir ou copiar.");return}
+    if(!plano&&typeof r==="string"&&r.trim()){ch.push({de:"ia",txt:r.trim(),data:hojeISO()});salvar();render();falarTexto(r);return}
+    const p=$("#pensando");if(p)p.remove();
+    ch.push({de:"ia",txt:"Agora não consegui responder (sem internet ou a IA está ocupada). Enquanto isso, veja as ideias prontas na aba 📘 Guia, separadas por idade. Tente de novo em instantes!",data:hojeISO()});salvar();render();
+  });
 }
 
 /* ============ MICROFONE (falar em vez de digitar) ============ */

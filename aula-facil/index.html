@@ -1182,6 +1182,10 @@ Object.assign(GRUPOS_DESENHO,{"fundo do mar":["peixe","baleia","golfinho","polvo
 
 /* ============ ATIVIDADES PRONTAS (funcionam sem internet) ============ */
 const INGLES={gato:"cat",cachorro:"dog",cavalo:"horse",vaca:"cow",porco:"pig",galinha:"chicken",pato:"duck",peixe:"fish",passaro:"bird",borboleta:"butterfly",coelho:"rabbit",ovelha:"sheep",tartaruga:"turtle",leao:"lion",elefante:"elephant",sapo:"frog",flor:"flower",arvore:"tree","macã":"apple",banana:"banana",carro:"car",sol:"sun",casa:"house",estrela:"star",coracao:"heart",girafa:"giraffe",macaco:"monkey",zebra:"zebra",urso:"bear",cobra:"snake",baleia:"whale",golfinho:"dolphin",joaninha:"ladybug",abelha:"bee",formiga:"ant",coruja:"owl",pinguim:"penguin",dinossauro:"dinosaur",jacare:"alligator",rato:"mouse",polvo:"octopus",caracol:"snail",minhoca:"worm",uva:"grapes",morango:"strawberry",laranja:"orange",abacaxi:"pineapple",melancia:"watermelon",pera:"pear",cenoura:"carrot",sorvete:"ice cream",bolo:"cake",lapis:"pencil",livro:"book",mochila:"backpack",tesoura:"scissors",regua:"ruler",onibus:"bus",aviao:"airplane",barco:"boat",bicicleta:"bicycle",trem:"train",foguete:"rocket",nuvem:"cloud",chuva:"rain",lua:"moon",montanha:"mountain",folha:"leaf",arcoiris:"rainbow",guardachuva:"umbrella",balao:"balloon",presente:"gift",ovopascoa:"Easter egg",arvorenatal:"Christmas tree",menino:"boy",menina:"girl",circulo:"circle",quadrado:"square",triangulo:"triangle",retangulo:"rectangle",losango:"rhombus"};
+/* Papagaio (pedido da professora) */
+DESENHOS.papagaio=`<path d="M24 166 L178 158" fill="none" stroke-width="7"/><path d="M98 154 L86 196 L104 192 L114 154"/><path d="M92 72 Q68 102 80 138 Q88 160 108 158 Q130 150 128 116 Q126 86 110 72Z"/><path d="M96 94 Q122 102 118 142 Q100 132 96 94Z"/><circle cx="106" cy="56" r="26"/><path d="M128 46 Q152 48 146 76 Q138 66 128 66Z"/><circle cx="112" cy="50" r="6"/><circle cx="113" cy="50" r="2" fill="#222"/><path d="M86 42 Q76 28 90 32 Q88 20 100 30" fill="none"/><path d="M98 158 L96 168 M116 156 L118 166" fill="none"/>`;
+NOMES_DESENHO.papagaio="Papagaio";SINONIMOS.papagaio=["papagaio","papagaios","arara","araras","periquito","periquitos","louro","calopsita"];INGLES.papagaio="parrot";
+
 const PRONTOS={colorir:1,mandala:1,letras:1,tracar:1,contas:1,conte:1,dinheiro:1,ingles:1,emocoes:1,autoaval:1};
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const embaralhar=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -1527,7 +1531,7 @@ function atividadeIA(at,r){
   if(at.tipo==="ligue"){const pr=arr(r.pares).filter(p=>Array.isArray(p)&&p.length>=2);if(semPal&&pr.length)at.pal=pr.map(p=>p[0]+"="+p[1]).join(", ");return gerarAtividade(at)}
   const t=esc(at.tema),inf=at.idade==="inf",inst=r.instrucao?`<p>${esc(r.instrucao)}</p>`:"";
   let corpo="";
-  if(at.tipo==="colorir"){const fc=folhaColorir(at,JSON.stringify(r));corpo=(inst||`<p>Pinte os desenhos bem bonito! 🖍️</p>`)+(fc||desenhoColorir(at.tema)+linhas(2))}
+  if(at.tipo==="colorir"){const fc=folhaColorir(at,JSON.stringify(r));corpo=fc?`<p>Pinte os desenhos bem bonito! 🖍️</p>`+fc:(inst||`<p>Pinte os desenhos bem bonito! 🖍️</p>`)+desenhoColorir(at.tema)+linhas(2)}
   else if(at.tipo==="desenho")corpo=inst+`<div style="border:2px solid #9AA7B6;border-radius:12px;height:${inf?340:260}px;margin-bottom:14px"></div>`+arr(r.questoes).map(q=>`<p>${esc(q.enunciado)}</p>`+linhas(q.linhas||1)).join("");
   else if(at.tipo==="texto")corpo=inst+arr(r.questoes).map(q=>`<p>${esc(q.enunciado)}</p>`).join("")+(inf?`<div style="border:2px solid #9AA7B6;border-radius:12px;height:300px"></div>`:`<p>Título: ________________________________</p>`+linhas({f1:10,f2:16,em:28,ad:12}[at.idade]||12));
   else{
@@ -1680,6 +1684,16 @@ $("#btnInstalar").onclick=()=>{
 function statusRede(){$("#avisoOffline").classList.toggle("oculto",navigator.onLine)}
 window.addEventListener("online",statusRede);window.addEventListener("offline",statusRede);statusRede();
 if("serviceWorker" in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+/* Tela acesa enquanto o app está aberto (não apaga enquanto a professora fala ou lê) */
+let travaTela=null;
+function manterTelaAcesa(){try{if(!("wakeLock" in navigator)||document.visibilityState!=="visible"||travaTela)return;
+  navigator.wakeLock.request("screen").then(t=>{travaTela=t;t.addEventListener("release",()=>{travaTela=null})}).catch(()=>{})}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")manterTelaAcesa()});
+["click","touchstart","keydown"].forEach(ev=>document.addEventListener(ev,manterTelaAcesa,{passive:true}));
+manterTelaAcesa();
+/* Quando sair versão nova do app, troca sozinho (sem ficar preso na versão antiga guardada) */
+if("serviceWorker" in navigator&&navigator.serviceWorker.controller){let recarregou=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(recarregou)return;recarregou=true;location.reload()})}
+
 
 render();
 setTimeout(avisarPrazos,3800);

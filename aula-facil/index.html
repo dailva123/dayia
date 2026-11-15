@@ -105,6 +105,13 @@ p{line-height:1.45}
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
 .chips button{flex:none;border:1px solid var(--linha);background:#fff;border-radius:999px;padding:8px 13px;font-weight:700;font-size:13px;color:var(--muted)}
 .chips button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-mic{border:0;background:var(--azul-l);color:var(--navy);border-radius:999px;padding:8px 14px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.btn-mic.ouvindo{background:var(--vermelho);color:#fff;animation:pulsa 1.2s infinite}
+@keyframes pulsa{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.45)}50%{box-shadow:0 0 0 8px rgba(214,69,69,0)}}
+.rotulo-mic{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.rotulo-mic label{margin:0!important}
+.ajuste{background:var(--amarelo-l);border:1px solid #F3DA8A;border-radius:16px;padding:12px;margin-top:12px}
+.ajuste textarea{min-height:64px}
 /* listas */
 .busca{position:relative;margin-bottom:12px}
 .busca input{width:100%;border:1px solid var(--linha);background:#fff;border-radius:14px;padding:13px 14px 13px 42px;font-size:16px}
@@ -354,7 +361,7 @@ function render(){
   document.querySelectorAll(".menu button").forEach(b=>b.classList.toggle("on",b.dataset.aba===aba));
   garantirOrg();
   const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes}[aba]||telaInicio;
-  $("#tela").innerHTML="";fn($("#tela"));window.scrollTo(0,0);
+  pararDitado();$("#tela").innerHTML="";fn($("#tela"));window.scrollTo(0,0);
   if(buscaInicial){const b=$("#"+buscaInicial.id);if(b){b.value=buscaInicial.q;b.dispatchEvent(new Event("input"))}buscaInicial=null}
 }
 let buscaInicial=null,ultimaBusca="";
@@ -546,19 +553,31 @@ function telaNotas(el){
     $("#rodNotas").innerHTML=`<p class="sub" style="margin-top:12px">🌱 Começando · 📈 Melhorando · ⭐ Já sabe</p>`;
   }else{
     L.innerHTML=t.alunos.map(a=>`<div class="item col" data-busca="${esc(a.nome)}"><div class="cab"><div class="av">${esc(iniciais(a.nome))}</div><div class="info"><div class="nome">${esc(a.nome)}</div><div class="det">${esc(a.info)}</div></div></div>
-      <div class="campo" style="margin:10px 0 8px"><label>Anotações rápidas</label><textarea data-id="${a.id}" data-c="anot" placeholder="Ex.: brinca bem com os colegas; já reconhece as cores; ainda tem dificuldade para segurar o lápis">${esc(a.anot)}</textarea></div>
+      <div class="campo" style="margin:10px 0 8px"><div class="rotulo-mic"><label>Anotações rápidas</label>${micBtn('[data-c=anot][data-id="'+a.id+'"]')}</div><textarea data-id="${a.id}" data-c="anot" placeholder="Ex.: brinca bem com os colegas; já reconhece as cores; ainda tem dificuldade para segurar o lápis">${esc(a.anot)}</textarea></div>
       <button class="btn btn-ama" data-rel="${a.id}">✨ Escrever relatório com IA</button>
       <div class="campo ${a.relatorio?"":"oculto"}" id="r_${a.id}" style="margin-top:12px"><label>Relatório (revise e ajuste se quiser)</label><textarea data-id="${a.id}" data-c="relatorio" style="min-height:180px">${esc(a.relatorio)}</textarea>
-      <div class="linha-btns" style="margin-top:8px"><button class="btn btn-sec" data-cp="${a.id}">📋 Copiar</button><button class="btn btn-sec" data-pr="${a.id}">🖨️ Imprimir</button></div></div></div>`).join("")||`<div class="vazio">Nenhum aluno.</div>`;
-    L.querySelectorAll("textarea").forEach(x=>x.oninput=()=>{const a=t.alunos.find(y=>y.id===x.dataset.id);a[x.dataset.c]=x.value;if(x.dataset.c==="relatorio")a.relData=hojeISO();salvar()});
-    L.querySelectorAll("[data-rel]").forEach(b=>b.onclick=()=>{const a=t.alunos.find(y=>y.id===b.dataset.rel);
-      if(!a.anot.trim()){toast("Escreva primeiro algumas anotações sobre "+a.nome.split(" ")[0]+".");return}
+      <div class="linha-btns" style="margin-top:8px"><button class="btn btn-sec" data-cp="${a.id}">📋 Copiar</button><button class="btn btn-sec" data-pr="${a.id}">🖨️ Imprimir</button></div>
+      <div class="ajuste"><div class="rotulo-mic"><label><b>Não gostou?</b> Fale ou escreva o que mudar</label>${micBtn('[data-aj="'+a.id+'"]')}</div>
+      <textarea data-aj="${a.id}" placeholder="Ex.: deixe mais curto, fale mais da coordenação motora, tom mais formal"></textarea>
+      <button class="btn btn-ama btn-bloco" data-refrel="${a.id}" style="margin-top:8px">🔄 Refazer o relatório</button></div></div></div>`).join("")||`<div class="vazio">Nenhum aluno.</div>`;
+    L.querySelectorAll("textarea[data-c]").forEach(x=>x.oninput=()=>{const a=t.alunos.find(y=>y.id===x.dataset.id);a[x.dataset.c]=x.value;if(x.dataset.c==="relatorio")a.relData=hojeISO();salvar()});
+    ligarMics(L);
+    const escrever=(a,b,extra,rotulo)=>{
+      if(!a.anot.trim()){toast("Escreva ou fale primeiro algumas anotações sobre "+a.nome.split(" ")[0]+".");return}
       const nomeP=a.nome.split(/[ ,(]/)[0];b.disabled=true;b.textContent="⏳ Escrevendo...";
-      const anon=a.anot.split(new RegExp(nomeP.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi")).join("[NOME]");
-      pedirIA({tipo:"relatorio",anotacoes:anon,fase:a.evol?EVOL[a.evol]:"",idade:(a.info.match(/\d+\s*anos?/)||[""])[0]}).then(r=>{
+      const tira=s=>String(s||"").split(new RegExp(nomeP.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi")).join("[NOME]");
+      const anon=tira(a.anot);
+      if(extra.anterior)extra.anterior=tira(extra.anterior);if(extra.ajuste)extra.ajuste=tira(extra.ajuste);
+      pedirIA(Object.assign({tipo:"relatorio",anotacoes:anon,fase:a.evol?EVOL[a.evol]:"",idade:(a.info.match(/\d+\s*anos?/)||[""])[0]},extra)).then(r=>{
+        if(extra.ajuste&&!(typeof r==="string"&&r.trim())){toast("Não consegui refazer agora. Tente de novo em instantes.");return}
         a.relatorio=(typeof r==="string"&&r.trim())?r.replace(/(^|[\s(])(?:[OoAa]|[Dd][oa]|[Nn][oa]) \[NOME\]/g,(m,p1)=>p1+(/^[Dd]/.test(m.trim())?"de ":/^[Nn]/.test(m.trim())?"em ":"")+"[NOME]").replace(/\[NOME\]/g,nomeP).trim():gerarRelatorio(a);
-        a.relData=hojeISO();salvar();const box=$("#r_"+a.id);box.classList.remove("oculto");box.querySelector("textarea").value=a.relatorio;toast("Relatório pronto e salvo em 📂 Salvos. Revise antes de usar.")
-      }).finally(()=>{b.disabled=false;b.textContent="✨ Escrever relatório com IA"})});
+        a.relData=hojeISO();salvar();const box=$("#r_"+a.id);box.classList.remove("oculto");box.querySelector("textarea[data-c=relatorio]").value=a.relatorio;
+        const aj=box.querySelector("[data-aj]");if(aj)aj.value="";
+        toast(extra.ajuste?"Relatório refeito com a sua mudança!":"Relatório pronto e salvo em 📂 Salvos. Revise antes de usar.")
+      }).finally(()=>{b.disabled=false;b.textContent=rotulo})};
+    L.querySelectorAll("[data-rel]").forEach(b=>b.onclick=()=>escrever(t.alunos.find(y=>y.id===b.dataset.rel),b,{},"✨ Escrever relatório com IA"));
+    L.querySelectorAll("[data-refrel]").forEach(b=>b.onclick=()=>{const a=t.alunos.find(y=>y.id===b.dataset.refrel);const aj=(L.querySelector('[data-aj="'+a.id+'"]').value||"").trim();
+      if(!aj){toast("Fale ou escreva o que você quer mudar no relatório.");return}escrever(a,b,{ajuste:aj,anterior:a.relatorio},"🔄 Refazer o relatório")});
     L.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>copiar(t.alunos.find(y=>y.id===b.dataset.cp).relatorio));
     L.querySelectorAll("[data-pr]").forEach(b=>b.onclick=()=>{const a=t.alunos.find(y=>y.id===b.dataset.pr);imprimir(`<h2>Relatório de desenvolvimento</h2><p><b>Aluno(a):</b> ${esc(a.nome)} &nbsp; <b>Turma:</b> ${esc(t.nome)}</p>${esc(a.relatorio).split(/\n+/).map(p=>"<p>"+p+"</p>").join("")}<p style="margin-top:40px">______________________________<br>Professora</p>`)});
   }
@@ -578,6 +597,7 @@ function telaAtividades(el){
   <div class="campo"><label for="aIdade">Idade</label><select id="aIdade">${Object.entries(IDADES).map(([k,v])=>`<option value="${k}" ${k===(DB.modo==="particular"?"inf":"f1")?"selected":""}>${v}</option>`).join("")}</select></div>
   <div class="campo"><label for="aTipo">Tipo</label><select id="aTipo">${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
   <div class="campo oculto" id="cPal"><label for="aPal" id="lblPal">Palavras</label><input id="aPal" placeholder="Ex.: vaca, porco, galinha, cavalo"><div class="dica">Separe por vírgula. Se deixar vazio, o app usa as palavras do tema.</div></div>
+  <div class="campo"><div class="rotulo-mic"><label for="aIdeia">💬 Sua ideia (opcional)</label>${micBtn("#aIdeia")}</div><textarea id="aIdeia" placeholder="Fale ou escreva como você quer a atividade. Ex.: quero 5 questões com desenho, usando os animais que a turma viu no passeio"></textarea></div>
   <button class="btn btn-ama btn-bloco" id="criarAt">✨ Criar atividade</button></div>
   <div id="resAt"></div>
   <h3 style="margin-top:22px">📂 Atividades salvas</h3>
@@ -587,24 +607,35 @@ function telaAtividades(el){
   const tipo=$("#aTipo");tipo.onchange=()=>{const v=tipo.value;$("#cPal").classList.toggle("oculto",!USA_PAL[v]);
     $("#lblPal").textContent=v==="ligue"?"Pares para ligar":v==="ditado"?"Palavras do ditado":v==="cruz"?"Palavras da cruzadinha":"Palavras do caça-palavras";
     $("#aPal").placeholder=v==="ligue"?"Ex.: vaca=leite, galinha=ovo, abelha=mel":v==="cruz"?"Ex.: vaca, porco, galinha":"Ex.: vaca, porco, galinha, cavalo"};
-  ligarBusca("bAt","#lAt .item");
+  ligarBusca("bAt","#lAt .item");ligarMics(el);
   $("#criarAt").onclick=()=>{
     const tema=$("#aTema").value.trim();if(!tema){toast("Escreva o tema da atividade.");$("#aTema").focus();return}
-    const at={id:uid(),tema,idade:$("#aIdade").value,tipo:tipo.value,pal:$("#aPal").value,data:hojeISO()};
+    const at={id:uid(),tema,idade:$("#aIdade").value,tipo:tipo.value,pal:$("#aPal").value,ideia:$("#aIdeia").value.trim(),data:hojeISO()};
     at.titulo=TIPOS[at.tipo]+": "+tema;
     const btn=$("#criarAt");btn.disabled=true;btn.textContent="⏳ Criando com IA...";
-    pedirIA({tipo:"atividade",tema,idade:at.idade,tipo_atividade:at.tipo,palavras:at.pal}).then(r=>{
-      if(r){try{at.ia=true;at.html=atividadeIA(at,r)}catch(e){at.ia=false;r=null}}
-      if(!r)at.html=gerarAtividade(at);
-      mostrarAtividade(at,false);
-    }).finally(()=>{btn.disabled=false;btn.textContent="✨ Criar atividade"});
+    criarAtividadeIA(at,{}).finally(()=>{btn.disabled=false;btn.textContent="✨ Criar atividade"});
   };
   el.querySelectorAll("#lAt .item").forEach(i=>i.onclick=e=>{if(e.target.dataset.del)return;mostrarAtividade(m.atividades.find(a=>a.id===i.dataset.id),true)});
   el.querySelectorAll("#lAt [data-del]").forEach(b=>b.onclick=()=>{if(!confirm("Apagar esta atividade?"))return;m.atividades=m.atividades.filter(a=>a.id!==b.dataset.del);salvar();render()});
 }
+function criarAtividadeIA(at,extra){
+  return pedirIA(Object.assign({tipo:"atividade",tema:at.tema,idade:at.idade,tipo_atividade:at.tipo,palavras:at.pal,ideia:at.ideia||""},extra)).then(r=>{
+    const htmlAntigo=at.html;
+    if(r){try{at.ia=true;at.html=atividadeIA(at,r)}catch(e){at.ia=false;r=null}}
+    if(!r){if(extra.ajuste&&htmlAntigo){toast("Não consegui refazer agora. Tente de novo em instantes.");at.html=htmlAntigo}else at.html=gerarAtividade(at)}
+    else if(extra.ajuste)toast("Pronto! Atividade refeita com a sua mudança.");
+    mostrarAtividade(at,false);
+  });
+}
 function mostrarAtividade(at,salva){
   $("#resAt").innerHTML=`<div class="folha" id="folhaAt">${at.html}</div>
-  <div class="linha-btns" style="margin-top:12px"><button class="btn btn-pri" id="impAt">🖨️ Imprimir</button>${salva?"":`<button class="btn btn-sec" id="salAt">💾 Salvar</button>`}</div>`;
+  <div class="linha-btns" style="margin-top:12px"><button class="btn btn-pri" id="impAt">🖨️ Imprimir</button>${salva?"":`<button class="btn btn-sec" id="salAt">💾 Salvar</button>`}</div>
+  ${salva?"":`<div class="ajuste"><div class="rotulo-mic"><label for="aAjuste"><b>Não gostou de algo?</b> Fale ou escreva o que mudar</label>${micBtn("#aAjuste")}</div>
+  <textarea id="aAjuste" placeholder="Ex.: deixe mais fácil, troque a questão 3, coloque mais desenho, use só animais selvagens"></textarea>
+  <button class="btn btn-ama btn-bloco" id="refazAt" style="margin-top:8px">🔄 Refazer com essa mudança</button></div>`}`;
+  ligarMics($("#resAt"));
+  const rf=$("#refazAt");if(rf)rf.onclick=()=>{const aj=$("#aAjuste").value.trim();if(!aj){toast("Fale ou escreva o que você quer mudar.");return}
+    rf.disabled=true;rf.textContent="⏳ Refazendo...";criarAtividadeIA(at,{ajuste:aj,anterior:tirarTags(at.html).replace(/\s+/g," ").slice(0,2500)})};
   $("#impAt").onclick=()=>imprimir(at.html);
   const s=$("#salAt");if(s)s.onclick=()=>{M().atividades.unshift(at);salvar();toast("Atividade salva em 📂 Salvos!");render()};
   $("#folhaAt").scrollIntoView({behavior:"smooth",block:"start"});
@@ -617,24 +648,32 @@ function telaPlano(el){
   <div class="card">
   <div class="campo"><label for="pTema">Tema</label><input id="pTema" placeholder="Ex.: ciclo da água"></div>
   <div class="campo"><label for="pIdade">Idade</label><select id="pIdade">${Object.entries(IDADES).map(([k,v])=>`<option value="${k}" ${k===(DB.modo==="particular"?"inf":"f1")?"selected":""}>${v}</option>`).join("")}</select></div>
+  <div class="campo"><div class="rotulo-mic"><label for="pIdeia">💬 Sua ideia (opcional)</label>${micBtn("#pIdeia")}</div><textarea id="pIdeia" placeholder="Fale ou escreva como imagina a aula. Ex.: quero uma aula com experiência usando copo e gelo, e um vídeo curto"></textarea></div>
   <div class="campo"><label for="pObj">Objetivo</label><textarea id="pObj" placeholder="O que os alunos vão aprender"></textarea></div>
   ${escola?`<div class="campo"><label for="pBncc">Habilidade da BNCC</label><textarea id="pBncc" placeholder="Código e descrição da habilidade"></textarea></div>`:""}
   <div class="campo"><label for="pPassos">Passo a passo da aula</label><textarea id="pPassos" style="min-height:140px" placeholder="1. Começo... 2. Meio... 3. Final..."></textarea></div>
   <div class="campo"><label for="pMat">Material</label><textarea id="pMat" placeholder="Ex.: quadro, folhas, lápis de cor"></textarea></div>
   <button class="btn btn-ama btn-bloco" id="montarP">✨ Montar o plano com IA</button>
+  <div class="ajuste"><div class="rotulo-mic"><label for="pAjuste"><b>Não gostou?</b> Fale ou escreva o que mudar</label>${micBtn("#pAjuste")}</div>
+  <textarea id="pAjuste" placeholder="Ex.: aula mais curta, sem vídeo, com mais atividade em grupo"></textarea>
+  <button class="btn btn-ama btn-bloco" id="refazP" style="margin-top:8px">🔄 Refazer o plano</button></div>
   <div class="linha-btns" style="margin-top:10px"><button class="btn btn-sec" id="salP">💾 Salvar</button><button class="btn btn-sec" id="impP">🖨️ Imprimir</button></div></div>
   <h3 style="margin-top:22px">📂 Planos salvos</h3>${campoBusca("bPl","Buscar plano (tema ou o que tem dentro)")}
   <div class="lista" id="lPl">${m.planos.length?m.planos.map(p=>`<div class="item" data-busca="${esc([p.tema,p.obj,p.bncc,p.passos,p.mat].join(" "))}" data-id="${p.id}" style="cursor:pointer"><div class="av">📚</div><div class="info"><div class="nome">${esc(p.tema)}</div><div class="det">${esc(IDADES[p.idade])} · ${dataBR(p.data)}</div></div><button class="x" data-del="${p.id}" aria-label="Apagar">✕</button></div>`).join(""):`<div class="vazio">Nenhum plano salvo ainda.</div>`}</div>`;
-  ligarBusca("bPl","#lPl .item");
+  ligarBusca("bPl","#lPl .item");ligarMics(el);
   const ler=()=>({tema:$("#pTema").value.trim(),idade:$("#pIdade").value,obj:$("#pObj").value,bncc:escola?$("#pBncc").value:"",passos:$("#pPassos").value,mat:$("#pMat").value});
   const pôr=p=>{$("#pTema").value=p.tema;$("#pIdade").value=p.idade;$("#pObj").value=p.obj;if(escola)$("#pBncc").value=p.bncc||"";$("#pPassos").value=p.passos;$("#pMat").value=p.mat};
-  $("#montarP").onclick=()=>{const p=ler();if(!p.tema){toast("Escreva o tema da aula.");$("#pTema").focus();return}
-    const bt=$("#montarP");bt.disabled=true;bt.textContent="⏳ Montando com IA...";
-    pedirIA({tipo:"plano",tema:p.tema,idade:p.idade,escola,objetivo:p.obj}).then(r=>{
+  const montar=(bt,rotulo,ajuste)=>{const p=ler();if(!p.tema){toast("Escreva o tema da aula.");$("#pTema").focus();return}
+    bt.disabled=true;bt.textContent="⏳ Montando com IA...";
+    const extra=ajuste?{ajuste,anterior:tirarTags(htmlPlano(p,escola)).replace(/\s+/g," ").slice(0,2500)}:{};
+    pedirIA(Object.assign({tipo:"plano",tema:p.tema,idade:p.idade,escola,objetivo:ajuste?"":p.obj,ideia:$("#pIdeia").value.trim()},extra)).then(r=>{
       let g=null;if(r&&typeof r==="object"&&r.passos){g={obj:r.objetivo||"",bncc:escola?(r.bncc||""):"",passos:(Array.isArray(r.passos)?r.passos.map((x,i)=>(i+1)+". "+String(x).replace(/^\d+[.)]\s*/,"")).join("\n"):String(r.passos)),mat:r.material||""}}
+      if(ajuste){if(!g){toast("Não consegui refazer agora. Tente de novo em instantes.");return}["obj","bncc","passos","mat"].forEach(k=>p[k]=g[k]);pôr(p);$("#pAjuste").value="";toast("Plano refeito com a sua mudança!");return}
       if(!g)g=gerarPlano(p.tema,p.idade,escola);
       ["obj","bncc","passos","mat"].forEach(k=>{if(!String(p[k]||"").trim())p[k]=g[k]});pôr(p);toast("Plano montado! Revise e ajuste do seu jeito.")
-    }).finally(()=>{bt.disabled=false;bt.textContent="✨ Montar o plano com IA"})};
+    }).finally(()=>{bt.disabled=false;bt.textContent=rotulo})};
+  $("#montarP").onclick=()=>montar($("#montarP"),"✨ Montar o plano com IA");
+  $("#refazP").onclick=()=>{const aj=$("#pAjuste").value.trim();if(!aj){toast("Fale ou escreva o que você quer mudar no plano.");return}montar($("#refazP"),"🔄 Refazer o plano",aj)};
   $("#salP").onclick=()=>{const p=ler();if(!p.tema){toast("Escreva o tema da aula.");return}p.id=uid();p.data=hojeISO();m.planos.unshift(p);salvar();toast("Plano salvo em 📂 Salvos!");render()};
   $("#impP").onclick=()=>{const p=ler();if(!p.tema){toast("Escreva o tema da aula.");return}imprimir(htmlPlano(p,escola))};
   el.querySelectorAll("#lPl .item").forEach(i=>i.onclick=e=>{if(e.target.dataset.del)return;pôr(m.planos.find(p=>p.id===i.dataset.id));window.scrollTo({top:0,behavior:"smooth"})});
@@ -1001,6 +1040,33 @@ function copiar(txt){
 function copiarAntigo(txt,ok){const t=document.createElement("textarea");t.value=txt;t.style.position="fixed";t.style.opacity="0";document.body.appendChild(t);t.select();try{document.execCommand("copy");ok()}catch(e){toast("Não consegui copiar.")}t.remove()}
 
 
+
+/* ============ MICROFONE (falar em vez de digitar) ============ */
+let ditadoAtivo=null;
+function micBtn(alvo){return `<button type="button" class="btn-mic" data-mic='${alvo}' aria-label="Falar em vez de escrever">👩‍🏫🎙️ Falar</button>`}
+function ligarMics(raiz){(raiz||document).querySelectorAll("[data-mic]").forEach(b=>b.onclick=e=>{e.preventDefault();ditar(b,document.querySelector(b.dataset.mic))})}
+function pararDitado(){if(ditadoAtivo){try{ditadoAtivo.rec.stop()}catch(e){}}}
+function ditar(btn,alvo){
+  if(!alvo)return;
+  if(ditadoAtivo&&ditadoAtivo.btn===btn){pararDitado();return}
+  pararDitado();
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){abrirModal(`<h3>🎙️ Falar em vez de escrever</h3><p>Este navegador não deixa o app ouvir direto. Mas você pode usar o <b>microfone do teclado</b> do celular:</p>
+    <ol><li>Toque no campo onde quer escrever.</li><li>No teclado, toque no <b>microfone 🎤</b> (no Android fica no canto de cima do teclado; no iPhone, embaixo à direita).</li><li>Fale normalmente: o texto aparece sozinho.</li></ol>
+    <button class="btn btn-pri btn-bloco" onclick="fecharModal()">Entendi</button>`);return}
+  if(!navigator.onLine){toast("Para ouvir sua voz o celular precisa de internet. Use o microfone do teclado.");return}
+  const rec=new SR();rec.lang="pt-BR";rec.continuous=true;rec.interimResults=true;
+  const base=alvo.value.trim();let final="";
+  const rotulo=btn.innerHTML;btn.classList.add("ouvindo");btn.innerHTML="🔴 Ouvindo… toque para parar";
+  ditadoAtivo={rec,btn};
+  rec.onresult=ev=>{let inter="";for(let i=ev.resultIndex;i<ev.results.length;i++){const r=ev.results[i];if(r.isFinal)final+=(final?" ":"")+r[0].transcript.trim();else inter+=r[0].transcript}
+    alvo.value=[base,final,inter.trim()].filter(Boolean).join(base||final?" ":"");alvo.dispatchEvent(new Event("input"))};
+  rec.onerror=ev=>{if(ev.error==="not-allowed"||ev.error==="service-not-allowed")toast("Libere o microfone para o app nas permissões do celular.");else if(ev.error!=="no-speech"&&ev.error!=="aborted")toast("Não consegui ouvir. Tente de novo.")};
+  rec.onend=()=>{btn.classList.remove("ouvindo");btn.innerHTML=rotulo;if(ditadoAtivo&&ditadoAtivo.rec===rec)ditadoAtivo=null;
+    alvo.value=[base,final].filter(Boolean).join(" ");alvo.dispatchEvent(new Event("input"));if(final)toast("Pronto! Confira o que ficou escrito.")};
+  try{rec.start();toast("Pode falar 🙂")}catch(e){btn.classList.remove("ouvindo");btn.innerHTML=rotulo;ditadoAtivo=null}
+}
+
 /* ============ IA DE VERDADE (via Apps Script) ============ */
 function pedirIA(dados){
   if(!IA_URL||IA_URL.indexOf("http")!==0)return Promise.resolve(null);
@@ -1028,7 +1094,8 @@ function atividadeIA(at,r){
     const qs=arr(r.questoes);if(!qs.length)throw 0;
     corpo=(at.tipo==="prova"?`<div class="cabec">Turma: __________ &nbsp; Nota: ______</div>`:"")+inst+`<ol>${qs.map(q=>{const alt=arr(q.alternativas);
       const n=typeof q.linhas==="number"?Math.min(q.linhas,6):(alt.length||inf?0:2);
-      return `<li>${at.tipo==="vf"?"( &nbsp; ) ":""}${esc(q.enunciado||"")}${alt.length?`<div style="margin-top:6px">${alt.map((x,i)=>`<div>${"abcdef"[i]}) ${esc(x)}</div>`).join("")}</div>`:""}${n?linhas(n):""}</li>`}).join("")}</ol>`;
+      const desenho=/desenh/i.test(q.enunciado||"")&&!alt.length;
+      return `<li>${at.tipo==="vf"?"( &nbsp; ) ":""}${esc(q.enunciado||"")}${desenho?`<div style="border:2px solid #9AA7B6;border-radius:12px;height:200px;margin-top:8px"></div>`:""}${alt.length?`<div style="margin-top:6px">${alt.map((x,i)=>`<div>${"abcdef"[i]}) ${esc(x)}</div>`).join("")}</div>`:""}${n?linhas(n):""}</li>`}).join("")}</ol>`;
     if(at.tipo==="tarefa")corpo+=`<p style="margin-top:14px">Assinatura do responsável: ______________________________</p>`;
   }
   const gab=arr(r.respostas);
@@ -1046,12 +1113,12 @@ function gerarRelatorio(a){
   return `Ao longo deste período, ${nome} participou das atividades propostas com envolvimento e foi conquistando novas aprendizagens no seu próprio ritmo.\n\n${corpo}${ev}\n\nSeguiremos acompanhando o desenvolvimento de ${nome} com carinho, incentivando suas descobertas e conquistas. Contamos com a parceria da família nesse caminho.`;
 }
 const PERG={
-  exe:{inf:["Desenhe algo que lembre {t}.","Circule as figuras que têm a ver com {t}.","Pinte o quadradinho: você já viu {t}? ( ) Sim  ( ) Não","Conte para a professora uma coisa que você sabe sobre {t}."],
+  exe:{inf:["Desenhe no quadro abaixo algo sobre {t}.[QUADRO]","Pinte a carinha que mostra se você gostou de aprender sobre {t}:<div style='font-size:34px;letter-spacing:18px;margin-top:6px'>😀 😐 😢</div>","Conte para a professora uma coisa que você aprendeu sobre {t}. Ela vai escrever aqui para você:"+"[LINHAS2]"],
     f1:["Escreva com suas palavras o que é {t}.","Cite dois exemplos de {t} no seu dia a dia.","Complete a frase: Eu aprendi que {t} ...","Faça um desenho sobre {t} e escreva uma frase sobre ele.","Converse com sua família e anote uma curiosidade sobre {t}."],
     f2:["Explique o que é {t} e por que é importante.","Dê três exemplos de {t} e explique cada um.","Compare {t} com outro assunto que você já estudou: o que é parecido e o que é diferente?","Crie uma pergunta sobre {t} e responda.","Escreva um pequeno texto (5 linhas) sobre o que você aprendeu de {t}."],
     em:["Defina {t} com suas palavras.","Explique causas e consequências relacionadas a {t}.","Relacione {t} com um fato atual ou do seu dia a dia.","Quais são os pontos positivos e negativos de {t}? Justifique.","Escreva um parágrafo dando a sua opinião sobre {t}, com argumentos."],
     ad:["Escreva o que você já sabe sobre {t}.","Conte uma situação da sua vida em que {t} aparece.","Escreva três palavras importantes sobre {t} e explique cada uma.","Escreva uma dúvida que você ainda tem sobre {t}."]},
-  pr:{inf:["O que é {t}?","Onde a gente encontra {t}?","Do que você mais gosta em {t}?"],
+  pr:{inf:["Do que você mais gosta em {t}? Desenhe:[QUADRO]","Conte para a professora: o que você aprendeu sobre {t}?[LINHAS2]"],
     f1:["O que é {t}?","Onde encontramos {t}?","Por que {t} é importante?","O que você achou mais interessante sobre {t}?","Como você explicaria {t} para um colega?"],
     f2:["O que é {t}?","Quais são as principais características de {t}?","Por que {t} é importante?","Dê um exemplo de {t} no cotidiano.","Que pergunta você faria a um especialista em {t}?"],
     em:["Defina {t}.","Quais fatores influenciam {t}?","Qual a relação entre {t} e a sociedade atual?","Cite um exemplo real de {t} e explique.","Que solução ou proposta você daria sobre {t}?"],
@@ -1063,25 +1130,19 @@ function cabecalho(at,titulo){
 const linhas=n=>Array.from({length:n},()=>`<div class="linhas"></div>`).join("");
 function gerarAtividade(at){
   const t=esc(at.tema),inf=at.idade==="inf";
-  const lista=(arr,nl)=>`<ol>${arr.map(q=>`<li>${q.replace(/\{t\}/g,"<b>"+t+"</b>")}${nl?linhas(nl):""}</li>`).join("")}</ol>`;
+  const marca=s=>s.replace(/\{t\}/g,"<b>"+t+"</b>").replace("[QUADRO]",`<div style="border:2px solid #9AA7B6;border-radius:12px;height:220px;margin-top:8px"></div>`).replace("[LINHAS2]",linhas(2));
+  const lista=(arr,nl)=>`<ol>${arr.map(q=>`<li>${marca(q)}${nl&&!/\[(QUADRO|LINHAS2)\]/.test(q)?linhas(nl):""}</li>`).join("")}</ol>`;
   if(at.tipo==="exe")return cabecalho(at,"Exercícios – "+at.tema)+lista(PERG.exe[at.idade],inf?0:2);
   if(at.tipo==="pr")return cabecalho(at,"Perguntas e respostas – "+at.tema)+lista(PERG.pr[at.idade].map(q=>q+"<br><i style='color:#5D6B7E'>Resposta:</i>"),inf?0:2);
   if(at.tipo==="prova"){
-    const q=[...PERG.exe[at.idade].slice(0,3).map(x=>x),`Marque V para verdadeiro e F para falso sobre {t}:<br>( ) ____________________________<br>( ) ____________________________<br>( ) ____________________________ <i class="so-tela" style="color:#5D6B7E">(professora: complete as frases)</i>`,
-      `Assinale a alternativa correta sobre {t}:<br>a) ____________________ &nbsp; b) ____________________<br>c) ____________________ &nbsp; d) ____________________ <i class="so-tela" style="color:#5D6B7E">(professora: complete as alternativas)</i>`];
-    return cabecalho(at,"Prova – "+at.tema)+`<div class="cabec">Turma: __________ &nbsp; Nota: ______</div>`+lista(q,inf?0:2);
+    const q=[...PERG.exe[at.idade],...PERG.pr[at.idade].slice(0,2)].filter((x,k,a)=>a.indexOf(x)===k).slice(0,inf?3:6);
+    return cabecalho(at,"Prova – "+at.tema)+`<div class="cabec">Turma: __________ &nbsp; Nota: ______</div>`+lista(q,inf?0:3);
   }
+
   if(at.tipo==="caca")return cabecalho(at,"Caça-palavras – "+at.tema)+cacaPalavras(at);
   if(at.tipo==="cruz")return cabecalho(at,"Cruzadinha – "+at.tema)+cruzadinha(at);
   if(at.tipo==="ligue")return cabecalho(at,"Ligue as colunas – "+at.tema)+ligue(at);
-  if(at.tipo==="lacuna"){const f={inf:["Eu gosto de ________ porque ________.","A cor de ________ é ________.","Na escola eu aprendi sobre ________."],
-      f1:["{t} é ________________________________.","Um exemplo de {t} é ________________.","Eu aprendi que {t} serve para ________________.","No meu dia a dia, {t} aparece quando ________________."],
-      f2:["{t} pode ser definido como ________________________.","Uma característica importante de {t} é ________________.","{t} é importante porque ________________________.","Um exemplo de {t} é ________________, pois ________________."],
-      em:["O conceito de {t} refere-se a ________________________.","Entre as causas de {t}, destaca-se ________________.","Uma consequência de {t} é ________________________.","{t} se relaciona com a sociedade atual porque ________________."],
-      ad:["Para mim, {t} significa ________________________.","Eu uso {t} quando ________________.","Uma coisa nova que aprendi sobre {t} é ________________."]}[at.idade];
-    return cabecalho(at,"Complete as frases – "+at.tema)+`<p>Complete as frases sobre <b>${t}</b>:</p>`+lista(f,0)+`<p class="so-tela" style="color:#5D6B7E;font-size:13px"><i>Professora: troque ou complete as frases com o conteúdo da sua aula.</i></p>`}
-  if(at.tipo==="vf"){const q=Array.from({length:inf?3:6},(_,i)=>`( &nbsp; ) ____________________________________________`);
-    return cabecalho(at,"Verdadeiro ou falso – "+at.tema)+`<p>Escreva <b>V</b> se a frase for verdadeira e <b>F</b> se for falsa:</p>`+lista(q,0)+(inf?"":`<p>Agora corrija as frases falsas:</p>${linhas(3)}`)+`<p class="so-tela" style="color:#5D6B7E;font-size:13px"><i>Professora: escreva nas linhas as frases sobre ${t} (algumas certas e outras erradas).</i></p>`}
+  if(at.tipo==="lacuna"||at.tipo==="vf")return `<div style="text-align:center;padding:24px 10px"><div style="font-size:42px">📶</div><h4>Este tipo precisa da IA</h4><p style="color:#5D6B7E">"${TIPOS[at.tipo]}" precisa de frases certas sobre <b>${t}</b>, e quem escreve é a IA. Ela não respondeu agora (sem internet ou fora do ar).<br><br>Tente de novo em instantes, ou escolha outro tipo: <b>Exercícios</b>, <b>Perguntas e respostas</b> ou <b>Desenhe e escreva</b> funcionam mesmo sem internet.</p></div>`;
   if(at.tipo==="ditado"){let pal=(at.pal||"").split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean);
     const n=pal.length||(inf?5:10);const folha=cabecalho(at,"Ditado – "+at.tema)+`<p>Escute com atenção e escreva as palavras:</p><ol>${Array.from({length:n},()=>`<li>${linhas(1)}</li>`).join("")}</ol>`;
     return folha+(pal.length?`<div style="margin-top:18px;border-top:2px dashed #9AA7B6;padding-top:10px"><b>Lista da professora</b> (recorte antes de entregar):<ol>${pal.map(x=>"<li>"+esc(x)+"</li>").join("")}</ol></div>`:`<p class="so-tela" style="color:#5D6B7E;font-size:13px"><i>Dica: escreva as palavras no campo "Palavras do ditado" para sair também a sua lista.</i></p>`)}

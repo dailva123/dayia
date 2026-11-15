@@ -278,7 +278,10 @@ const MODOS={
   aulas:{nome:"Aulas particulares",ic:"🧑‍🏫",curto:"Aulas",turmas:"Alunos",aval:"evolucao"}
 };
 const IDADES={inf:"Educação Infantil",f1:"Fundamental I",f2:"Fundamental II",em:"Ensino Médio",ad:"Adultos"};
-const TIPOS={exe:"Exercícios",pr:"Perguntas e respostas",prova:"Prova",caca:"Caça-palavras",cruz:"Cruzadinha",ligue:"Ligue as colunas",lacuna:"Complete as frases",vf:"Verdadeiro ou falso",ditado:"Ditado",texto:"Produção de texto",desenho:"Desenhe e escreva",colorir:"Para colorir",tarefa:"Tarefa de casa"};
+const TIPOS={exe:"Exercícios",pr:"Perguntas e respostas",prova:"Prova",lacuna:"Complete as frases",vf:"Verdadeiro ou falso",cruz:"Cruzadinha",caca:"Caça-palavras",ligue:"Ligue as colunas",ditado:"Ditado",texto:"Produção de texto",desenho:"Desenhe e escreva",tarefa:"Tarefa de casa",colorir:"Desenhos para colorir",mandala:"Mandala para colorir",letras:"Letras e números para colorir",tracar:"Traçar letras e números",contas:"Continhas de matemática",conte:"Conte e escreva",dinheiro:"Dinheiro e troco",ingles:"Inglês com figuras",emocoes:"Como estou me sentindo",autoaval:"Autoavaliação"};
+const GRUPOS_TIPO=[["✨ Com IA (qualquer assunto)",["exe","pr","prova","lacuna","vf","cruz","caca","ligue","ditado","texto","desenho","tarefa"]],["🎨 Para colorir",["colorir","mandala","letras"]],["✏️ Alfabetização e matemática",["tracar","contas","conte","dinheiro"]],["🌎 Inglês",["ingles"]],["💛 Socioemocional",["emocoes","autoaval"]]];
+const MATERIAS=["Português","Matemática","Ciências","História","Geografia","Inglês","Espanhol","Artes","Música","Educação Física","Educação Financeira","Socioemocional (comportamento e sentimentos)","Cognição e Metacognição (aprender a aprender)","Projeto de Vida","Cidadania e Ética","Meio Ambiente","Saúde e Higiene","Tecnologia","Ensino Religioso","Filosofia","Sociologia","Química","Física","Biologia","Redação","Alfabetização"];
+const DICAS_TIPO={colorir:"Ex.: gato, cachorro, cavalo e vaca — ou um tema: frutas, transportes, fundo do mar",mandala:"Ex.: mandala bem detalhada (para adultos) ou simples (para crianças)",letras:"Ex.: alfabeto, vogais, letra A e B, números de 1 a 10, nome: ANA",tracar:"Ex.: vogais, letras minúsculas, números de 0 a 9, nome: PEDRO",contas:"Ex.: soma, subtração, multiplicação, divisão, tabuada do 7",conte:"Ex.: animais, frutas, transportes",dinheiro:"Ex.: troco, contar cédulas e moedas",ingles:"Ex.: animais, frutas, cores da escola, transportes",emocoes:"Ex.: turma voltando das férias",autoaval:"Ex.: projeto de ciências do bimestre"};
 const USA_PAL={caca:1,cruz:1,ligue:1,ditado:1};
 const EVOL={e1:"Começando",e2:"Melhorando",e3:"Já sabe"};
 const $=s=>document.querySelector(s);
@@ -595,7 +598,8 @@ function telaAtividades(el){
   <div class="card">
   <div class="campo"><label for="aTema">Tema da atividade</label><input id="aTema" placeholder="Ex.: animais da fazenda, frações, verbo to be"></div>
   <div class="campo"><label for="aIdade">Idade</label><select id="aIdade">${Object.entries(IDADES).map(([k,v])=>`<option value="${k}" ${k===(DB.modo==="particular"?"inf":"f1")?"selected":""}>${v}</option>`).join("")}</select></div>
-  <div class="campo"><label for="aTipo">Tipo</label><select id="aTipo">${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
+  <div class="campo"><label for="aMat">Matéria</label><select id="aMat"><option value="">Escolha (opcional)</option>${MATERIAS.map(m=>`<option>${m}</option>`).join("")}</select></div>
+  <div class="campo"><label for="aTipo">Tipo</label><select id="aTipo">${GRUPOS_TIPO.map(([g,ks])=>`<optgroup label="${g}">${ks.map(k=>`<option value="${k}">${TIPOS[k]}</option>`).join("")}</optgroup>`).join("")}</select><div class="dica" id="dicaTipo"></div></div>
   <div class="campo oculto" id="cPal"><label for="aPal" id="lblPal">Palavras</label><input id="aPal" placeholder="Ex.: vaca, porco, galinha, cavalo"><div class="dica">Separe por vírgula. Se deixar vazio, o app usa as palavras do tema.</div></div>
   <div class="campo"><div class="rotulo-mic"><label for="aIdeia">💬 Sua ideia (opcional)</label>${micBtn("#aIdeia")}</div><textarea id="aIdeia" placeholder="Fale ou escreva como você quer a atividade. Ex.: quero 5 questões com desenho, usando os animais que a turma viu no passeio"></textarea></div>
   <button class="btn btn-ama btn-bloco" id="criarAt">✨ Criar atividade</button></div>
@@ -605,15 +609,20 @@ function telaAtividades(el){
   <div class="lista" id="lAt">${m.atividades.length?m.atividades.map(a=>`<div class="item" data-busca="${esc(a.titulo+" "+tirarTags(a.html))}" data-id="${a.id}" style="cursor:pointer"><div class="av">📄</div><div class="info"><div class="nome">${esc(a.titulo)}</div><div class="det">${esc(IDADES[a.idade])} · ${dataBR(a.data)}</div></div><button class="x" data-del="${a.id}" aria-label="Apagar">✕</button></div>`).join(""):`<div class="vazio">Nenhuma atividade salva ainda.</div>`}</div>`;
   if(atPrefill){$("#aTema").value=atPrefill.tema;$("#aTipo").value="prova";atPrefill=null;setTimeout(()=>{$("#aTema").scrollIntoView({block:"center"});toast("Confira a idade e toque em ✨ Criar atividade.")},100)}
   const tipo=$("#aTipo");tipo.onchange=()=>{const v=tipo.value;$("#cPal").classList.toggle("oculto",!USA_PAL[v]);
-    if(v==="colorir"){$("#aIdeia").placeholder="Fale ou escreva o que quer para colorir. Ex.: gato, cachorro, cavalo e vaca";if(!$("#dicaCol")){$("#aIdeia").insertAdjacentHTML("afterend",`<div class="dica" id="dicaCol">Desenhos prontos: ${Object.values(NOMES_DESENHO).join(", ")}.</div>`)}}
-    else{const dc=$("#dicaCol");if(dc)dc.remove();$("#aIdeia").placeholder="Fale ou escreva como você quer a atividade. Ex.: quero 5 questões com desenho, usando os animais que a turma viu no passeio"}
+    $("#dicaTipo").textContent=PRONTOS[v]?"✅ Fica pronta na hora, mesmo sem internet. Use o campo \"Sua ideia\" para escolher o que vai na folha.":"✨ A IA cria sobre qualquer assunto (precisa de internet).";
+    $("#aIdeia").placeholder=DICAS_TIPO[v]||"Fale ou escreva como você quer a atividade. Ex.: quero 5 questões com desenho, usando os animais que a turma viu no passeio";
+    const dc=$("#dicaCol");if(dc)dc.remove();
+    if(v==="colorir")$("#aIdeia").insertAdjacentHTML("afterend",`<div class="dica" id="dicaCol">Desenhos prontos (${Object.keys(NOMES_DESENHO).length}): ${Object.values(NOMES_DESENHO).join(", ")}.</div>`);
+    if(PRONTOS[v]&&!$("#aTema").value.trim())$("#aTema").placeholder="Opcional para este tipo";else $("#aTema").placeholder="Ex.: animais da fazenda, frações, verbo to be";
     $("#lblPal").textContent=v==="ligue"?"Pares para ligar":v==="ditado"?"Palavras do ditado":v==="cruz"?"Palavras da cruzadinha":"Palavras do caça-palavras";
     $("#aPal").placeholder=v==="ligue"?"Ex.: vaca=leite, galinha=ovo, abelha=mel":v==="cruz"?"Ex.: vaca, porco, galinha":"Ex.: vaca, porco, galinha, cavalo"};
-  ligarBusca("bAt","#lAt .item");ligarMics(el);
+  ligarBusca("bAt","#lAt .item");ligarMics(el);tipo.onchange();
   $("#criarAt").onclick=()=>{
-    const tema=$("#aTema").value.trim();if(!tema){toast("Escreva o tema da atividade.");$("#aTema").focus();return}
-    const at={id:uid(),tema,idade:$("#aIdade").value,tipo:tipo.value,pal:$("#aPal").value,ideia:$("#aIdeia").value.trim(),data:hojeISO()};
-    at.titulo=TIPOS[at.tipo]+": "+tema;
+    const tema=$("#aTema").value.trim();
+    if(!tema&&!PRONTOS[tipo.value]){toast("Escreva o tema da atividade.");$("#aTema").focus();return}
+    const at={id:uid(),tema,materia:$("#aMat").value,idade:$("#aIdade").value,tipo:tipo.value,pal:$("#aPal").value,ideia:$("#aIdeia").value.trim(),data:hojeISO()};
+    at.titulo=TIPOS[at.tipo]+(tema?": "+tema:"");
+    if(PRONTOS[at.tipo]){at.pronto=true;at.html=gerarPronto(at);mostrarAtividade(at,false);return}
     const btn=$("#criarAt");btn.disabled=true;btn.textContent="⏳ Criando com IA...";
     criarAtividadeIA(at,{}).finally(()=>{btn.disabled=false;btn.textContent="✨ Criar atividade"});
   };
@@ -621,7 +630,7 @@ function telaAtividades(el){
   el.querySelectorAll("#lAt [data-del]").forEach(b=>b.onclick=()=>{if(!confirm("Apagar esta atividade?"))return;m.atividades=m.atividades.filter(a=>a.id!==b.dataset.del);salvar();render()});
 }
 function criarAtividadeIA(at,extra){
-  return pedirIA(Object.assign({tipo:"atividade",tema:at.tema,idade:at.idade,tipo_atividade:at.tipo,palavras:at.pal,ideia:at.ideia||""},extra)).then(r=>{
+  return pedirIA(Object.assign({tipo:"atividade",tema:(at.materia?at.materia+" – ":"")+at.tema,idade:at.idade,tipo_atividade:at.tipo,palavras:at.pal,ideia:at.ideia||""},extra)).then(r=>{
     const htmlAntigo=at.html;
     if(r){try{at.ia=true;at.html=atividadeIA(at,r)}catch(e){at.ia=false;r=null}}
     if(!r){if(extra.ajuste&&htmlAntigo){toast("Não consegui refazer agora. Tente de novo em instantes.");at.html=htmlAntigo}else at.html=gerarAtividade(at)}
@@ -632,10 +641,12 @@ function criarAtividadeIA(at,extra){
 function mostrarAtividade(at,salva){
   $("#resAt").innerHTML=`<div class="folha" id="folhaAt">${at.html}</div>
   <div class="linha-btns" style="margin-top:12px"><button class="btn btn-pri" id="impAt">🖨️ Imprimir</button>${salva?"":`<button class="btn btn-sec" id="salAt">💾 Salvar</button>`}</div>
-  ${salva?"":`<div class="ajuste"><div class="rotulo-mic"><label for="aAjuste"><b>Não gostou de algo?</b> Fale ou escreva o que mudar</label>${micBtn("#aAjuste")}</div>
+  ${!salva&&at.pronto?`<button class="btn btn-ama btn-bloco" id="outraAt" style="margin-top:10px">🔄 Gerar outra versão</button>`:""}
+  ${salva||at.pronto?"":`<div class="ajuste"><div class="rotulo-mic"><label for="aAjuste"><b>Não gostou de algo?</b> Fale ou escreva o que mudar</label>${micBtn("#aAjuste")}</div>
   <textarea id="aAjuste" placeholder="Ex.: deixe mais fácil, troque a questão 3, coloque mais desenho, use só animais selvagens"></textarea>
   <button class="btn btn-ama btn-bloco" id="refazAt" style="margin-top:8px">🔄 Refazer com essa mudança</button></div>`}`;
   ligarMics($("#resAt"));
+  const ou=$("#outraAt");if(ou)ou.onclick=()=>{at.html=gerarPronto(at);mostrarAtividade(at,false);toast("Pronto! Uma versão nova.")};
   const rf=$("#refazAt");if(rf)rf.onclick=()=>{const aj=$("#aAjuste").value.trim();if(!aj){toast("Fale ou escreva o que você quer mudar.");return}
     rf.disabled=true;rf.textContent="⏳ Refazendo...";criarAtividadeIA(at,{ajuste:aj,anterior:tirarTags(at.html).replace(/\s+/g," ").slice(0,2500)})};
   $("#impAt").onclick=()=>imprimir(at.html);
@@ -1091,6 +1102,196 @@ function folhaColorir(at,textoExtra){
     <div style="max-width:${col===1?360:240}px;margin:0 auto">${svgDesenho(k)}</div><div style="font-weight:800;font-size:${col===1?24:18}px;letter-spacing:2px;margin:4px 0">${esc(NOMES_DESENHO[k]).toUpperCase()}</div></div>`).join("")}</div>`;
 }
 
+/* Mais desenhos (contorno, viewBox 0 0 200 200) — originais DayIA */
+const BANDA=(d,w)=>`<path d="${d}" fill="none" stroke="#222" stroke-width="${w+8}"/><path d="${d}" fill="none" stroke="#fff" stroke-width="${w}"/>`;
+Object.assign(DESENHOS,{
+girafa:`<ellipse cx="118" cy="128" rx="44" ry="24"/><path d="M88 118 L66 40 L84 36 L104 112"/><ellipse cx="64" cy="36" rx="20" ry="13"/><path d="M60 24 L58 10 M72 24 L74 10"/><circle cx="58" cy="9" r="4"/><circle cx="74" cy="9" r="4"/><circle cx="70" cy="32" r="3"/><circle cx="48" cy="40" r="2"/><path d="M92 146 L90 184 M108 150 L108 184 M134 150 L134 184 M150 144 L152 184"/><path d="M162 122 Q176 132 172 150"/><circle cx="110" cy="122" r="7"/><circle cx="132" cy="132" r="6"/><circle cx="144" cy="116" r="5"/><circle cx="82" cy="80" r="5"/><circle cx="92" cy="100" r="5"/><circle cx="76" cy="58" r="4"/>`,
+macaco:`<circle cx="66" cy="66" r="14"/><circle cx="134" cy="66" r="14"/><circle cx="100" cy="66" r="34"/><path d="M76 80 Q76 54 100 60 Q124 54 124 80 Q124 100 100 100 Q76 100 76 80Z"/><circle cx="90" cy="70" r="4"/><circle cx="110" cy="70" r="4"/><path d="M90 86 Q100 94 110 86"/><ellipse cx="100" cy="140" rx="30" ry="36"/><ellipse cx="100" cy="146" rx="18" ry="22"/><path d="M72 120 Q48 130 50 150 M128 120 Q152 130 150 150"/><path d="M82 172 L78 186 M118 172 L122 186"/><path d="M130 160 Q170 168 164 132 Q158 112 172 108"/>`,
+zebra:`<ellipse cx="114" cy="110" rx="54" ry="28"/><path d="M74 100 L62 56 Q60 46 70 46 L84 50 L94 92"/><path d="M64 54 Q44 48 28 62 Q22 72 32 76 Q48 76 66 72"/><path d="M66 48 L68 32 L78 46"/><circle cx="62" cy="60" r="4"/><path d="M80 130 L76 182 M98 136 L98 182 M132 136 L132 182 M150 130 L154 182"/><path d="M166 102 Q190 110 184 148"/><path d="M80 60 L90 58 M84 74 L94 72 M88 88 L98 86 M108 84 L104 136 M124 82 L120 138 M140 84 L138 136 M154 90 L156 128"/>`,
+urso:`<circle cx="70" cy="42" r="14"/><circle cx="130" cy="42" r="14"/><circle cx="100" cy="70" r="36"/><ellipse cx="100" cy="84" rx="16" ry="12"/><ellipse cx="100" cy="78" rx="6" ry="4"/><circle cx="86" cy="62" r="4"/><circle cx="114" cy="62" r="4"/><path d="M94 90 Q100 96 106 90"/><ellipse cx="100" cy="146" rx="42" ry="40"/><ellipse cx="100" cy="150" rx="22" ry="24"/><circle cx="62" cy="128" r="14"/><circle cx="138" cy="128" r="14"/><ellipse cx="76" cy="182" rx="16" ry="9"/><ellipse cx="124" cy="182" rx="16" ry="9"/>`,
+cobra:BANDA("M30 170 Q40 130 80 140 Q130 152 130 110 Q130 70 90 76 Q60 80 70 52 Q80 30 118 34",18)+`<ellipse cx="128" cy="34" rx="20" ry="15"/><circle cx="132" cy="28" r="3"/><path d="M148 36 L162 38 L168 32 M162 38 L168 44"/>`,
+baleia:`<path d="M24 120 Q30 60 100 62 Q160 64 170 110 L186 84 L190 120 L186 150 L168 130 Q150 160 90 160 Q30 158 24 120Z"/><circle cx="62" cy="102" r="5"/><path d="M40 130 Q70 140 100 132"/><path d="M90 62 Q86 40 76 32 M90 62 Q92 38 104 30 M90 62 Q98 44 112 42"/><path d="M100 140 Q110 154 124 146"/>`,
+golfinho:`<path d="M30 112 Q50 70 110 70 Q160 72 176 110 L190 96 L186 126 L192 146 L168 130 Q140 140 110 132 L96 150 L92 132 Q60 128 46 118 L20 122 Z"/><circle cx="66" cy="96" r="4"/><path d="M110 70 L124 46 L134 74"/><path d="M40 114 Q50 120 60 116"/>`,
+joaninha:`<circle cx="100" cy="114" r="56"/><path d="M100 58 L100 170"/><path d="M62 72 Q100 40 138 72 Q120 58 100 58 Q80 58 62 72Z"/><circle cx="100" cy="52" r="20"/><path d="M90 36 Q80 18 70 18 M110 36 Q120 18 130 18"/><circle cx="72" cy="100" r="9"/><circle cx="128" cy="100" r="9"/><circle cx="76" cy="136" r="9"/><circle cx="124" cy="136" r="9"/><path d="M44 110 L28 104 M46 132 L30 140 M156 110 L172 104 M154 132 L170 140"/>`,
+abelha:`<ellipse cx="80" cy="64" rx="30" ry="22"/><ellipse cx="124" cy="60" rx="30" ry="22"/><ellipse cx="104" cy="120" rx="52" ry="38"/><path d="M90 84 Q80 120 90 156 M114 82 Q104 120 114 158"/><circle cx="48" cy="112" r="24"/><circle cx="42" cy="106" r="4"/><path d="M38 120 Q46 126 54 120"/><path d="M40 90 Q32 70 22 68 M52 88 Q52 70 46 60"/><path d="M156 120 L178 120"/>`,
+formiga:`<circle cx="44" cy="96" r="20"/><ellipse cx="90" cy="104" rx="22" ry="16"/><ellipse cx="148" cy="108" rx="36" ry="26"/><circle cx="40" cy="92" r="3"/><path d="M38 78 Q30 54 18 50 M50 78 Q56 54 68 48"/><path d="M80 118 L66 150 M92 120 L92 154 M104 116 L118 150 M80 92 L64 64 M100 90 L116 62"/>`,
+coruja:`<path d="M54 60 L50 30 L74 48 Q100 40 126 48 L150 30 L146 60 Q160 90 156 130 Q150 176 100 178 Q50 176 44 130 Q40 90 54 60Z"/><circle cx="78" cy="78" r="20"/><circle cx="122" cy="78" r="20"/><circle cx="78" cy="78" r="8"/><circle cx="122" cy="78" r="8"/><path d="M92 96 L100 110 L108 96Z"/><path d="M60 110 Q50 140 66 160 M140 110 Q150 140 134 160"/><path d="M80 128 Q90 122 100 128 Q110 122 120 128 M80 144 Q90 138 100 144 Q110 138 120 144"/><path d="M84 178 L84 188 M92 178 L92 188 M108 178 L108 188 M116 178 L116 188"/>`,
+pinguim:`<ellipse cx="100" cy="110" rx="50" ry="68"/><ellipse cx="100" cy="120" rx="32" ry="52"/><circle cx="86" cy="70" r="5"/><circle cx="114" cy="70" r="5"/><path d="M92 84 L100 96 L108 84Z"/><path d="M50 100 Q30 130 46 150 M150 100 Q170 130 154 150"/><path d="M76 176 L62 188 L92 188Z M124 176 L108 188 L138 188Z"/>`,
+dinossauro:`<ellipse cx="110" cy="128" rx="50" ry="30"/><path d="M68 118 Q52 60 44 40 Q40 26 54 24 Q70 24 70 38 Q66 50 80 110"/><circle cx="56" cy="32" r="3"/><path d="M44 36 Q40 42 48 42"/><path d="M158 128 Q186 132 194 160 Q176 150 154 148"/><path d="M80 152 L80 184 L96 184 L96 156 M126 156 L126 184 L142 184 L142 150"/><path d="M84 100 L92 88 L100 100 L108 88 L116 100 L124 88 L132 100 L140 90 L146 104"/>`,
+jacare:`<path d="M14 100 Q14 86 40 86 L100 84 Q150 82 176 96 L196 110 L176 116 Q150 128 100 124 L40 120 Q14 118 14 100Z"/><path d="M14 102 L72 104"/><circle cx="66" cy="84" r="8"/><circle cx="66" cy="84" r="3"/><path d="M24 104 L28 112 L32 104 L36 112 L40 104 L44 112 L48 104"/><path d="M76 122 L68 146 L86 146 L92 124 M136 124 L132 146 L150 146 L150 122"/><path d="M96 84 L104 76 L112 84 L120 76 L128 84 L136 78 L144 86"/>`,
+rato:`<path d="M40 140 Q40 90 100 84 Q150 84 160 130 L170 140 L40 140Z"/><circle cx="70" cy="80" r="20"/><circle cx="104" cy="74" r="20"/><circle cx="150" cy="118" r="3"/><circle cx="170" cy="138" r="5"/><path d="M160 130 L182 124 M160 134 L184 136"/><path d="M40 136 Q14 130 18 160 Q22 180 48 170"/>`,
+polvo:`<path d="M50 110 Q40 30 100 28 Q160 30 150 110Z"/><circle cx="82" cy="78" r="9"/><circle cx="118" cy="78" r="9"/><circle cx="82" cy="78" r="3"/><circle cx="118" cy="78" r="3"/><path d="M86 96 Q100 106 114 96"/>`+BANDA("M60 110 Q40 140 60 160 Q74 176 58 186",10)+BANDA("M86 112 Q78 150 92 180",10)+BANDA("M114 112 Q122 150 108 180",10)+BANDA("M140 110 Q160 140 140 160 Q126 176 142 186",10),
+caracol:`<path d="M20 160 L150 160 Q170 160 176 140 L184 110"/><path d="M176 118 L170 92 M184 116 L196 94"/><circle cx="170" cy="90" r="4"/><circle cx="196" cy="92" r="4"/><circle cx="100" cy="110" r="50"/><path d="M100 110 m-8 0 a8 8 0 1 1 16 0 a16 16 0 1 1 -32 0 a24 24 0 1 1 48 0 a32 32 0 1 1 -64 0"/>`,
+minhoca:BANDA("M20 150 Q50 110 80 140 Q110 170 140 130 Q160 100 178 110",22)+`<circle cx="176" cy="104" r="3"/><path d="M166 116 Q172 122 180 118"/>`,
+uva:`<path d="M100 40 Q104 22 116 16"/><path d="M104 32 Q130 20 150 34 Q130 48 104 32Z"/><circle cx="80" cy="60" r="18"/><circle cx="116" cy="60" r="18"/><circle cx="62" cy="92" r="18"/><circle cx="98" cy="92" r="18"/><circle cx="134" cy="92" r="18"/><circle cx="80" cy="124" r="18"/><circle cx="116" cy="124" r="18"/><circle cx="98" cy="156" r="18"/>`,
+morango:`<path d="M100 60 Q40 50 44 100 Q56 160 100 184 Q144 160 156 100 Q160 50 100 60Z"/><path d="M66 60 L80 40 L92 58 L100 34 L108 58 L120 40 L134 60 Q100 74 66 60Z"/><circle cx="76" cy="90" r="2.5"/><circle cx="100" cy="86" r="2.5"/><circle cx="124" cy="90" r="2.5"/><circle cx="86" cy="116" r="2.5"/><circle cx="114" cy="116" r="2.5"/><circle cx="100" cy="142" r="2.5"/><circle cx="78" cy="138" r="2.5"/><circle cx="122" cy="138" r="2.5"/>`,
+laranja:`<circle cx="100" cy="112" r="62"/><path d="M100 50 L102 36"/><path d="M104 40 Q130 22 152 38 Q130 54 104 40Z"/><circle cx="76" cy="96" r="2.5"/><circle cx="120" cy="88" r="2.5"/><circle cx="130" cy="130" r="2.5"/><circle cx="84" cy="140" r="2.5"/><circle cx="104" cy="116" r="2.5"/>`,
+abacaxi:`<ellipse cx="100" cy="124" rx="44" ry="58"/><path d="M68 84 L132 164 M58 110 L116 182 M84 72 L144 146 M132 84 L68 164 M142 110 L84 182 M116 72 L56 146"/><path d="M100 66 L80 20 L96 42 L100 10 L104 42 L120 20 L100 66"/><path d="M90 62 L62 34 M110 62 L138 34"/>`,
+melancia:`<path d="M20 70 Q100 200 180 70Z"/><path d="M34 82 Q100 176 166 82"/><circle cx="78" cy="100" r="4"/><circle cx="100" cy="114" r="4"/><circle cx="122" cy="100" r="4"/><circle cx="90" cy="130" r="4"/><circle cx="112" cy="132" r="4"/><circle cx="100" cy="92" r="4"/>`,
+pera:`<path d="M100 40 Q80 40 82 70 Q84 90 64 110 Q40 140 60 168 Q80 188 100 186 Q120 188 140 168 Q160 140 136 110 Q116 90 118 70 Q120 40 100 40Z"/><path d="M100 40 Q100 26 108 18"/><path d="M104 28 Q124 14 140 26 Q122 38 104 28Z"/>`,
+cenoura:`<path d="M80 60 Q100 52 120 60 Q116 120 100 186 Q84 120 80 60Z"/><path d="M90 60 Q70 30 76 18 Q90 32 98 58 M100 58 Q100 24 108 12 Q114 34 106 58 M110 60 Q128 30 140 26 Q132 46 116 62"/><path d="M84 90 L94 92 M110 110 L118 108 M88 130 L96 132 M104 150 L110 148"/>`,
+sorvete:`<path d="M66 100 L100 186 L134 100Z"/><path d="M76 120 L118 110 M84 140 L112 132 M92 160 L106 156 M124 120 L82 110 M116 140 L88 132"/><circle cx="100" cy="70" r="30"/><path d="M62 104 Q60 80 80 82 M138 104 Q140 80 120 82"/><path d="M60 102 Q80 112 100 102 Q120 112 140 102"/><circle cx="100" cy="36" r="8"/>`,
+bolo:`<path d="M30 120 L170 120 L170 180 L30 180Z"/><path d="M30 120 Q50 138 70 120 Q90 138 110 120 Q130 138 150 120 Q160 132 170 124"/><path d="M48 80 L152 80 L152 120 L48 120Z"/><path d="M48 92 Q74 104 100 92 Q126 104 152 92"/><path d="M100 80 L100 50"/><path d="M100 30 Q90 40 100 50 Q110 40 100 30Z"/><path d="M60 150 L80 150 M120 150 L140 150"/>`,
+lapis:`<path d="M30 150 L130 50 L160 80 L60 180Z"/><path d="M30 150 L14 196 L60 180"/><path d="M24 168 L42 186"/><path d="M130 50 L146 34 Q156 26 166 36 L176 46 Q184 56 176 64 L160 80"/><path d="M120 60 L150 90"/>`,
+livro:`<path d="M20 60 Q60 44 100 64 L100 180 Q60 160 20 176Z"/><path d="M180 60 Q140 44 100 64 L100 180 Q140 160 180 176Z"/><path d="M34 82 Q60 74 86 86 M34 102 Q60 94 86 106 M34 122 Q60 114 86 126 M114 86 Q140 74 166 82 M114 106 Q140 94 166 102 M114 126 Q140 114 166 122"/>`,
+mochila:`<path d="M50 70 Q50 40 100 40 Q150 40 150 70 L150 176 Q150 186 140 186 L60 186 Q50 186 50 176Z"/><path d="M80 40 Q80 20 100 20 Q120 20 120 40"/><path d="M64 110 L136 110 L136 168 L64 168Z"/><path d="M64 128 L136 128"/><path d="M96 120 L104 120"/>`,
+tesoura:`<circle cx="60" cy="150" r="24"/><circle cx="140" cy="150" r="24"/><circle cx="60" cy="150" r="12"/><circle cx="140" cy="150" r="12"/><path d="M76 132 L150 24 Q156 30 148 46 L106 116"/><path d="M124 132 L50 24 Q44 30 52 46 L94 116"/><circle cx="100" cy="104" r="5"/>`,
+regua:`<path d="M10 80 L190 80 L190 130 L10 130Z"/><path d="M26 80 L26 104 M42 80 L42 94 M58 80 L58 104 M74 80 L74 94 M90 80 L90 104 M106 80 L106 94 M122 80 L122 104 M138 80 L138 94 M154 80 L154 104 M170 80 L170 94"/>`,
+onibus:`<path d="M14 60 Q14 44 30 44 L170 44 Q186 44 186 60 L186 150 L14 150Z"/><path d="M26 58 L56 58 L56 92 L26 92Z M66 58 L96 58 L96 92 L66 92Z M106 58 L136 58 L136 92 L106 92Z M146 58 L174 58 L174 92 L146 92Z"/><path d="M14 112 L186 112"/><circle cx="52" cy="152" r="18"/><circle cx="148" cy="152" r="18"/><circle cx="52" cy="152" r="6"/><circle cx="148" cy="152" r="6"/><path d="M176 126 L186 126"/>`,
+aviao:`<path d="M20 104 Q20 88 40 88 L160 84 Q190 86 190 100 Q190 114 160 114 L40 112 Q20 112 20 104Z"/><path d="M90 88 L120 30 L136 30 L120 88"/><path d="M90 112 L120 170 L136 170 L120 112"/><path d="M30 90 L20 60 L36 60 L52 88"/><circle cx="150" cy="98" r="5"/><circle cx="130" cy="98" r="5"/><circle cx="110" cy="98" r="5"/><circle cx="90" cy="98" r="5"/>`,
+barco:`<path d="M20 130 L180 130 L156 168 L44 168Z"/><path d="M100 130 L100 20"/><path d="M100 26 L156 116 L100 116Z"/><path d="M96 40 L50 116 L96 116Z"/><path d="M10 182 Q30 172 50 182 Q70 192 90 182 Q110 172 130 182 Q150 192 170 182 Q180 178 190 182"/>`,
+bicicleta:`<circle cx="50" cy="132" r="36"/><circle cx="150" cy="132" r="36"/><circle cx="50" cy="132" r="5"/><circle cx="150" cy="132" r="5"/><path d="M50 132 L84 74 L134 74 L150 132 M84 74 L100 132 L134 74 M100 132 L50 132"/><path d="M76 64 L96 64 M134 74 L128 52 L146 48"/>`,
+trem:`<path d="M20 70 L20 150 L120 150 L120 40 L70 40 L70 70Z"/><path d="M84 54 L108 54 L108 84 L84 84Z"/><path d="M120 90 L180 90 L180 150 L120 150"/><path d="M30 70 L30 40 L52 40 L52 70"/><path d="M36 28 Q30 16 40 12 Q52 12 50 24"/><circle cx="44" cy="156" r="16"/><circle cx="96" cy="156" r="16"/><circle cx="154" cy="156" r="16"/><path d="M10 176 L190 176"/>`,
+foguete:`<path d="M100 14 Q140 50 136 130 L64 130 Q60 50 100 14Z"/><circle cx="100" cy="72" r="16"/><path d="M64 100 L36 140 L64 130 M136 100 L164 140 L136 130"/><path d="M76 130 L80 150 L120 150 L124 130"/><path d="M86 152 Q90 176 100 190 Q110 176 114 152"/>`,
+nuvem:`<path d="M40 140 Q10 138 14 110 Q20 86 48 90 Q52 56 88 56 Q116 56 124 80 Q138 66 158 74 Q178 84 172 104 Q194 112 186 132 Q180 144 160 142Z"/>`,
+chuva:`<path d="M40 100 Q10 98 14 74 Q20 52 48 56 Q52 26 88 26 Q116 26 124 48 Q138 36 158 42 Q178 50 172 70 Q194 76 186 94 Q180 104 160 102Z"/><path d="M50 120 Q44 134 50 140 Q56 134 50 120Z M90 126 Q84 140 90 146 Q96 140 90 126Z M130 120 Q124 134 130 140 Q136 134 130 120Z M70 156 Q64 170 70 176 Q76 170 70 156Z M110 158 Q104 172 110 178 Q116 172 110 158Z M150 152 Q144 166 150 172 Q156 166 150 152Z"/>`,
+lua:`<path d="M120 20 Q50 30 50 100 Q50 170 120 180 Q70 150 72 100 Q74 50 120 20Z"/><circle cx="84" cy="80" r="4"/><path d="M78 112 Q88 120 96 114"/><path d="M150 50 L154 60 L164 62 L156 68 L158 78 L150 72 L142 78 L144 68 L136 62 L146 60Z"/><path d="M160 120 L163 127 L170 128 L165 132 L166 139 L160 135 L154 139 L155 132 L150 128 L157 127Z"/>`,
+montanha:`<path d="M10 176 L76 54 L120 128 L140 96 L190 176Z"/><path d="M58 88 L76 54 L94 88 L84 80 L76 90 L66 80Z"/><circle cx="160" cy="44" r="18"/>`,
+folha:`<path d="M100 186 Q30 150 40 80 Q50 30 100 14 Q150 30 160 80 Q170 150 100 186Z"/><path d="M100 186 L100 30 M100 70 L70 50 M100 100 L64 80 M100 130 L70 112 M100 70 L130 50 M100 100 L136 80 M100 130 L130 112"/>`,
+arcoiris:`<path d="M10 150 A90 90 0 0 1 190 150 L170 150 A70 70 0 0 0 30 150Z"/><path d="M30 150 A70 70 0 0 1 170 150 L150 150 A50 50 0 0 0 50 150Z"/><path d="M50 150 A50 50 0 0 1 150 150 L130 150 A30 30 0 0 0 70 150Z"/><path d="M14 168 Q0 168 4 152 Q10 140 24 146 Q30 134 44 140 Q56 144 52 158 Q60 168 46 172Z"/><path d="M186 168 Q200 168 196 152 Q190 140 176 146 Q170 134 156 140 Q144 144 148 158 Q140 168 154 172Z"/>`,
+guardachuva:`<path d="M14 100 Q20 30 100 26 Q180 30 186 100 Q172 88 158 100 Q144 88 128 100 Q114 88 100 100 Q86 88 72 100 Q56 88 42 100 Q28 88 14 100Z"/><path d="M100 26 L100 16 M100 100 L100 170 Q100 186 116 186 Q130 186 130 172"/><path d="M100 26 Q70 50 72 100 M100 26 Q130 50 128 100"/>`,
+balao:`<ellipse cx="100" cy="80" rx="50" ry="62"/><path d="M92 140 L108 140 L104 150 L96 150Z"/><path d="M100 150 Q86 166 104 176 Q120 186 100 196"/><path d="M74 56 Q80 40 94 38"/>`,
+presente:`<path d="M30 80 L170 80 L170 110 L30 110Z"/><path d="M42 110 L158 110 L158 184 L42 184Z"/><path d="M90 80 L90 184 M110 80 L110 184"/><path d="M100 80 Q70 40 56 54 Q48 72 100 80 Q152 72 144 54 Q130 40 100 80Z"/>`,
+ovopascoa:`<path d="M100 16 Q40 16 34 110 Q32 186 100 186 Q168 186 166 110 Q160 16 100 16Z"/><path d="M38 80 L58 64 L78 80 L100 64 L122 80 L142 64 L162 80"/><path d="M34 120 Q66 136 100 120 Q134 104 166 120"/><circle cx="70" cy="152" r="7"/><circle cx="100" cy="158" r="7"/><circle cx="130" cy="152" r="7"/><circle cx="100" cy="42" r="6"/>`,
+arvorenatal:`<path d="M100 18 L140 70 L120 70 L156 116 L130 116 L168 164 L32 164 L70 116 L44 116 L80 70 L60 70Z"/><path d="M88 164 L88 186 L112 186 L112 164"/><path d="M100 4 L104 14 L114 15 L106 21 L109 31 L100 25 L91 31 L94 21 L86 15 L96 14Z"/><circle cx="86" cy="90" r="5"/><circle cx="116" cy="100" r="5"/><circle cx="76" cy="136" r="5"/><circle cx="128" cy="144" r="5"/><circle cx="100" cy="128" r="5"/>`,
+menino:`<circle cx="100" cy="46" r="28"/><path d="M72 40 Q76 14 100 16 Q126 14 128 40 Q114 28 100 32 Q86 28 72 40Z"/><circle cx="90" cy="48" r="3"/><circle cx="110" cy="48" r="3"/><path d="M90 60 Q100 68 110 60"/><path d="M70 82 L130 82 L136 132 L64 132Z"/><path d="M70 84 L46 120 M130 84 L154 120"/><path d="M70 132 L70 184 L96 184 L98 132 M102 132 L104 184 L130 184 L130 132"/>`,
+menina:`<path d="M66 50 Q60 92 74 96 L126 96 Q140 92 134 50"/><circle cx="100" cy="46" r="28"/><path d="M72 42 Q76 14 100 16 Q126 14 128 42 Q110 30 92 34 Q80 36 72 42Z"/><circle cx="90" cy="48" r="3"/><circle cx="110" cy="48" r="3"/><path d="M90 60 Q100 68 110 60"/><path d="M78 82 L122 82 L146 150 L54 150Z"/><path d="M80 86 L56 120 M120 86 L144 120"/><path d="M84 150 L84 184 M116 150 L116 184 M76 184 L92 184 M108 184 L124 184"/><circle cx="66" cy="36" r="8"/><circle cx="134" cy="36" r="8"/>`,
+circulo:`<circle cx="100" cy="100" r="72"/>`,
+quadrado:`<path d="M34 34 L166 34 L166 166 L34 166Z"/>`,
+triangulo:`<path d="M100 22 L180 168 L20 168Z"/>`,
+retangulo:`<path d="M16 56 L184 56 L184 144 L16 144Z"/>`,
+losango:`<path d="M100 14 L176 100 L100 186 L24 100Z"/>`,
+coracao2:`<path d="M100 170 Q30 120 30 76 Q30 40 64 40 Q88 40 100 64 Q112 40 136 40 Q170 40 170 76 Q170 120 100 170Z"/>`
+});
+Object.assign(NOMES_DESENHO,{girafa:"Girafa",macaco:"Macaco",zebra:"Zebra",urso:"Urso",cobra:"Cobra",baleia:"Baleia",golfinho:"Golfinho",joaninha:"Joaninha",abelha:"Abelha",formiga:"Formiga",coruja:"Coruja",pinguim:"Pinguim",dinossauro:"Dinossauro",jacare:"Jacaré",rato:"Rato",polvo:"Polvo",caracol:"Caracol",minhoca:"Minhoca",uva:"Uva",morango:"Morango",laranja:"Laranja",abacaxi:"Abacaxi",melancia:"Melancia",pera:"Pera",cenoura:"Cenoura",sorvete:"Sorvete",bolo:"Bolo",lapis:"Lápis",livro:"Livro",mochila:"Mochila",tesoura:"Tesoura",regua:"Régua",onibus:"Ônibus",aviao:"Avião",barco:"Barco",bicicleta:"Bicicleta",trem:"Trem",foguete:"Foguete",nuvem:"Nuvem",chuva:"Chuva",lua:"Lua",montanha:"Montanha",folha:"Folha",arcoiris:"Arco-íris",guardachuva:"Guarda-chuva",balao:"Balão",presente:"Presente",ovopascoa:"Ovo de Páscoa",arvorenatal:"Árvore de Natal",menino:"Menino",menina:"Menina",circulo:"Círculo",quadrado:"Quadrado",triangulo:"Triângulo",retangulo:"Retângulo",losango:"Losango"});
+delete NOMES_DESENHO.coracao2;delete DESENHOS.coracao2;
+Object.assign(SINONIMOS,{girafa:["girafa"],macaco:["macaco","macaquinho","mico"],zebra:["zebra"],urso:["urso","ursinho","urso panda"],cobra:["cobra","serpente"],baleia:["baleia"],golfinho:["golfinho","boto"],joaninha:["joaninha"],abelha:["abelha","abelhinha"],formiga:["formiga","formiguinha"],coruja:["coruja"],pinguim:["pinguim"],dinossauro:["dinossauro","dino","dinossauros"],jacare:["jacare","jacaré","crocodilo"],rato:["rato","ratinho","camundongo"],polvo:["polvo"],caracol:["caracol","lesma"],minhoca:["minhoca"],uva:["uva","uvas","cacho de uva"],morango:["morango","morangos"],laranja:["laranja","laranjas"],abacaxi:["abacaxi"],melancia:["melancia"],pera:["pera","peras","pêra"],cenoura:["cenoura"],sorvete:["sorvete","picole","picolé"],bolo:["bolo","aniversario","aniversário"],lapis:["lapis","lápis"],livro:["livro","livros"],mochila:["mochila"],tesoura:["tesoura"],regua:["regua","régua"],onibus:["onibus","ônibus"],aviao:["aviao","avião"],barco:["barco","navio","barquinho"],bicicleta:["bicicleta","bike"],trem:["trem"],foguete:["foguete"],nuvem:["nuvem","nuvens"],chuva:["chuva"],lua:["lua"],montanha:["montanha","montanhas"],folha:["folha","folhas"],arcoiris:["arco iris","arco-iris","arco-íris","arcoiris","arco íris"],guardachuva:["guarda chuva","guarda-chuva","sombrinha"],balao:["balao","balão","bexiga"],presente:["presente"],ovopascoa:["ovo de pascoa","ovo de páscoa","pascoa","páscoa"],arvorenatal:["arvore de natal","árvore de natal","natal"],menino:["menino","garoto"],menina:["menina","garota"],circulo:["circulo","círculo","bola"],quadrado:["quadrado"],triangulo:["triangulo","triângulo"],retangulo:["retangulo","retângulo"],losango:["losango"]});
+Object.assign(GRUPOS_DESENHO,{"fundo do mar":["peixe","baleia","golfinho","polvo","tartaruga"],mar:["peixe","baleia","golfinho","polvo","barco"],insetos:["joaninha","abelha","formiga","borboleta"],"animais selvagens":["leao","elefante","girafa","zebra","macaco","jacare"],zoologico:["leao","elefante","girafa","zebra","macaco","urso"],"zoológico":["leao","elefante","girafa","zebra","macaco","urso"],selva:["leao","macaco","girafa","cobra","jacare"],frutas:["maçã".replace("ç","c")&&"macã","banana","uva","morango","laranja","abacaxi"],alimentos:["macã","banana","cenoura","bolo","sorvete"],"meios de transporte":["carro","onibus","aviao","barco","bicicleta","trem"],transportes:["carro","onibus","aviao","barco","bicicleta","trem"],transporte:["carro","onibus","aviao","barco","bicicleta","trem"],natureza:["arvore","flor","sol","nuvem","montanha","folha"],tempo:["sol","nuvem","chuva","arcoiris","lua","guardachuva"],clima:["sol","nuvem","chuva","arcoiris","guardachuva"],"estacoes do ano":["sol","flor","folha","chuva"],escola:["lapis","livro","mochila","tesoura","regua"],"material escolar":["lapis","livro","mochila","tesoura","regua"],"formas geometricas":["circulo","quadrado","triangulo","retangulo","losango"],"formas geométricas":["circulo","quadrado","triangulo","retangulo","losango"],formas:["circulo","quadrado","triangulo","retangulo","losango"],familia:["menino","menina","casa","coracao"],"família":["menino","menina","casa","coracao"],aniversario:["bolo","balao","presente"],"aniversário":["bolo","balao","presente"],festa:["bolo","balao","presente"],espaco:["foguete","lua","estrela","sol"],"espaço":["foguete","lua","estrela","sol"],ceu:["sol","lua","estrela","nuvem","arcoiris"],"céu":["sol","lua","estrela","nuvem","arcoiris"],dinossauros:["dinossauro"]});
+
+/* ============ ATIVIDADES PRONTAS (funcionam sem internet) ============ */
+const INGLES={gato:"cat",cachorro:"dog",cavalo:"horse",vaca:"cow",porco:"pig",galinha:"chicken",pato:"duck",peixe:"fish",passaro:"bird",borboleta:"butterfly",coelho:"rabbit",ovelha:"sheep",tartaruga:"turtle",leao:"lion",elefante:"elephant",sapo:"frog",flor:"flower",arvore:"tree","macã":"apple",banana:"banana",carro:"car",sol:"sun",casa:"house",estrela:"star",coracao:"heart",girafa:"giraffe",macaco:"monkey",zebra:"zebra",urso:"bear",cobra:"snake",baleia:"whale",golfinho:"dolphin",joaninha:"ladybug",abelha:"bee",formiga:"ant",coruja:"owl",pinguim:"penguin",dinossauro:"dinosaur",jacare:"alligator",rato:"mouse",polvo:"octopus",caracol:"snail",minhoca:"worm",uva:"grapes",morango:"strawberry",laranja:"orange",abacaxi:"pineapple",melancia:"watermelon",pera:"pear",cenoura:"carrot",sorvete:"ice cream",bolo:"cake",lapis:"pencil",livro:"book",mochila:"backpack",tesoura:"scissors",regua:"ruler",onibus:"bus",aviao:"airplane",barco:"boat",bicicleta:"bicycle",trem:"train",foguete:"rocket",nuvem:"cloud",chuva:"rain",lua:"moon",montanha:"mountain",folha:"leaf",arcoiris:"rainbow",guardachuva:"umbrella",balao:"balloon",presente:"gift",ovopascoa:"Easter egg",arvorenatal:"Christmas tree",menino:"boy",menina:"girl",circulo:"circle",quadrado:"square",triangulo:"triangle",retangulo:"rectangle",losango:"rhombus"};
+const PRONTOS={colorir:1,mandala:1,letras:1,tracar:1,contas:1,conte:1,dinheiro:1,ingles:1,emocoes:1,autoaval:1};
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const embaralhar=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const gabarito=itens=>`<div class="so-tela" style="margin-top:16px;border-top:2px dashed #9AA7B6;padding-top:10px;color:#5D6B7E;font-size:13px"><b>Gabarito (só a professora vê, não sai na impressão):</b><ol>${itens.map(x=>"<li>"+x+"</li>").join("")}</ol></div>`;
+const miniSvg=(k,tam)=>`<svg viewBox="0 0 200 200" width="${tam}" height="${tam}" fill="#fff" stroke="#222" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" style="vertical-align:middle">${DESENHOS[k]}</svg>`;
+function desenhosDoTema(at,padrao){const ks=acharDesenhos([at.tema,at.ideia||""].join(" "));return ks.length?ks:(padrao||GRUPOS_DESENHO.animais)}
+
+/* ---- Mandala (adultos e crianças) ---- */
+function mandalaSvg(detalhe){
+  const aneis=detalhe?8:4,partes=[],sim=[8,10,12,16][rnd(0,3)];
+  partes.push(`<circle cx="0" cy="0" r="${detalhe?10:16}"/>`);
+  let r=detalhe?14:20;
+  for(let i=0;i<aneis;i++){
+    const n=sim*(i>3?2:1),passo=detalhe?20:36,tipo=rnd(0,4),a=360/n;r+=passo;
+    for(let k=0;k<n;k++){const ang=k*a;
+      if(tipo===0)partes.push(`<ellipse cx="0" cy="${-(r-passo/2)}" rx="${Math.max(4,Math.PI*r/n*0.55)}" ry="${passo/2}" transform="rotate(${ang})"/>`);
+      else if(tipo===1)partes.push(`<circle cx="0" cy="${-(r-passo/2)}" r="${Math.min(passo/2,Math.PI*r/n*0.6)}" transform="rotate(${ang})"/>`);
+      else if(tipo===2)partes.push(`<path d="M0 ${-(r-passo)} Q${passo*0.6} ${-(r-passo/2)} 0 ${-r} Q${-passo*0.6} ${-(r-passo/2)} 0 ${-(r-passo)}Z" transform="rotate(${ang})"/>`);
+      else if(tipo===3)partes.push(`<path d="M${-Math.PI*(r-passo)/n} ${-(r-passo)} L0 ${-r} L${Math.PI*(r-passo)/n} ${-(r-passo)}" transform="rotate(${ang})"/>`);
+      else partes.push(`<path d="M0 ${-(r-passo)} A${passo/2} ${passo/2} 0 0 1 0 ${-r}" transform="rotate(${ang})"/><circle cx="0" cy="${-(r-passo/2)}" r="2.5" transform="rotate(${ang+a/2})"/>`);
+    }
+    partes.push(`<circle cx="0" cy="0" r="${r}" fill="none"/>`);
+  }
+  return `<svg viewBox="${-r-6} ${-r-6} ${2*r+12} ${2*r+12}" style="width:100%;max-width:520px;display:block;margin:10px auto" fill="#fff" stroke="#222" stroke-width="${detalhe?1.6:2.4}" stroke-linejoin="round">${partes.reverse().join("")}</svg>`;
+}
+
+/* ---- Letras e números ---- */
+function sequenciaLetras(at){
+  const tx=" "+norm([at.tema,at.ideia||"",at.pal||""].join(" "))+" ",mai=!/minuscul/.test(tx);
+  const cx=s=>mai?s.toUpperCase():s.toLowerCase();
+  let m=tx.match(/(?:numeros?|contar)\s*(?:de)?\s*(\d+)\s*(?:a|ate)\s*(\d+)/);
+  if(m){const a=+m[1],b=Math.min(+m[2],a+29);return Array.from({length:b-a+1},(_,i)=>String(a+i))}
+  m=tx.match(/(?:nome|palavra)s?\s*:?\s*([a-zà-ú ]{2,30})/i);
+  if(m&&!/alfabeto|letra/.test(m[1]))return cx(m[1].trim().split(/\s+/)[0]).split("");
+  if(/vogais/.test(tx))return cx("aeiou").split("");
+  if(/consoantes/.test(tx))return cx("bcdfghjklmnpqrstvwxz").split("");
+  m=tx.match(/letras?\s+((?:[a-z](?:\s*,\s*|\s+e\s+|\s+|$))+)/);
+  if(m){const l=m[1].match(/\b[a-z]\b/g);if(l&&l.length)return l.map(cx)}
+  if(/numer/.test(tx)){const n=(tx.match(/\b(\d{1,3})\b/)||[])[1];return n?[n]:Array.from({length:11},(_,i)=>String(i))}
+  return cx("abcdefghijklmnopqrstuvwxyz").split("");
+}
+const fonteLetra=`font-family="'Arial Rounded MT Bold','Arial Black',Arial,sans-serif" font-weight="900"`;
+function letraVazada(c,tam){return `<svg viewBox="0 0 200 200" width="${tam}" height="${tam}"><text x="100" y="${c.length>1?150:162}" text-anchor="middle" font-size="${c.length>2?90:c.length>1?120:170}" ${fonteLetra} fill="#fff" stroke="#222" stroke-width="4" stroke-linejoin="round">${esc(c)}</text></svg>`}
+function letraPontilhada(c,tam,cheia){return `<svg viewBox="0 0 200 200" width="${tam}" height="${tam}"><text x="100" y="${c.length>1?150:162}" text-anchor="middle" font-size="${c.length>2?90:c.length>1?120:170}" ${fonteLetra} fill="none" stroke="${cheia?"#222":"#7A8796"}" stroke-width="${cheia?6:5}" stroke-linecap="round" stroke-linejoin="round" ${cheia?"":`stroke-dasharray="0.5 11"`}>${esc(c)}</text></svg>`}
+
+/* ---- Matemática ---- */
+function contas(at){
+  const tx=norm([at.tema,at.ideia||""].join(" ")),id=at.idade,linhas=[],gab=[];
+  let op=/divis|divid|÷/.test(tx)?"÷":/multipl|vezes|tabuada|×/.test(tx)?"×":/subtra|menos|tirar/.test(tx)?"−":"+";
+  const tab=(tx.match(/tabuada\s*do\s*(\d+)/)||[])[1];
+  const lim={inf:5,f1:20,f2:100,em:1000,ad:100}[id]||20,q=id==="inf"?6:12;
+  for(let i=0;i<q;i++){let a,b,res;
+    if(tab){a=+tab;b=i+1;if(b>10)break;op="×";res=a*b}
+    else if(op==="+"){a=rnd(id==="inf"?0:1,lim);b=rnd(id==="inf"?0:1,id==="inf"?5-a:lim);res=a+b}
+    else if(op==="−"){a=rnd(1,lim);b=rnd(0,a);res=a-b}
+    else if(op==="×"){const m={inf:3,f1:10,f2:12,em:20,ad:12}[id]||10;a=rnd(2,m);b=rnd(2,id==="f2"||id==="em"?m:10);res=a*b}
+    else{b=rnd(2,{inf:3,f1:10,f2:12,em:25,ad:10}[id]||10);res=rnd(1,{inf:3,f1:10,f2:20,em:50,ad:12}[id]||10);a=b*res}
+    linhas.push(`<div style="font-size:${id==="inf"?30:24}px;font-weight:700;padding:10px 4px;border-bottom:1px dashed #D5DEE8;letter-spacing:1px">${a} ${op} ${b} = <span style="display:inline-block;width:60px;border-bottom:2px solid #444">&nbsp;</span></div>`);
+    gab.push(`${a} ${op} ${b} = <b>${res}</b>`);
+  }
+  const nome={"+":"Adição (mais)","−":"Subtração (menos)","×":tab?"Tabuada do "+tab:"Multiplicação (vezes)","÷":"Divisão"}[op];
+  return {html:`<p><b>${nome}</b> — resolva as continhas:</p><div style="display:grid;grid-template-columns:${id==="inf"?"1fr":"1fr 1fr"};gap:0 24px">${linhas.join("")}</div>`,gab};
+}
+function conteEscreva(at){
+  const ks=embaralhar(desenhosDoTema(at)).slice(0,at.idade==="inf"?4:6),max=at.idade==="inf"?5:10,gab=[];
+  const cx=ks.map(k=>{const n=rnd(1,max);gab.push(NOMES_DESENHO[k]+": <b>"+n+"</b>");
+    return `<div style="border:2px solid #9AA7B6;border-radius:14px;padding:10px;display:flex;align-items:center;gap:10px;page-break-inside:avoid"><div style="flex:1;display:flex;flex-wrap:wrap;gap:4px">${Array.from({length:n},()=>miniSvg(k,46)).join("")}</div><div style="text-align:center;font-size:12px">Quantos?<div style="width:54px;height:54px;border:2px solid #444;border-radius:10px;margin-top:4px"></div></div></div>`});
+  return {html:`<p>Conte os desenhos e escreva o número no quadradinho:</p><div style="display:grid;gap:10px">${cx.join("")}</div>`,gab};
+}
+function dinheiro(at){
+  const id=at.idade,gab=[],nota=v=>`<span style="display:inline-flex;align-items:center;justify-content:center;width:84px;height:42px;border:2px solid #222;border-radius:6px;margin:3px;font-weight:900">R$ ${v}</span>`,
+    moeda=v=>`<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:2px solid #222;border-radius:50%;margin:3px;font-weight:900;font-size:${v<1?11:13}px">${v<1?Math.round(v*100)+"¢":"R$"+v}</span>`;
+  const valores=id==="inf"?[[1,"m"],[2,"n"],[5,"n"]]:id==="f1"?[[0.5,"m"],[1,"m"],[2,"n"],[5,"n"],[10,"n"]]:[[0.25,"m"],[0.5,"m"],[1,"m"],[2,"n"],[5,"n"],[10,"n"],[20,"n"],[50,"n"]];
+  const fmtR=v=>"R$ "+v.toFixed(2).replace(".",",");
+  const qs=[];
+  for(let i=0;i<(id==="inf"?3:4);i++){let tot=0,h="";for(let j=0;j<rnd(2,id==="inf"?3:5);j++){const [v,t]=valores[rnd(0,valores.length-1)];tot+=v;h+=t==="m"?moeda(v):nota(v)}
+    qs.push(`<li>Quanto dinheiro tem aqui?<div style="margin:6px 0">${h}</div>Total: ______________</li>`);gab.push("Total: <b>"+fmtR(tot)+"</b>")}
+  if(id!=="inf"){const itens=["sorvete","bolo","lapis","livro","mochila","bicicleta","balao","presente"];
+    for(let i=0;i<3;i++){const k=itens[rnd(0,itens.length-1)],preco=id==="f1"?rnd(2,9):rnd(5,45)+[0,0.5,0.25,0.75][rnd(0,id==="f1"?0:3)],pago=id==="f1"?10:[20,50,100][rnd(0,2)];
+      qs.push(`<li>${miniSvg(k,60)} ${esc(NOMES_DESENHO[k])} custa <b>${fmtR(preco)}</b>. Você pagou com <b>${fmtR(pago)}</b>. Quanto recebe de troco?<br>Troco: ______________</li>`);gab.push("Troco: <b>"+fmtR(pago-preco)+"</b>")}
+    qs.push(`<li>Você tem <b>${fmtR(id==="f1"?10:50)}</b>. Escreva duas coisas que você compraria e quanto sobraria:<div class="linhas"></div><div class="linhas"></div></li>`);
+    qs.push(`<li>O que é mais importante: uma coisa que você <b>precisa</b> ou uma coisa que você <b>quer</b>? Dê um exemplo de cada:<div class="linhas"></div><div class="linhas"></div></li>`);}
+  return {html:`<p>💰 Educação financeira: vamos aprender a usar o dinheiro!</p><ol>${qs.join("")}</ol>`,gab};
+}
+function inglesFiguras(at){
+  const ks=embaralhar(desenhosDoTema(at)).filter(k=>INGLES[k]).slice(0,at.idade==="inf"?4:6),pal=embaralhar(ks.map(k=>INGLES[k]));
+  const cards=`<div style="display:grid;grid-template-columns:repeat(${Math.min(3,ks.length)},1fr);gap:10px">${ks.map(k=>`<div style="border:2px solid #9AA7B6;border-radius:14px;padding:8px;text-align:center;page-break-inside:avoid">${miniSvg(k,96)}<div style="font-weight:900;font-size:18px;letter-spacing:1px">${esc(INGLES[k]).toUpperCase()}</div><div style="color:#5D6B7E;font-size:13px">(${esc(NOMES_DESENHO[k])})</div></div>`).join("")}</div>`;
+  const ligue=`<p style="margin-top:18px"><b>Ligue o desenho à palavra em inglês:</b></p><table style="width:100%;border-collapse:separate;border-spacing:0 8px">${ks.map((k,i)=>`<tr><td style="width:40%">${miniSvg(k,64)} ●</td><td style="width:20%"></td><td style="width:40%;font-weight:800;font-size:18px">● ${esc(pal[i])}</td></tr>`).join("")}</table>`;
+  const escrever=at.idade==="inf"?"":`<p style="margin-top:18px"><b>Escreva em inglês:</b></p><ol>${embaralhar(ks).slice(0,4).map(k=>`<li>${miniSvg(k,48)} <span style="display:inline-block;width:160px;border-bottom:2px solid #444">&nbsp;</span></li>`).join("")}</ol>`;
+  return {html:`<p>🇺🇸 Vocabulário em inglês — <i>Let's learn!</i></p>${cards}${ligue}${escrever}`,gab:ks.map(k=>NOMES_DESENHO[k]+" = <b>"+INGLES[k]+"</b>")};
+}
+function emocoes(at){
+  const em=[["😀","Feliz"],["😢","Triste"],["😠","Bravo(a)"],["😨","Com medo"],["😲","Surpreso(a)"],["😴","Cansado(a)"]];
+  const adulto=at.idade==="em"||at.idade==="ad";
+  return {html:`<p>💛 Como estou me sentindo hoje? Pinte ou marque:</p><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">${em.map(e=>`<div style="border:2px solid #9AA7B6;border-radius:14px;padding:8px"><div style="font-size:48px">${e[0]}</div><b>${e[1]}</b></div>`).join("")}</div>
+  <ol style="margin-top:16px"><li>${adulto?"Escreva o que provocou esse sentimento:":"Desenhe ou escreva por que você está assim:"}${at.idade==="inf"?`<div style="border:2px solid #9AA7B6;border-radius:12px;height:180px;margin-top:8px"></div>`:"<div class='linhas'></div><div class='linhas'></div>"}</li>
+  <li>O que me deixa feliz?<div class='linhas'></div></li>
+  <li>Quando fico bravo(a) ou triste, eu posso: (marque)<br>( ) respirar fundo 3 vezes &nbsp; ( ) contar até 10 &nbsp; ( ) conversar com alguém &nbsp; ( ) beber água &nbsp; ( ) desenhar</li>
+  <li>${adulto?"Como posso ajudar um colega que está passando por um momento difícil?":"Como posso ajudar um amigo que está triste?"}<div class='linhas'></div></li></ol>`,gab:[]};
+}
+function autoavaliacao(at){
+  const crit=["Prestei atenção na aula","Fiz as atividades com capricho","Respeitei os colegas e a professora","Pedi ajuda quando precisei","Ajudei um colega"];
+  const kids=at.idade==="inf"||at.idade==="f1";
+  return {html:`<p>🧠 Como foi o meu aprendizado? ${kids?"Pinte a carinha:":"Marque com um X:"}</p>
+  <table style="width:100%;border-collapse:collapse;font-size:14px"><tr><th style="text-align:left;border-bottom:2px solid #444;padding:6px">Eu…</th><th style="border-bottom:2px solid #444">${kids?"😀":"Sempre"}</th><th style="border-bottom:2px solid #444">${kids?"😐":"Às vezes"}</th><th style="border-bottom:2px solid #444">${kids?"😢":"Ainda não"}</th></tr>
+  ${crit.map(c=>`<tr><td style="padding:8px 6px;border-bottom:1px solid #D5DEE8">${c}</td><td style="text-align:center;border-bottom:1px solid #D5DEE8">◯</td><td style="text-align:center;border-bottom:1px solid #D5DEE8">◯</td><td style="text-align:center;border-bottom:1px solid #D5DEE8">◯</td></tr>`).join("")}</table>
+  <ol style="margin-top:16px"><li>O que eu aprendi${at.tema?" sobre <b>"+esc(at.tema)+"</b>":""}?<div class='linhas'></div><div class='linhas'></div></li>
+  <li>Como eu aprendi melhor? ( ) lendo &nbsp; ( ) ouvindo &nbsp; ( ) fazendo &nbsp; ( ) desenhando &nbsp; ( ) em grupo</li>
+  <li>O que foi mais difícil?<div class='linhas'></div></li>
+  <li>O que vou fazer para melhorar?<div class='linhas'></div></li></ol>`,gab:[]};
+}
+function gerarPronto(at){
+  const t=at.tema,inf=at.idade==="inf";let r,titulo=TIPOS[at.tipo]+(t?" – "+t:"");
+  if(at.tipo==="colorir"){const fc=folhaColorir(at,"")||folhaColorir({tema:"animais"},"");return cabecalho(at,titulo)+`<p>Pinte os desenhos bem bonito! 🖍️</p>`+fc}
+  if(at.tipo==="mandala"){const det=!(inf||at.idade==="f1")||/detalh/.test(norm(at.ideia||""));return cabecalho(at,titulo)+`<p>${det?"Mandala para colorir com calma. Escolha as cores e aproveite o momento. 🌸":"Pinte a mandala com as cores que você mais gosta! 🌈"}</p>`+mandalaSvg(det)}
+  if(at.tipo==="letras"){const s=sequenciaLetras(at);return cabecalho(at,titulo)+`<p>Pinte as letras e os números bem bonito!</p><div style="display:grid;grid-template-columns:repeat(${s.length<=2?s.length:s.length<=6?3:4},1fr);gap:6px">${s.map(c=>`<div style="border:2px solid #D5DEE8;border-radius:12px;page-break-inside:avoid">${letraVazada(c,"100%")}</div>`).join("")}</div>`}
+  if(at.tipo==="tracar"){const s=sequenciaLetras(at).slice(0,inf?8:14);return cabecalho(at,titulo)+`<p>Passe o lápis por cima dos pontinhos, seguindo o modelo. ✏️</p>${s.map(c=>`<div style="display:flex;align-items:center;gap:2px;border-bottom:2px solid #D5DEE8;page-break-inside:avoid">${letraPontilhada(c,inf?90:70,true)}${Array.from({length:inf?3:5},()=>letraPontilhada(c,inf?90:70,false)).join("")}</div>`).join("")}`}
+  if(at.tipo==="contas")r=contas(at);else if(at.tipo==="conte")r=conteEscreva(at);else if(at.tipo==="dinheiro")r=dinheiro(at);
+  else if(at.tipo==="ingles")r=inglesFiguras(at);else if(at.tipo==="emocoes")r=emocoes(at);else r=autoavaliacao(at);
+  return cabecalho(at,titulo)+r.html+(r.gab.length?gabarito(r.gab):"");
+}
+
 /* ============ MICROFONE (falar em vez de digitar) ============ */
 let ditadoAtivo=null;
 function micBtn(alvo){return `<button type="button" class="btn-mic" data-mic='${alvo}' aria-label="Falar em vez de escrever">👩‍🏫🎙️ Falar</button>`}
@@ -1214,7 +1415,7 @@ const PERG={
     ad:["O que é {t} para você?","Onde {t} aparece no seu dia a dia?","Por que é útil saber sobre {t}?","O que você gostaria de aprender mais sobre {t}?"]}
 };
 function cabecalho(at,titulo){
-  return `<h4>${esc(titulo)}</h4><div class="cabec">Nome: ______________________________ &nbsp; Data: ___/___/____<br>${esc(IDADES[at.idade])} · Tema: <b>${esc(at.tema)}</b> &nbsp;${at.ia?'<span class="selo-ia">✨ feito com IA</span>':'<span class="selo-demo">modelo pronto</span>'}</div>`;
+  return `<h4>${esc(titulo)}</h4><div class="cabec">Nome: ______________________________ &nbsp; Data: ___/___/____<br>${esc(IDADES[at.idade])}${at.materia?" · "+esc(at.materia):""}${at.tema?` · Tema: <b>${esc(at.tema)}</b>`:""} &nbsp;${at.pronto?'<span class="selo-ia">✅ pronta</span>':at.ia?'<span class="selo-ia">✨ feito com IA</span>':'<span class="selo-demo">modelo pronto</span>'}</div>`;
 }
 const linhas=n=>Array.from({length:n},()=>`<div class="linhas"></div>`).join("");
 function gerarAtividade(at){

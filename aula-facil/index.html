@@ -86,9 +86,9 @@ p{line-height:1.45}
 .pag-resumo b{display:block;font-size:24px}
 
 /* organização */
-.org{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
-.org button{background:#fff;border:1px solid var(--linha);border-radius:16px;padding:12px 4px;font-weight:700;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--navy)}
-.org .ic{font-size:24px}
+.org{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+.org button{background:#fff;border:1px solid var(--linha);border-radius:14px;padding:10px 2px;font-weight:700;font-size:11px;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--navy)}
+.org .ic{font-size:22px}
 .bolinha{display:inline-block;background:var(--vermelho);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;margin-left:2px}
 .tarefa{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha)}
 .tarefa:last-child{border-bottom:0}
@@ -353,7 +353,7 @@ function render(){
   $("#lblTurmas").textContent=md.turmas;
   document.querySelectorAll(".menu button").forEach(b=>b.classList.toggle("on",b.dataset.aba===aba));
   garantirOrg();
-  const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos}[aba]||telaInicio;
+  const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes}[aba]||telaInicio;
   $("#tela").innerHTML="";fn($("#tela"));window.scrollTo(0,0);
   if(buscaInicial){const b=$("#"+buscaInicial.id);if(b){b.value=buscaInicial.q;b.dispatchEvent(new Event("input"))}buscaInicial=null}
 }
@@ -379,6 +379,7 @@ function telaBusca(el){
     g("📚 Planos de aula",m.planos.filter(p=>tem([p.tema,p.obj,p.bncc,p.passos,p.mat].join(" "))).map(p=>item("📚",p.tema,IDADES[p.idade]+" · "+dataBR(p.data),{a:"plano",id:p.id})));
     const di=[];m.turmas.forEach(t=>(m.diario[t.id]||[]).forEach(d=>{if(tem(d.txt))di.push(item("📖",d.txt,dataBR(d.data)+(DB.modo==="aulas"?"":" · "+t.nome),{a:"diario",t:t.id,b:"bDia",q:i.value.trim()}))}));
     g("📖 Diário de aula",di);
+    g("📝 Avaliações",(m.avaliacoes||[]).filter(a=>tem([a.tipo,a.materia,a.conteudo,nomeTurma(a.turmaId)].join(" "))).map(a=>item("📝",a.tipo+" – "+a.materia,dataBR(a.data)+(DB.modo==="aulas"?"":" · "+nomeTurma(a.turmaId))+" · "+a.conteudo,{a:"avaliacoes",b:"bAval",q:a.materia})));
     g("📌 Pendências",(m.pendencias||[]).filter(p=>tem(p.txt)).map(p=>item(p.feito?"✅":"📌",p.txt,p.feito?"Feita":(p.prazo?"Prazo: "+dataBR(p.prazo):"Sem prazo"),{a:"pendencias",b:"bPend",q:i.value.trim()})));
     const en=[];m.turmas.forEach(t=>(m.entregas[t.id]||[]).forEach(e=>{if(tem(e.nome))en.push(item("📥",e.nome,(DB.modo==="aulas"?"":t.nome+" · ")+e.entregues.length+" entregaram",{a:"entregas",t:t.id,id:e.id}))}));
     g("📥 Entregas",en);
@@ -444,8 +445,10 @@ function telaInicio(el){
     <button onclick="ir('diario')"><span class="ic">📖</span>Diário de aula</button>
     <button onclick="ir('pendencias')"><span class="ic">📌</span>Pendências${pendAbertas()?` <b class="bolinha">${pendAbertas()}</b>`:""}</button>
     <button onclick="ir('entregas')"><span class="ic">📥</span>Entregas</button>
+    <button onclick="ir('avaliacoes')"><span class="ic">📝</span>Avaliações</button>
     <button onclick="ir('salvos')"><span class="ic">📂</span>Salvos</button>
   </div>
+  ${cardAvaliacoes()}
   ${cardPendencias()}
   ${pag}
   <div class="card"><div class="topo-lista"><h3 style="margin:0">📅 Agenda de hoje</h3><button class="btn btn-sec" style="padding:8px 12px" id="addAg">+ Adicionar</button></div>
@@ -580,6 +583,7 @@ function telaAtividades(el){
   <h3 style="margin-top:22px">📂 Atividades salvas</h3>
   ${campoBusca("bAt","Buscar atividade (nome ou o que tem dentro)")}
   <div class="lista" id="lAt">${m.atividades.length?m.atividades.map(a=>`<div class="item" data-busca="${esc(a.titulo+" "+tirarTags(a.html))}" data-id="${a.id}" style="cursor:pointer"><div class="av">📄</div><div class="info"><div class="nome">${esc(a.titulo)}</div><div class="det">${esc(IDADES[a.idade])} · ${dataBR(a.data)}</div></div><button class="x" data-del="${a.id}" aria-label="Apagar">✕</button></div>`).join(""):`<div class="vazio">Nenhuma atividade salva ainda.</div>`}</div>`;
+  if(atPrefill){$("#aTema").value=atPrefill.tema;$("#aTipo").value="prova";atPrefill=null;setTimeout(()=>{$("#aTema").scrollIntoView({block:"center"});toast("Confira a idade e toque em ✨ Criar atividade.")},100)}
   const tipo=$("#aTipo");tipo.onchange=()=>{const v=tipo.value;$("#cPal").classList.toggle("oculto",!USA_PAL[v]);
     $("#lblPal").textContent=v==="ligue"?"Pares para ligar":v==="ditado"?"Palavras do ditado":v==="cruz"?"Palavras da cruzadinha":"Palavras do caça-palavras";
     $("#aPal").placeholder=v==="ligue"?"Ex.: vaca=leite, galinha=ovo, abelha=mel":v==="cruz"?"Ex.: vaca, porco, galinha":"Ex.: vaca, porco, galinha, cavalo"};
@@ -671,6 +675,10 @@ function garantirOrg(){const m=M();if(!m)return;
       :[{id:uid(),data:diasAtras(1),txt:"Lucas: tabuada do 7. Pedro: leitura de sílabas com R."}]}
   if(!m.pendencias)m.pendencias=DB.modo==="aulas"?[{id:uid(),txt:"Preparar material de inglês da Sofia",prazo:diasAtras(-1),feito:false},{id:uid(),txt:"Cobrar pagamentos pendentes",prazo:diasAtras(-3),feito:false}]
     :[{id:uid(),txt:"Corrigir as provas do "+m.turmas[0].nome.split("·")[0].trim(),prazo:diasAtras(-1),feito:false},{id:uid(),txt:"Entregar as notas do bimestre",prazo:diasAtras(-6),feito:false},{id:uid(),txt:"Imprimir atividades da semana",prazo:diasAtras(1),feito:true}];
+  if(!m.avaliacoes){const t1=m.turmas[0],t2=m.turmas[1]||t1;
+    m.avaliacoes=DB.modo==="aulas"?[{id:uid(),data:diasAtras(-4),turmaId:t1.id,tipo:"Simulado",materia:"Inglês – Sofia",conteudo:"Verbo to be e cores"}]
+      :DB.modo==="particular"?[{id:uid(),data:diasAtras(-3),turmaId:t2.id,tipo:"Prova",materia:"Português",conteudo:"Leitura e interpretação de texto"},{id:uid(),data:diasAtras(-8),turmaId:t1.id,tipo:"Avaliação oral",materia:"Cores e formas",conteudo:"Reconhecer cores primárias"}]
+      :[{id:uid(),data:diasAtras(-1),turmaId:t1.id,tipo:"Prova",materia:"Matemática",conteudo:"Frações e números decimais"},{id:uid(),data:diasAtras(-3),turmaId:t1.id,tipo:"Trabalho",materia:"Ciências",conteudo:"Ciclo da água (cartaz em grupo)"},{id:uid(),data:diasAtras(-5),turmaId:t2.id,tipo:"Prova",materia:"Português",conteudo:"Substantivos e adjetivos"},{id:uid(),data:diasAtras(6),turmaId:t1.id,tipo:"Prova",materia:"Português",conteudo:"Interpretação de texto"}]}
   if(!m.entregas){m.entregas={};const t=m.turmas[0];const al=t.alunos;
     m.entregas[t.id]=[{id:uid(),nome:DB.modo==="particular"?"Tarefa de casa: desenho da família":DB.modo==="aulas"?"Lição de casa da semana":"Trabalho de Ciências: ciclo da água",data:diasAtras(2),entregues:al.filter((a,i)=>i%4!==1).map(a=>a.id)}]}
 }
@@ -713,9 +721,11 @@ function telaPendencias(el){
 function avisarPrazos(){
   try{const m=M();if(!m||!m.pendencias)return;const hoje=hojeISO();if(DB.ultAviso===hoje)return;
     const lim=diasAtras(-1),perto=m.pendencias.filter(p=>!p.feito&&p.prazo&&p.prazo<=lim);
-    if(!perto.length)return;DB.ultAviso=hoje;salvar();
-    avisoCelular("Pendências com prazo chegando",perto.map(p=>p.txt).join(" · "));
-    toast("📌 Você tem "+perto.length+(perto.length===1?" pendência":" pendências")+" com prazo chegando.");
+    const av=(m.avaliacoes||[]).filter(a=>a.data>=hoje&&a.data<=lim);
+    if(!perto.length&&!av.length)return;DB.ultAviso=hoje;salvar();
+    if(av.length)avisoCelular("Avaliações chegando",av.map(a=>(a.data===hoje?"Hoje: ":"Amanhã: ")+a.tipo+" de "+a.materia+" – "+nomeTurma(a.turmaId)).join(" · "));
+    if(perto.length)avisoCelular("Pendências com prazo chegando",perto.map(p=>p.txt).join(" · "));
+    toast([av.length?"📝 "+av.length+(av.length===1?" avaliação":" avaliações")+" hoje ou amanhã":"",perto.length?"📌 "+perto.length+(perto.length===1?" pendência":" pendências")+" com prazo chegando":""].filter(Boolean).join(" · "));
   }catch(e){}
 }
 
@@ -765,9 +775,61 @@ function telaEntregas(el){
 }
 
 
+
+/* ---------- AVALIAÇÕES ---------- */
+const TIPOS_AVAL=["Prova","Trabalho","Recuperação","Simulado","Apresentação","Avaliação oral"];
+let atPrefill=null,avalEditando=null,verSemana=false,formAval=false;
+function nomeTurma(id){const t=M().turmas.find(x=>x.id===id);return t?t.nome:""}
+function diaSemana(iso){return new Date(iso+"T12:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit"})}
+function rotuloData(iso){const d=Math.round((new Date(iso)-new Date(hojeISO()))/864e5);
+  return d<0?`<span class="prazo ok" style="opacity:.7">Já foi</span>`:d===0?`<span class="prazo atras">Hoje</span>`:d===1?`<span class="prazo perto">Amanhã</span>`:d<=7?`<span class="prazo perto">Em ${d} dias</span>`:`<span class="prazo ok">${dataBR(iso)}</span>`}
+function cardAvaliacoes(){const h=hojeISO(),lim=diasAtras(-7);const p=(M().avaliacoes||[]).filter(a=>a.data>=h&&a.data<=lim).sort((a,b)=>a.data.localeCompare(b.data)).slice(0,3);
+  if(!p.length)return "";
+  return `<div class="card"><div class="topo-lista"><h3 style="margin:0">📝 Próximas avaliações</h3><button class="btn btn-sec" style="padding:8px 12px" onclick="ir('avaliacoes')">Ver todas</button></div>
+  ${p.map(a=>`<div class="tarefa"><div style="flex:1;min-width:0"><div class="ttxt"><b>${esc(a.tipo)}</b> de ${esc(a.materia)}${DB.modo==="aulas"?"":" · "+esc(nomeTurma(a.turmaId))}</div><div class="det" style="color:var(--muted);font-size:13px">${esc(a.conteudo)}</div>${rotuloData(a.data)}</div></div>`).join("")}</div>`}
+function linhaAval(a){
+  return `<div class="item col" data-busca="${esc([a.tipo,a.materia,a.conteudo,nomeTurma(a.turmaId),dataBR(a.data)].join(" "))}">
+  <div class="cab"><div class="av">📝</div><div class="info"><div class="nome">${esc(a.tipo)} – ${esc(a.materia)}</div>
+  <div class="det">${diaSemana(a.data)}${DB.modo==="aulas"?"":" · "+esc(nomeTurma(a.turmaId))}</div>${a.conteudo?`<div class="det">📚 ${esc(a.conteudo)}</div>`:""}${rotuloData(a.data)}</div>
+  <button class="x" data-edav="${a.id}" aria-label="Editar">✏️</button><button class="x" data-delav="${a.id}" aria-label="Apagar">✕</button></div>
+  <div class="linha-btns" style="margin-top:10px"><button class="btn btn-ama" style="padding:10px" data-iaav="${a.id}">✨ Criar a prova com IA</button><button class="btn btn-sec" style="padding:10px" data-ntav="${a.id}">📝 Lançar notas</button></div></div>`}
+function telaAvaliacoes(el){
+  const m=M(),h=hojeISO(),ed=avalEditando?m.avaliacoes.find(x=>x.id===avalEditando):null;
+  const lst=[...m.avaliacoes].sort((a,b)=>a.data.localeCompare(b.data)),prox=lst.filter(a=>a.data>=h),pass=lst.filter(a=>a.data<h).reverse();
+  const seg=new Date(h+"T12:00"),fds=[0,6].includes(seg.getDay());seg.setDate(seg.getDate()-((seg.getDay()+6)%7)+(fds?7:0));const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const dias=Array.from({length:7},(_,i)=>{const d=new Date(seg);d.setDate(seg.getDate()+i);return iso(d)}),sem=lst.filter(a=>a.data>=dias[0]&&a.data<=dias[6]);
+  el.innerHTML=`<h2>Avaliações 📝</h2><p class="sub">Provas, trabalhos e recuperações organizados por data. O app avisa um dia antes.</p>
+  ${!(ed||formAval)?`<button class="btn btn-pri btn-bloco" style="margin-bottom:14px" id="avNova">+ Marcar avaliação</button>`:""}
+  <div class="card ${ed||formAval?"":"oculto"}"><h3>${ed?"✏️ Editar avaliação":"Marcar avaliação"}</h3>
+  <div class="campo"><label for="avData">Data</label><input id="avData" type="date" value="${ed?ed.data:diasAtras(-7)}"></div>
+  ${DB.modo==="aulas"?"":`<div class="campo"><label for="avTurma">Turma</label><select id="avTurma">${m.turmas.map(t=>`<option value="${t.id}" ${(ed?ed.turmaId:m.turmaId)===t.id?"selected":""}>${esc(t.nome)}</option>`).join("")}</select></div>`}
+  <div class="campo"><label for="avTipo">Tipo</label><select id="avTipo">${TIPOS_AVAL.map(x=>`<option ${ed&&ed.tipo===x?"selected":""}>${x}</option>`).join("")}</select></div>
+  <div class="campo"><label for="avMat">${DB.modo==="aulas"?"Matéria e aluno":"Matéria"}</label><input id="avMat" value="${esc(ed?ed.materia:"")}" placeholder="${DB.modo==="aulas"?"Ex.: Inglês – Sofia":"Ex.: Matemática"}"></div>
+  <div class="campo"><label for="avCont">O que vai cair</label><input id="avCont" value="${esc(ed?ed.conteudo:"")}" placeholder="Ex.: frações e números decimais"></div>
+  <div class="linha-btns"><button class="btn btn-pri" id="avSalvar">💾 ${ed?"Salvar alterações":"Marcar avaliação"}</button><button class="btn btn-sec" id="avCanc">Cancelar</button></div></div>
+  <div class="seg"><button data-vs="0" class="${verSemana?"":"on"}">Todas</button><button data-vs="1" class="${verSemana?"on":""}">📅 Semana de provas</button></div>
+  ${verSemana?`<div class="topo-lista"><span class="sub" style="margin:0">De ${dataBR(dias[0])} a ${dataBR(dias[6])}</span><button class="btn btn-sec" style="padding:8px 12px" id="impSem">🖨️ Imprimir</button></div>
+    ${dias.map(d=>{const x=sem.filter(a=>a.data===d);return x.length?`<div class="dia" style="margin:14px 0 6px">${diaSemana(d)}</div><div class="lista">${x.map(linhaAval).join("")}</div>`:""}).join("")||`<div class="vazio">Nenhuma avaliação nesta semana.</div>`}`
+  :`${campoBusca("bAval","Buscar avaliação (matéria, conteúdo, turma)")}
+    <h3 style="margin-top:6px">Próximas</h3><div class="lista" id="lAval1">${prox.length?prox.map(linhaAval).join(""):`<div class="vazio">Nenhuma avaliação marcada.</div>`}</div>
+    ${pass.length?`<h3 style="margin-top:18px">Já aconteceram</h3><div class="lista" id="lAval2">${pass.map(linhaAval).join("")}</div>`:""}`}`;
+  ligarBusca("bAval","#lAval1 .item, #lAval2 .item");
+  el.querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{verSemana=b.dataset.vs==="1";render()});
+  const c=$("#avCanc");if(c)c.onclick=()=>{avalEditando=null;formAval=false;render()};
+  const nv=$("#avNova");if(nv)nv.onclick=()=>{formAval=true;render();setTimeout(()=>{const f=$("#avMat");if(f)f.focus()},80)};
+  $("#avSalvar").onclick=()=>{const mat=$("#avMat").value.trim();if(!mat){toast("Escreva a matéria.");$("#avMat").focus();return}
+    const d={data:$("#avData").value||hojeISO(),turmaId:DB.modo==="aulas"?m.turmas[0].id:$("#avTurma").value,tipo:$("#avTipo").value,materia:mat,conteudo:$("#avCont").value.trim()};
+    if(ed)Object.assign(ed,d);else m.avaliacoes.push(Object.assign({id:uid()},d));avalEditando=null;formAval=false;salvar();render();toast(ed?"Avaliação atualizada!":"Avaliação marcada! O app avisa um dia antes.")};
+  el.querySelectorAll("[data-delav]").forEach(b=>b.onclick=()=>{if(!confirm("Apagar esta avaliação?"))return;m.avaliacoes=m.avaliacoes.filter(x=>x.id!==b.dataset.delav);salvar();render()});
+  el.querySelectorAll("[data-edav]").forEach(b=>b.onclick=()=>{avalEditando=b.dataset.edav;render()});
+  el.querySelectorAll("[data-iaav]").forEach(b=>b.onclick=()=>{const a=m.avaliacoes.find(x=>x.id===b.dataset.iaav);atPrefill={tema:(a.materia+(a.conteudo?": "+a.conteudo:""))};ir("atividades")});
+  el.querySelectorAll("[data-ntav]").forEach(b=>b.onclick=()=>{const a=m.avaliacoes.find(x=>x.id===b.dataset.ntav);if(a.turmaId&&m.turmas.some(t=>t.id===a.turmaId)){m.turmaId=a.turmaId;chamadaTemp=null;salvar()}ir("notas")});
+  const ip=$("#impSem");if(ip)ip.onclick=()=>imprimir(`<h2>Semana de provas – ${dataBR(dias[0])} a ${dataBR(dias[6])}</h2><table><tr><th>Dia</th>${DB.modo==="aulas"?"":"<th>Turma</th>"}<th>Tipo</th><th>Matéria</th><th>O que vai cair</th></tr>${sem.map(a=>`<tr><td>${diaSemana(a.data)}</td>${DB.modo==="aulas"?"":`<td>${esc(nomeTurma(a.turmaId))}</td>`}<td>${esc(a.tipo)}</td><td>${esc(a.materia)}</td><td>${esc(a.conteudo)}</td></tr>`).join("")||`<tr><td colspan="5">Nenhuma avaliação nesta semana.</td></tr>`}</table>`);
+}
+
 /* ---------- SALVOS ---------- */
 let filtroSalvos="tudo";
-const TIPOS_SALVOS={tudo:"Tudo",rel:"Relatórios",dia:"Diário",ativ:"Atividades",plano:"Planos",cham:"Chamadas",ent:"Entregas"};
+const TIPOS_SALVOS={tudo:"Tudo",aval:"Avaliações",rel:"Relatórios",dia:"Diário",ativ:"Atividades",plano:"Planos",cham:"Chamadas",ent:"Entregas"};
 function listaSalvos(){
   const m=M(),L=[],nT=t=>DB.modo==="aulas"?"":t.nome;
   m.turmas.forEach(t=>{
@@ -777,6 +839,7 @@ function listaSalvos(){
       L.push({tipo:"cham",ic:"✅",titulo:"Chamada"+(DB.modo==="aulas"?"":" – "+t.nome),det:(t.alunos.length-f)+" presentes · "+f+(f===1?" falta":" faltas"),data:d,busca:"chamada "+t.nome,acao:{a:"vercham",t:t.id,d}})});
     (m.entregas[t.id]||[]).forEach(e=>L.push({tipo:"ent",ic:"📥",titulo:e.nome,det:(nT(t)?nT(t)+" · ":"")+e.entregues.length+" entregaram",data:e.data,busca:e.nome,acao:{a:"entregas",t:t.id,id:e.id}}));
   });
+  (m.avaliacoes||[]).forEach(a=>L.push({tipo:"aval",ic:"📝",titulo:a.tipo+" – "+a.materia,det:(DB.modo==="aulas"?"":nomeTurma(a.turmaId)+" · ")+a.conteudo,data:a.data,busca:[a.tipo,a.materia,a.conteudo,nomeTurma(a.turmaId)].join(" "),acao:{a:"avaliacoes",b:"bAval",q:a.materia}}));
   m.atividades.forEach(a=>L.push({tipo:"ativ",ic:"✨",titulo:a.titulo,det:IDADES[a.idade],data:a.data,busca:a.titulo+" "+tirarTags(a.html),acao:{a:"atividade",id:a.id}}));
   m.planos.forEach(p=>L.push({tipo:"plano",ic:"📚",titulo:"Plano – "+p.tema,det:IDADES[p.idade],data:p.data,busca:[p.tema,p.obj,p.passos,p.mat].join(" "),acao:{a:"plano",id:p.id}}));
   return L.sort((x,y)=>String(y.data).localeCompare(String(x.data)));
@@ -824,7 +887,7 @@ function recuperarCopia(){
 
 /* ---------- EXEMPLOS x COMEÇAR DO ZERO ---------- */
 function vazio(m){const t={id:uid(),nome:m==="aulas"?"Meus alunos":"Minha turma",aval:MODOS[m].aval,limite:m==="aulas"?6:15,alunos:[]};
-  return {exemplo:false,turmas:[t],turmaId:t.id,chamadas:{},atividades:[],planos:[],agenda:[],diario:{},pendencias:[],entregas:{}}}
+  return {exemplo:false,turmas:[t],turmaId:t.id,chamadas:{},atividades:[],planos:[],agenda:[],diario:{},pendencias:[],entregas:{},avaliacoes:[]}}
 function avisoExemplo(){return M().exemplo?`<div class="aviso-ex">👀 <b>Estes são alunos de exemplo</b>, só para você conhecer o app. Quando quiser, apague todos de uma vez e cadastre os seus. Ou toque no ✏️ para aproveitar e só trocar os nomes.
   <button class="btn btn-pri" data-zerar>🧹 Apagar exemplos e começar do zero</button></div>`:""}
 function ligarExemplo(){document.querySelectorAll("[data-zerar]").forEach(b=>b.onclick=comecarDoZero)}

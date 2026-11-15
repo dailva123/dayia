@@ -1056,9 +1056,26 @@ function finalizarDitado(st,avisar){
   if(ditadoAtivo===st)ditadoAtivo=null;
   if(avisar&&(st.final||st.parcial))toast("Pronto! Confira o que ficou escrito.");
 }
+function ajudaMicrofone(bloqueado){
+  $("#toast").classList.remove("on");clearTimeout(toast._t);
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent),inst=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  const passos=ios?`<ol><li>Abra o app <b>Ajustes</b> do iPhone (a engrenagem cinza).</li><li>Desça e toque em <b>Safari</b>.</li><li>Toque em <b>Microfone</b> e escolha <b>Perguntar</b> ou <b>Permitir</b>.</li><li>Volte ao Aula Fácil e toque em <b>Falar</b> de novo.</li></ol>`
+    :inst?`<ol><li>Saia do Aula Fácil e <b>segure o dedo no ícone</b> dele na tela do celular.</li><li>Toque em <b>"Informações do app"</b> (ou no ⓘ).</li><li>Toque em <b>Permissões</b> → <b>Microfone</b> → <b>Permitir</b>.</li><li>Abra o Aula Fácil de novo e toque em <b>Falar</b>.</li></ol>`
+    :`<ol><li>Lá em cima, ao lado do endereço do site, toque no <b>cadeado 🔒</b> (ou no ícone de ajustes).</li><li>Toque em <b>Permissões</b> (ou "Configurações do site").</li><li>Em <b>Microfone</b>, escolha <b>Permitir</b>.</li><li>Toque em <b>Falar</b> de novo.</li></ol>`;
+  abrirModal(`<h3>🎙️ O microfone está bloqueado</h3><p>${bloqueado?"O celular não deixou o app usar o microfone.":""} Você pode liberar assim:</p>${passos}
+  <div class="ajuste" style="margin-top:10px"><b>Mais fácil:</b> use o microfone do <b>teclado</b>, que funciona sem liberar nada. Toque no campo e, no teclado, toque no <b>🎤</b>. Depois é só falar.</div>
+  <button class="btn btn-pri btn-bloco" style="margin-top:12px" onclick="fecharModal()">Entendi</button>`);
+}
 function pararDitado(){if(ditadoAtivo)finalizarDitado(ditadoAtivo,false)}
 function ditar(btn,alvo){
   if(!alvo)return;
+  if(!DB.micAvisado&&!(ditadoAtivo&&ditadoAtivo.btn===btn)){
+    abrirModal(`<div style="text-align:center"><div style="font-size:52px">👩‍🏫🎙️</div><h3>Falar em vez de escrever</h3>
+    <p>Agora o celular vai perguntar se o Aula Fácil pode usar o microfone.</p>
+    <p style="background:var(--verde-l);color:var(--verde);border-radius:14px;padding:12px;font-weight:800">Toque em "Permitir" ✅</p>
+    <p class="sub">O app só ouve enquanto o botão estiver vermelho 🔴. Nada é gravado nem guardado.</p>
+    <button class="btn btn-pri btn-bloco" id="micOk">Entendi, quero falar</button></div>`,()=>{$("#micOk").onclick=()=>{DB.micAvisado=true;salvar();fecharModal();ditar(btn,alvo)}});
+    return}
   if(ditadoAtivo&&ditadoAtivo.btn===btn){finalizarDitado(ditadoAtivo,true);return}   // 2º toque: para na hora
   pararDitado();
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -1074,7 +1091,7 @@ function ditar(btn,alvo){
     st.final=fin.trim();st.parcial=par.trim();
     alvo.value=[st.base,st.final,st.parcial].filter(Boolean).join(" ").replace(/\s+/g," ");};
   rec.onerror=ev=>{if(st.fim)return;
-    if(ev.error==="not-allowed"||ev.error==="service-not-allowed")toast("Libere o microfone para o app nas permissões do celular.");
+    if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){finalizarDitado(st,false);ajudaMicrofone(true);return}
     else if(ev.error==="no-speech")toast("Não ouvi nada. Toque em Falar e fale perto do celular.");
     else if(ev.error!=="aborted")toast("Não consegui ouvir. Tente de novo.");
     finalizarDitado(st,false)};

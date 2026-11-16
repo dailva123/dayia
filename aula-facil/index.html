@@ -36,7 +36,7 @@ button{cursor:pointer}
 .btn-modo{background:var(--navy2);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;padding:8px 10px;font-size:13px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .btn-instalar{background:var(--amarelo);color:var(--navy);border:0;border-radius:12px;padding:9px 13px;font-weight:800;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap;box-shadow:0 4px 12px rgba(244,180,0,.35)}
 .btn-engr{background:transparent;border:0;color:#fff;font-size:20px;padding:6px;line-height:1}
-@media (max-width:420px){.btn-modo .txt{display:none}.marca .simb{display:none}}
+@media (max-width:520px){.btn-modo .txt{display:none}}@media (max-width:420px){.marca .simb{display:none}}.marca h1{white-space:nowrap}
 
 main{max-width:720px;margin:0 auto;padding:16px 16px calc(100px + env(safe-area-inset-bottom))}
 h2{font-size:22px;margin:4px 0 4px}
@@ -1267,6 +1267,7 @@ function acharDesenhos(texto){
   for(const k in SINONIMOS){const pos=Math.min(...SINONIMOS[k].map(s=>{const i=tx.indexOf(" "+norm(s)+" ");return i<0?1e9:i}));if(pos<1e9)achou.push([pos,k])}
   let lista=achou.sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
   if(lista.includes("estrelamar"))lista=lista.filter(k=>k!=="estrela");if(lista.includes("cavalomarinho"))lista=lista.filter(k=>k!=="cavalo");if(lista.includes("ursopolar"))lista=lista.filter(k=>k!=="urso");if(lista.includes("raposaartica"))lista=lista.filter(k=>k!=="raposa");if(lista.includes("beijaflor"))lista=lista.filter(k=>k!=="flor");if(lista.includes("vagalume"))lista=lista.filter(k=>k!=="lampada");if(lista.includes("feneco"))lista=lista.filter(k=>k!=="raposa");if(lista.includes("pegaso"))lista=lista.filter(k=>k!=="cavalo");if(lista.includes("tigresabre"))lista=lista.filter(k=>k!=="tigre");if(lista.includes("preguicagigante"))lista=lista.filter(k=>k!=="preguica");if(lista.includes("porquinho"))lista=lista.filter(k=>k!=="leitao");for(const [f,a] of [["gatinho","gato"],["cachorrinho","cachorro"],["potrinho","cavalo"],["bezerrinho","vaca"],["leitao","porco"],["ursinho","urso"]])if(lista.includes(f))lista=lista.filter(k=>k!==a);if(lista.includes("loboguara"))lista=lista.filter(k=>k!=="lobo");if(lista.includes("tatucanastra"))lista=lista.filter(k=>k!=="tatu");if(lista.includes("cachorrodomato"))lista=lista.filter(k=>k!=="cachorro");if(lista.includes("porquinho"))lista=lista.filter(k=>k!=="porco");if(lista.includes("micoleao"))lista=lista.filter(k=>k!=="leao");if(lista.includes("peixeboi"))lista=lista.filter(k=>k!=="peixe"&&k!=="boi"&&k!=="vaca");
+  if(lista.length)for(const g of Object.keys(GRUPOS_DESENHO).filter(g=>!g.includes(" "))){const i=tx.indexOf(" "+norm(g)+" ");if(i>=0){const k=NOMES_DESENHO[g]?g:GRUPOS_DESENHO[g][0];if(k&&!lista.includes(k))lista.push(k)}}
   if(!lista.length){for(const g of Object.keys(GRUPOS_DESENHO).sort((a,b)=>b.length-a.length)){if(tx.includes(" "+norm(g)+" ")){lista=GRUPOS_DESENHO[g].slice();break}}}
   return lista.slice(0,6);
 }

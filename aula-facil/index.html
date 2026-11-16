@@ -650,7 +650,7 @@ function telaAtividades(el){
   el.querySelectorAll("#lAt [data-del]").forEach(b=>b.onclick=()=>{if(!confirm("Apagar esta atividade?"))return;m.atividades=m.atividades.filter(a=>a.id!==b.dataset.del);salvar();render()});
 }
 function criarAtividadeIA(at,extra){
-  return pedirIA(Object.assign({tipo:"atividade",tema:(at.materia?at.materia+" – ":"")+at.tema,idade:at.idade,tipo_atividade:at.tipo,palavras:at.pal,ideia:at.ideia||"",metodologia:at.metodo?METODOS[at.metodo]:""},extra)).then(r=>{
+  return pedirIA(Object.assign({tipo:"atividade",tema:(at.materia?at.materia+" – ":"")+at.tema,idade:at.idade,tipo_atividade:at.tipo,palavras:at.pal,ideia:at.ideia||"",figuras:Object.values(NOMES_DESENHO).join(", "),metodologia:at.metodo?METODOS[at.metodo]:""},extra)).then(r=>{
     const htmlAntigo=at.html;
     if(r){try{at.ia=true;at.html=atividadeIA(at,r)}catch(e){at.ia=false;r=null}}
     if(!r){if(extra.ajuste&&htmlAntigo){toast("Não consegui refazer agora. Tente de novo em instantes.");at.html=htmlAntigo}else at.html=gerarAtividade(at)}
@@ -1810,8 +1810,10 @@ function atividadeIA(at,r){
     qs.forEach(q=>{q.enunciado=semNum(q.enunciado);q.alternativas=arr(q.alternativas).map(semNum)});
     corpo=(at.tipo==="prova"&&!inf?`<div class="cabec">Turma: __________ &nbsp; Nota: ______</div>`:"")+inst+caixaTexto(r)+`<ol>${qs.map(q=>{const alt=arr(q.alternativas);
       const n=typeof q.linhas==="number"?Math.min(q.linhas,6):(alt.length||inf?0:2);
-      const desenho=/desenh/i.test(q.enunciado||"")&&!alt.length;
-      return `<li>${at.tipo==="vf"?"( &nbsp; ) ":""}${esc(q.enunciado||"")}${desenho?`<div style="border:2px solid #9AA7B6;border-radius:12px;height:200px;margin-top:8px"></div>`:""}${alt.length?`<div style="margin-top:6px">${alt.map((x,i)=>`<div>${"abcdef"[i]}) ${esc(x)}</div>`).join("")}</div>`:""}${n?linhas(n):""}</li>`}).join("")}</ol>`;
+      const desenho=/desenh/i.test(q.enunciado||"")&&!alt.length&&!/desenho (abaixo|ao lado)/i.test(q.enunciado||"");
+      const figs=[...new Set((Array.isArray(q.figuras)?q.figuras:q.figura?[q.figura]:[]).map(f=>acharDesenhos(String(f))[0]).filter(Boolean))].slice(0,4);
+      const figHtml=figs.length?`<div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0;align-items:flex-end">${figs.map(k=>`<div style="width:${figs.length>2?120:160}px;border:1.5px solid #ccd;border-radius:12px;padding:6px">${svgDesenho(k)}</div>`).join("")}</div>`:"";
+      return `<li>${at.tipo==="vf"?"( &nbsp; ) ":""}${esc(q.enunciado||"")}${figHtml}${desenho?`<div style="border:2px solid #9AA7B6;border-radius:12px;height:200px;margin-top:8px"></div>`:""}${alt.length?`<div style="margin-top:6px">${alt.map((x,i)=>`<div>${"abcdef"[i]}) ${esc(x)}</div>`).join("")}</div>`:""}${n?linhas(n):""}</li>`}).join("")}</ol>`;
     if(at.tipo==="tarefa")corpo+=`<p style="margin-top:14px">Assinatura do responsável: ______________________________</p>`;
   }
   const gab=at.tipo==="colorir"?[]:arr(r.respostas);

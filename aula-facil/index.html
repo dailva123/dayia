@@ -381,7 +381,7 @@ function render(){
   $("#lblTurmas").textContent=md.turmas;
   document.querySelectorAll(".menu button").forEach(b=>b.classList.toggle("on",b.dataset.aba===aba));
   garantirOrg();
-  const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes,guia:telaInicio}[aba]||telaInicio;
+  const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes,guia:telaInicio,metodos:telaMetodos}[aba]||telaInicio;
   pararDitado();if(aba!=="guia")pararVoz();$("#tela").innerHTML="";fn($("#tela"));window.scrollTo(0,0);
   if(buscaInicial){const b=$("#"+buscaInicial.id);if(b){b.value=buscaInicial.q;b.dispatchEvent(new Event("input"))}buscaInicial=null}
 }
@@ -476,6 +476,7 @@ function telaInicio(el){
     <button onclick="ir('avaliacoes')"><span class="ic">📝</span>Avaliações</button>
     <button onclick="ir('salvos')"><span class="ic">📂</span>Salvos</button>
   </div>
+  <button class="card" style="width:100%;text-align:left;display:flex;align-items:center;gap:14px" onclick="ir('metodos')"><span style="font-size:36px">📚</span><span><b style="font-size:17px">Metodologias de ensino</b><br><span class="sub" style="font-size:13px">Compare métodos, descubra o melhor para a turma ou peça uma atividade no método</span></span></button>
   ${cardAvaliacoes()}
   ${cardPendencias()}
   ${pag}
@@ -617,6 +618,7 @@ function telaAtividades(el){
   <div class="campo"><label for="aTema">Tema da atividade</label><input id="aTema" placeholder="Ex.: animais da fazenda, frações, verbo to be"></div>
   <div class="campo"><label for="aIdade">Idade</label><select id="aIdade">${Object.entries(IDADES).map(([k,v])=>`<option value="${k}" ${k===(DB.modo==="particular"?"inf":"f1")?"selected":""}>${v}</option>`).join("")}</select></div>
   <div class="campo"><label for="aMat">Matéria</label><select id="aMat"><option value="">Escolha (opcional)</option>${MATERIAS.map(m=>`<option>${m}</option>`).join("")}</select></div>
+  ${seletorMetodo("aMet")}
   <div class="campo"><label for="aTipo">Tipo</label><select id="aTipo">${GRUPOS_TIPO.map(([g,ks])=>`<optgroup label="${g}">${ks.map(k=>`<option value="${k}">${TIPOS[k]}</option>`).join("")}</optgroup>`).join("")}</select><div class="dica" id="dicaTipo"></div></div>
   <div class="campo oculto" id="cPal"><label for="aPal" id="lblPal">Palavras</label><input id="aPal" placeholder="Ex.: vaca, porco, galinha, cavalo"><div class="dica">Separe por vírgula. Se deixar vazio, o app usa as palavras do tema.</div></div>
   <div class="campo"><div class="rotulo-mic"><label for="aIdeia">💬 Sua ideia (opcional)</label>${micBtn("#aIdeia")}</div><textarea id="aIdeia" placeholder="Fale ou escreva como você quer a atividade. Ex.: quero 5 questões com desenho, usando os animais que a turma viu no passeio"></textarea></div>
@@ -638,7 +640,7 @@ function telaAtividades(el){
   $("#criarAt").onclick=()=>{
     const tema=$("#aTema").value.trim();
     if(!tema&&!PRONTOS[tipo.value]){toast("Escreva o tema da atividade.");$("#aTema").focus();return}
-    const at={id:uid(),tema,materia:$("#aMat").value,idade:$("#aIdade").value,tipo:tipo.value,pal:$("#aPal").value,ideia:$("#aIdeia").value.trim(),data:hojeISO()};
+    const at={id:uid(),tema,materia:$("#aMat").value,metodo:$("#aMet").value,idade:$("#aIdade").value,tipo:tipo.value,pal:$("#aPal").value,ideia:$("#aIdeia").value.trim(),data:hojeISO()};
     at.titulo=TIPOS[at.tipo]+(tema?": "+tema:"");
     if(PRONTOS[at.tipo]){at.pronto=true;at.html=gerarPronto(at);mostrarAtividade(at,false);return}
     const btn=$("#criarAt");btn.disabled=true;btn.textContent="⏳ Criando com IA...";
@@ -648,7 +650,7 @@ function telaAtividades(el){
   el.querySelectorAll("#lAt [data-del]").forEach(b=>b.onclick=()=>{if(!confirm("Apagar esta atividade?"))return;m.atividades=m.atividades.filter(a=>a.id!==b.dataset.del);salvar();render()});
 }
 function criarAtividadeIA(at,extra){
-  return pedirIA(Object.assign({tipo:"atividade",tema:(at.materia?at.materia+" – ":"")+at.tema,idade:at.idade,tipo_atividade:at.tipo,palavras:at.pal,ideia:at.ideia||""},extra)).then(r=>{
+  return pedirIA(Object.assign({tipo:"atividade",tema:(at.materia?at.materia+" – ":"")+at.tema,idade:at.idade,tipo_atividade:at.tipo,palavras:at.pal,ideia:at.ideia||"",metodologia:at.metodo?METODOS[at.metodo]:""},extra)).then(r=>{
     const htmlAntigo=at.html;
     if(r){try{at.ia=true;at.html=atividadeIA(at,r)}catch(e){at.ia=false;r=null}}
     if(!r){if(extra.ajuste&&htmlAntigo){toast("Não consegui refazer agora. Tente de novo em instantes.");at.html=htmlAntigo}else at.html=gerarAtividade(at)}
@@ -685,6 +687,7 @@ function telaPlano(el){
   <div class="card">
   <div class="campo"><label for="pTema">Tema</label><input id="pTema" placeholder="Ex.: ciclo da água"></div>
   <div class="campo"><label for="pIdade">Idade</label><select id="pIdade">${Object.entries(IDADES).map(([k,v])=>`<option value="${k}" ${k===(DB.modo==="particular"?"inf":"f1")?"selected":""}>${v}</option>`).join("")}</select></div>
+  ${seletorMetodo("pMet")}
   <div class="campo"><div class="rotulo-mic"><label for="pIdeia">💬 Sua ideia (opcional)</label>${micBtn("#pIdeia")}</div><textarea id="pIdeia" placeholder="Fale ou escreva como imagina a aula. Ex.: quero uma aula com experiência usando copo e gelo, e um vídeo curto"></textarea></div>
   <div class="campo"><label for="pObj">Objetivo</label><textarea id="pObj" placeholder="O que os alunos vão aprender"></textarea></div>
   ${escola?`<div class="campo"><label for="pBncc">Habilidade da BNCC</label><textarea id="pBncc" placeholder="Código e descrição da habilidade"></textarea></div>`:""}
@@ -703,7 +706,7 @@ function telaPlano(el){
   const montar=(bt,rotulo,ajuste)=>{const p=ler();if(!p.tema){toast("Escreva o tema da aula.");$("#pTema").focus();return}
     bt.disabled=true;bt.textContent="⏳ Montando com IA...";
     const extra=ajuste?{ajuste,anterior:tirarTags(htmlPlano(p,escola)).replace(/\s+/g," ").slice(0,2500)}:{};
-    pedirIA(Object.assign({tipo:"plano",tema:p.tema,idade:p.idade,escola,objetivo:ajuste?"":p.obj,ideia:$("#pIdeia").value.trim()},extra)).then(r=>{
+    pedirIA(Object.assign({tipo:"plano",tema:p.tema,idade:p.idade,escola,objetivo:ajuste?"":p.obj,ideia:$("#pIdeia").value.trim(),metodologia:$("#pMet").value?METODOS[$("#pMet").value]:""},extra)).then(r=>{
       let g=null;if(r&&typeof r==="object"&&r.passos){g={obj:r.objetivo||"",bncc:escola?(r.bncc||""):"",passos:(Array.isArray(r.passos)?r.passos.map((x,i)=>(i+1)+". "+String(x).replace(/^\d+[.)]\s*/,"")).join("\n"):String(r.passos)),mat:r.material||""}}
       if(ajuste){if(!g){toast("Não consegui refazer agora. Tente de novo em instantes.");return}["obj","bncc","passos","mat"].forEach(k=>p[k]=g[k]);pôr(p);$("#pAjuste").value="";toast("Plano refeito com a sua mudança!");return}
       if(!g)g=gerarPlano(p.tema,p.idade,escola);
@@ -917,6 +920,7 @@ function listaSalvos(){
   });
   (m.avaliacoes||[]).forEach(a=>L.push({tipo:"aval",ic:"📝",titulo:a.tipo+" – "+a.materia,det:(DB.modo==="aulas"?"":nomeTurma(a.turmaId)+" · ")+a.conteudo,data:a.data,busca:[a.tipo,a.materia,a.conteudo,nomeTurma(a.turmaId)].join(" "),acao:{a:"avaliacoes",b:"bAval",q:a.materia}}));
   m.atividades.forEach(a=>L.push({tipo:"ativ",ic:"✨",titulo:a.titulo,det:IDADES[a.idade],data:a.data,busca:a.titulo+" "+tirarTags(a.html),acao:{a:"atividade",id:a.id}}));
+  (m.metodos||[]).forEach(x=>L.push({tipo:"plano",ic:"📚",titulo:x.titulo,det:"Metodologias",data:x.data,busca:x.titulo+" "+x.txt,acao:{a:"metodos"}}));
   m.planos.forEach(p=>L.push({tipo:"plano",ic:"📚",titulo:"Plano – "+p.tema,det:IDADES[p.idade],data:p.data,busca:[p.tema,p.obj,p.passos,p.mat].join(" "),acao:{a:"plano",id:p.id}}));
   return L.sort((x,y)=>String(y.data).localeCompare(String(x.data)));
 }
@@ -981,6 +985,48 @@ function abrirModal(html,ligar){
   ligar&&ligar();
 }
 function fecharModal(){$("#modal").innerHTML=""}
+/* ===== Metodologias de ensino (consultora com IA) ===== */
+const METODOS={tradicional:"Tradicional por competências",investigativa:"Investigativa (perguntas e pesquisa)",pratica:"Prática / experimental (mão na massa com experiências)",maker:"Cultura Maker (criar projetos em grupo)",bilingue:"Bilíngue (com inglês no meio da aula)"};
+const MET_ICO={tradicional:"📘",investigativa:"🔎",pratica:"🧪",maker:"🛠️",bilingue:"🌎"};
+const MET_OBJ={comparar:"Comparar metodologias",recomendar:"Qual metodologia combina com a minha turma?",atividade:"Criar uma atividade com a metodologia",explicar:"Explicar um conteúdo com a metodologia"};
+const MET_IDADE={inf:"Educação Infantil",f1:"Fundamental I (1º ao 5º ano)",f2:"Fundamental II (6º ao 9º ano)",em:"Ensino Médio"};
+function seletorMetodo(id){return `<div class="campo"><label for="${id}">Metodologia (opcional)</label><select id="${id}"><option value="">Do meu jeito</option>${Object.entries(METODOS).map(([k,v])=>`<option value="${k}">${MET_ICO[k]} ${v}</option>`).join("")}</select></div>`}
+function textoParaHtml(t){return esc(String(t||"")).split(/\n/).map(l=>{l=l.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
+  if(/^#{1,3}\s/.test(l))return `<h3 style="margin:14px 0 6px">${l.replace(/^#{1,3}\s*/,"")}</h3>`;
+  if(/^\s*[-•*]\s+/.test(l))return `<div style="padding-left:18px;text-indent:-12px;margin:3px 0">• ${l.replace(/^\s*[-•*]\s+/,"")}</div>`;
+  return l.trim()?`<p style="margin:6px 0">${l}</p>`:""}).join("")}
+function telaMetodos(el){const m=M();if(!m.metodos)m.metodos=[];
+  el.innerHTML=`<h2>📚 Metodologias de ensino</h2><p class="sub">Compare jeitos de ensinar, descubra qual combina com a sua turma ou peça uma atividade pronta no método que você escolher.</p>
+  <div class="card">
+  <div class="campo"><label for="mObj">O que você quer?</label><select id="mObj">${Object.entries(MET_OBJ).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
+  <div class="campo"><label for="mIdade">Idade / série</label><select id="mIdade">${Object.entries(MET_IDADE).map(([k,v])=>`<option value="${k}" ${k===(DB.modo==="particular"?"inf":"f1")?"selected":""}>${v}</option>`).join("")}</select></div>
+  <div class="campo"><label>Metodologias</label><div id="mMets">${Object.entries(METODOS).map(([k,v])=>`<label style="display:flex;gap:10px;align-items:center;padding:6px 0"><input type="checkbox" value="${k}" style="width:22px;height:22px"> ${MET_ICO[k]} ${v}</label>`).join("")}</div><div class="dica" id="mDica"></div></div>
+  <div class="campo"><div class="rotulo-mic"><label for="mTema">Tema ou situação</label>${micBtn("#mTema")}</div><textarea id="mTema" placeholder="Ex.: frações; minha turma é agitada e gosta de mexer nas coisas; quero trabalhar o ciclo da água"></textarea></div>
+  <button class="btn btn-ama btn-bloco" id="mGerar">✨ Gerar com IA</button></div>
+  <div id="mRes"></div>
+  <h3 style="margin-top:22px">📂 Respostas salvas</h3>${campoBusca("bMet","Buscar (tema ou método)")}
+  <div class="lista" id="lMet">${m.metodos.length?m.metodos.map(x=>`<div class="item" data-busca="${esc(x.titulo+" "+x.txt)}" data-id="${x.id}" style="cursor:pointer"><div class="av">📚</div><div class="info"><div class="nome">${esc(x.titulo)}</div><div class="det">${esc(MET_IDADE[x.idade]||"")} · ${dataBR(x.data)}</div></div><button class="btn-ico" data-del="${x.id}" aria-label="Apagar">🗑️</button></div>`).join(""):`<p class="sub">Nada salvo ainda.</p>`}</div>`;
+  ligarMics(el);ligarBusca("bMet","#lMet .item");
+  const ob=$("#mObj"),dica=()=>{$("#mDica").textContent=ob.value==="comparar"?"Marque 2 ou mais para comparar.":ob.value==="recomendar"?"Pode deixar sem marcar: a IA sugere a melhor. No tema, conte como é a turma.":"Marque a metodologia que quer usar."};ob.onchange=dica;dica();
+  const mostrar=x=>{$("#mRes").innerHTML=`<div class="card folha" id="mFolha"><h3 style="margin-top:0">${esc(x.titulo)}</h3><p class="sub" style="margin:0 0 8px">${esc(MET_IDADE[x.idade]||"")}</p>${textoParaHtml(x.txt)}</div>
+    <div class="linha-btns" style="margin-top:10px"><button class="btn btn-pri" id="mImp">🖨️ Imprimir</button><button class="btn btn-sec" id="mCop">📋 Copiar</button>${x.salvo?"":`<button class="btn btn-sec" id="mSal">💾 Salvar</button>`}</div>`;
+    $("#mImp").onclick=()=>imprimir(`<h2>${esc(x.titulo)}</h2><p>${esc(MET_IDADE[x.idade]||"")}</p>`+textoParaHtml(x.txt));
+    $("#mCop").onclick=()=>copiar(x.titulo+"\n\n"+x.txt.replace(/\*\*/g,""));
+    const s=$("#mSal");if(s)s.onclick=()=>{x.salvo=true;M().metodos.unshift(x);salvar();toast("Salvo em 📂 Salvos!");render()};
+    $("#mRes").scrollIntoView({behavior:"smooth",block:"start"})};
+  $("#mGerar").onclick=()=>{const mets=[...el.querySelectorAll("#mMets input:checked")].map(c=>c.value),tema=$("#mTema").value.trim(),obj=ob.value;
+    if(obj==="comparar"&&mets.length<2){toast("Marque pelo menos 2 metodologias para comparar.");return}
+    if((obj==="atividade"||obj==="explicar")&&!mets.length){toast("Marque a metodologia que quer usar.");return}
+    if((obj==="atividade"||obj==="explicar")&&!tema){toast("Escreva o tema.");$("#mTema").focus();return}
+    const b=$("#mGerar");b.disabled=true;b.textContent="⏳ Pensando...";
+    pedirIA({tipo:"metodo",objetivo:MET_OBJ[obj],idade:MET_IDADE[$("#mIdade").value],metodologias:mets.map(k=>METODOS[k]),tema}).then(r=>{
+      if(!r||typeof r!=="string"){toast("Não consegui agora. Confira a internet e tente de novo.");return}
+      const titulo=MET_OBJ[obj].replace("Qual metodologia combina com a minha turma?","Metodologia recomendada")+(tema?" – "+tema.slice(0,60):"");
+      mostrar({id:uid(),titulo,txt:r,idade:$("#mIdade").value,data:hojeISO()})}).finally(()=>{b.disabled=false;b.textContent="✨ Gerar com IA"})};
+  el.querySelectorAll("#lMet .item").forEach(i=>i.onclick=e=>{if(e.target.dataset.del)return;mostrar(m.metodos.find(x=>x.id===i.dataset.id))});
+  el.querySelectorAll("#lMet [data-del]").forEach(b=>b.onclick=()=>{if(!confirm("Apagar?"))return;m.metodos=m.metodos.filter(x=>x.id!==b.dataset.del);salvar();render()});
+}
+
 /* Folha com o nome de cada aluno já escrito (os nomes não saem do celular) */
 function folhaComNome(html,nome){const n=`<b style="font-size:1.35em;letter-spacing:1px">${esc(nome)}</b>`;
   return html.indexOf("Nome: ___")>=0?html.replace(/Nome: _+/,"Nome: "+n):`<div class="cabec">Nome: ${n}</div>`+html}

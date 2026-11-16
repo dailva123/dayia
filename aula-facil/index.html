@@ -321,6 +321,45 @@ function carregar(){
   return {v:1,modo:null,modos:{}};
 }
 function salvar(){try{localStorage.setItem(CHAVE,JSON.stringify(DB))}catch(e){toast("Não consegui salvar neste celular.")}}
+/* ===== Assinatura: 30 dias grátis, depois Mercado Pago ===== */
+const PLANOS={lancamento:{nome:"Preço de lançamento",preco:"R$ 19,90 por mês",det:"nos 6 primeiros meses (depois R$ 29,90)",link:"https://mpago.la/2qTRVuq",dias:183},
+  mensal:{nome:"Mensal",preco:"R$ 29,90 por mês",det:"cancele quando quiser",link:"https://mpago.la/1cY3Jkh",dias:31},
+  anual:{nome:"Anual",preco:"R$ 199,00 por ano",det:"sai por menos de R$ 16,60 por mês",link:"https://mpago.la/2QwCwWG",dias:366}};
+const ZAP_DAYIA="https://wa.me/5519999389118?text="+encodeURIComponent("Olá! Assinei o Aula Fácil e preciso de ajuda para liberar o app.");
+const DIA_MS=86400000;
+function diasDesde(iso){return Math.floor((Date.now()-new Date(iso+"T00:00:00").getTime())/DIA_MS)}
+function statusAssinatura(){
+  if(!DB.inicioTeste){DB.inicioTeste=hojeISO();salvar()}
+  const a=DB.assinatura;
+  if(a&&a.plano){const d=diasDesde(a.data);
+    if(a.plano==="lancamento"&&d>=PLANOS.lancamento.dias)return {tipo:"fimLanc",resta:Math.max(0,PLANOS.lancamento.dias+15-d)};
+    return {tipo:"ativa",plano:a.plano}}
+  const resta=30-diasDesde(DB.inicioTeste);return resta>0?{tipo:"teste",resta}:{tipo:"fim"}}
+(function lerVoltaPagamento(){try{const u=new URL(location.href),p=u.searchParams.get("assinatura");
+  if(p&&PLANOS[p]){DB.assinatura={plano:p,data:hojeISO()};salvar();u.searchParams.delete("assinatura");history.replaceState(null,"",u.pathname+u.search+u.hash);
+    setTimeout(()=>toast("🎉 Obrigada por assinar o Aula Fácil! Seu app está liberado."),1200)}}catch(e){}})();
+function cartaoPlanos(soMensal){return Object.entries(PLANOS).filter(([k])=>soMensal?k==="mensal":k!=="mensal").map(([k,p])=>`<a class="card" href="${p.link}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;margin:8px 0;${k==="lancamento"||soMensal?"border:2px solid var(--amarelo,#F4B400)":""}"><b style="font-size:17px">${p.nome}</b>${k==="lancamento"?' <span class="selo-ia">⭐ mais escolhido</span>':""}<div style="font-size:20px;font-weight:800;margin:4px 0">${p.preco}</div><div class="sub" style="margin:0">${p.det}</div><div class="btn btn-pri btn-bloco" style="margin-top:8px">💳 Assinar no Mercado Pago</div></a>`).join("")}
+function abrirAssinatura(){const s=statusAssinatura();
+  abrirModal(`<h3>💳 Minha assinatura</h3>
+  ${s.tipo==="ativa"?`<p>✅ Sua assinatura <b>${PLANOS[s.plano].nome}</b> está ativa desde ${dataBR(DB.assinatura.data)}. Obrigada!</p><p class="sub">Para cancelar ou trocar o cartão, entre no Mercado Pago, em Assinaturas.</p>`:
+    s.tipo==="teste"?`<p>🎁 Você está no <b>teste grátis</b>: faltam <b>${s.resta} ${s.resta===1?"dia":"dias"}</b>. Pode assinar agora ou no fim do teste.</p>${cartaoPlanos()}`:
+    s.tipo==="fimLanc"?`<p>O seu preço de lançamento terminou. Para continuar usando, assine o plano mensal:</p>${cartaoPlanos(true)}${cartaoPlanos().replace(/[\s\S]*?(<a[^>]*>\s*<b[^>]*>Anual[\s\S]*)/,"$1")}`:
+    `<p>Seu teste grátis terminou. Para continuar usando, escolha um plano:</p>${cartaoPlanos()}`}
+  <p class="sub" style="margin-top:10px">Pagamento seguro pelo Mercado Pago (Pix, cartão ou boleto). Depois de pagar, você volta para o app e ele já fica liberado.</p>
+  <p class="sub">Pagou e o app não liberou? <a href="${ZAP_DAYIA}" target="_blank" rel="noopener">Fale com a DayIA</a>.</p>
+  <button class="btn btn-sec btn-bloco" onclick="fecharModal()">Fechar</button>`)}
+function bloqueioAssinatura(){const s=statusAssinatura();if(s.tipo!=="fim"&&!(s.tipo==="fimLanc"&&s.resta<=0))return false;
+  $("#tela").innerHTML=`<div class="card" style="text-align:center;margin-top:16px"><div style="font-size:48px">💛</div><h2>${s.tipo==="fim"?"Seu teste grátis terminou":"Seu preço de lançamento terminou"}</h2>
+  <p>Gostou do Aula Fácil, ${esc(tratoProf())}? Assine para continuar criando atividades, fazendo chamada e tudo mais. <b>Seus dados continuam guardados</b> neste celular.</p>
+  <div style="text-align:left">${s.tipo==="fim"?cartaoPlanos():cartaoPlanos(true)}</div>
+  <p class="sub">Pagou e o app não liberou? <a href="${ZAP_DAYIA}" target="_blank" rel="noopener">Fale com a DayIA</a>.</p>
+  <button class="btn btn-sec btn-bloco" id="bqCopia">💾 Salvar uma cópia dos meus dados</button></div>`;
+  $("#bqCopia").onclick=()=>salvarCopia();return true}
+function avisoAssinatura(){const s=statusAssinatura();
+  if(s.tipo==="teste")return `<button class="card" onclick="abrirAssinatura()" style="width:100%;text-align:left;display:flex;gap:12px;align-items:center;background:var(--amarelo-l,#FFF5D6);border:0"><span style="font-size:30px">🎁</span><span><b>Teste grátis: faltam ${s.resta} ${s.resta===1?"dia":"dias"}</b><br><span class="sub" style="font-size:13px">Depois, R$ 19,90 por mês no lançamento. Toque para ver os planos.</span></span></button>`;
+  if(s.tipo==="fimLanc")return `<button class="card" onclick="abrirAssinatura()" style="width:100%;text-align:left;background:var(--amarelo-l,#FFF5D6);border:0"><b>⏰ Seu preço de lançamento terminou.</b> Para continuar, assine o plano mensal (R$ 29,90). Faltam ${s.resta} dias.</button>`;
+  return ""}
+
 function M(){return DB.modos[DB.modo]}
 function turma(){const m=M();return m.turmas.find(t=>t.id===m.turmaId)||m.turmas[0]}
 function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(toast._t);toast._t=setTimeout(()=>e.classList.remove("on"),2600)}
@@ -384,7 +423,7 @@ function render(){
   document.querySelectorAll(".menu button").forEach(b=>b.classList.toggle("on",b.dataset.aba===aba));
   garantirOrg();
   const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes,guia:telaInicio,metodos:telaMetodos}[aba]||telaInicio;
-  pararDitado();if(aba!=="guia")pararVoz();$("#tela").innerHTML="";fn($("#tela"));window.scrollTo(0,0);
+  pararDitado();if(aba!=="guia")pararVoz();$("#tela").innerHTML="";window.scrollTo(0,0);if(bloqueioAssinatura())return;fn($("#tela"));
   if(buscaInicial){const b=$("#"+buscaInicial.id);if(b){b.value=buscaInicial.q;b.dispatchEvent(new Event("input"))}buscaInicial=null}
 }
 let buscaInicial=null,ultimaBusca="";
@@ -463,6 +502,7 @@ function telaInicio(el){
   <div class="ola"><div><h2>${saudacao()}, ${esc(tratoProf())}! 👋</h2>${DB.nomeProf?"":`<button class="link-nome" id="pNomeIni" onclick="document.getElementById('btnAjustes').click();setTimeout(()=>{const i=document.getElementById('jNome');if(i)i.focus()},200)" style="background:none;border:0;color:var(--azul,#2a6fb0);font-weight:700;padding:0;margin-top:2px;cursor:pointer">✏️ Coloque o seu nome</button>`}
   <p class="sub">${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</p></div></div>
   ${DB.modo==="aulas"?`<p class="sub" style="margin-top:-8px"><b>${t.alunos.length} alunos</b> nas suas aulas</p>`:seletorTurma()}
+  ${avisoAssinatura()}
   ${avisoExemplo()}
   ${alertas.length?`<div class="aviso">⚠️ <b>Atenção às faltas:</b> ${alertas.map(x=>esc(x.a.nome)+" ("+x.n+")").join(", ")}. O limite desta turma é ${t.limite} faltas.</div>`:""}
   <div class="atalhos">
@@ -1114,6 +1154,7 @@ $("#btnAjustes").onclick=()=>abrirModal(`<h3>Ajustes</h3>
   <div class="card" style="margin:4px 0;background:var(--azul-l)"><h3 style="margin-bottom:4px">💾 Cópia de segurança</h3>
   <p class="sub" style="margin:0 0 10px">Seus dados ficam só neste celular. Salve uma cópia de vez em quando e guarde no e-mail ou no Drive.${DB.ultimaCopia?" Última cópia: "+dataBR(DB.ultimaCopia)+".":" Você ainda não salvou nenhuma cópia."}</p>
   <div class="linha-btns"><button class="btn btn-pri" id="jCopia">💾 Salvar uma cópia</button><button class="btn btn-sec" id="jRecup">📂 Recuperar cópia</button></div></div>
+  <button class="btn btn-sec btn-bloco" onclick="fecharModal();abrirAssinatura()">💳 Minha assinatura</button>
   <button class="btn btn-sec btn-bloco" id="jPriv">🔒 Como cuidamos dos dados</button>
   <button class="btn btn-sec btn-bloco" id="jZero">🧹 Apagar exemplos e começar do zero</button>
   <button class="btn btn-sec btn-bloco" id="jEx">🔄 Voltar aos alunos de exemplo</button>

@@ -328,31 +328,63 @@ const PLANOS={lancamento:{nome:"Preço de lançamento",preco:"R$ 19,90 por mês"
 const ZAP_DAYIA="https://wa.me/5519999389118?text="+encodeURIComponent("Olá! Assinei o Aula Fácil e preciso de ajuda para liberar o app.");
 const DIA_MS=86400000;
 function diasDesde(iso){return Math.floor((Date.now()-new Date(iso+"T00:00:00").getTime())/DIA_MS)}
+/* A assinatura é conferida no Mercado Pago (pelo cofre do Google) uma vez por dia.
+   Cancelou ou pausou: o app bloqueia. Sem internet: vale a última conferência por até 7 dias. */
 function statusAssinatura(){
   if(!DB.inicioTeste){DB.inicioTeste=hojeISO();salvar()}
-  const a=DB.assinatura;
-  if(a&&a.plano){const d=diasDesde(a.data);
-    if(a.plano==="lancamento"&&d>=PLANOS.lancamento.dias)return {tipo:"fimLanc",resta:Math.max(0,PLANOS.lancamento.dias+15-d)};
-    return {tipo:"ativa",plano:a.plano}}
-  const resta=30-diasDesde(DB.inicioTeste);return resta>0?{tipo:"teste",resta}:{tipo:"fim"}}
-(function lerVoltaPagamento(){try{const u=new URL(location.href),p=u.searchParams.get("assinatura");
-  if(p&&PLANOS[p]){DB.assinatura={plano:p,data:hojeISO()};salvar();u.searchParams.delete("assinatura");history.replaceState(null,"",u.pathname+u.search+u.hash);
-    setTimeout(()=>toast("🎉 Obrigada por assinar o Aula Fácil! Seu app está liberado."),1200)}}catch(e){}})();
+  const a=DB.assinatura,resta=30-diasDesde(DB.inicioTeste);
+  if(a&&(a.id||a.email)){
+    const st=a.status||"verificando",velho=a.verificado?diasDesde(a.verificado):99;
+    if(st==="authorized"&&velho<=7)return {tipo:"ativa",plano:a.plano||"mensal"};
+    if(st==="authorized"||st==="verificando"||st==="semtoken"){if(diasDesde(a.data||hojeISO())<=7||velho<=7)return {tipo:"ativa",plano:a.plano||"mensal",conferindo:true};return {tipo:"conferir"}}
+    if(st==="pending")return diasDesde(a.data||hojeISO())<=3?{tipo:"ativa",plano:a.plano,conferindo:true}:{tipo:"fim",motivo:"pendente"};
+    if(a.plano==="lancamento"&&(st==="cancelled"||st==="finished")&&a.faltam===0)return {tipo:"fimLanc",resta:0};
+    if(resta>0)return {tipo:"teste",resta};
+    return {tipo:"fim",motivo:"cancelada"}}
+  return resta>0?{tipo:"teste",resta}:{tipo:"fim"}}
+function conferirAssinatura(forcar){const a=DB.assinatura;if(!a||!(a.id||a.email))return Promise.resolve(null);
+  if(!forcar&&a.verificado===hojeISO()&&a.status!=="verificando")return Promise.resolve(a);
+  if(!navigator.onLine||!IA_URL)return Promise.resolve(null);
+  return fetch(IA_URL,{method:"POST",body:JSON.stringify({tipo:"licenca",id:a.id||"",email:a.email||""})}).then(r=>r.json()).then(d=>{
+    if(d&&d.ok&&d.resultado){const r=d.resultado;
+      if(r.status==="nenhuma"){a.status=a.id?"verificando":"nenhuma";}else{a.status=r.status;a.id=r.id||a.id;a.plano=r.plano||a.plano;a.proxima=r.proxima||"";a.faltam=r.faltam}
+      a.verificado=hojeISO();salvar();return a}
+    if(d&&d.erro==="semtoken"){a.status=a.status==="verificando"?"semtoken":a.status;salvar()}
+    return null}).catch(()=>null)}
+(function lerVoltaPagamento(){try{const u=new URL(location.href),p=u.searchParams.get("assinatura"),id=u.searchParams.get("preapproval_id");
+  if(p&&PLANOS[p]){DB.assinatura={plano:p,data:hojeISO(),id:id||"",status:"verificando"};salvar();["assinatura","preapproval_id"].forEach(k=>u.searchParams.delete(k));history.replaceState(null,"",u.pathname+u.search+u.hash);
+    setTimeout(()=>toast("🎉 Obrigada por assinar o Aula Fácil! Estou conferindo o pagamento..."),1200)}}catch(e){}})();
+setTimeout(()=>conferirAssinatura().then(a=>{if(a&&DB.modo)render()}),2500);
+function jaAssinei(){abrirModal(`<h3>Já assinei</h3><p>Escreva o <b>e-mail que você usou no Mercado Pago</b> para assinar. O app confere e libera.</p>
+  <input id="laEmail" type="email" inputmode="email" autocomplete="email" placeholder="seuemail@exemplo.com">
+  <div class="linha-btns" style="margin-top:10px"><button class="btn btn-pri" id="laOk">✅ Conferir</button><button class="btn btn-sec" onclick="fecharModal()">Cancelar</button></div><div id="laRes"></div>`,()=>{
+  $("#laOk").onclick=()=>{const em=$("#laEmail").value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(em)){toast("Confira o e-mail.");return}
+    $("#laOk").disabled=true;$("#laOk").textContent="⏳ Conferindo...";
+    const antes=DB.assinatura;DB.assinatura={email:em,data:hojeISO(),status:"verificando"};
+    conferirAssinatura(true).then(a=>{
+      if(a&&a.status==="authorized"){fecharModal();toast("🎉 Assinatura encontrada! App liberado.");render();return}
+      DB.assinatura=antes;salvar();
+      $("#laRes").innerHTML=`<p class="sub" style="margin-top:8px">${a&&a.status==="nenhuma"?"Não achei uma assinatura do Aula Fácil com esse e-mail.":a?"Achei a assinatura, mas ela não está ativa (cancelada ou pausada).":"Não consegui conferir agora. Veja a internet e tente de novo."} Se precisar, <a href="${ZAP_DAYIA}" target="_blank" rel="noopener">fale com a DayIA</a>.</p>`;
+      $("#laOk").disabled=false;$("#laOk").textContent="✅ Conferir"})}})}
 function cartaoPlanos(soMensal){return Object.entries(PLANOS).filter(([k])=>soMensal?k==="mensal":k!=="mensal").map(([k,p])=>`<a class="card" href="${p.link}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;margin:8px 0;${k==="lancamento"||soMensal?"border:2px solid var(--amarelo,#F4B400)":""}"><b style="font-size:17px">${p.nome}</b>${k==="lancamento"?' <span class="selo-ia">⭐ mais escolhido</span>':""}<div style="font-size:20px;font-weight:800;margin:4px 0">${p.preco}</div><div class="sub" style="margin:0">${p.det}</div><div class="btn btn-pri btn-bloco" style="margin-top:8px">💳 Assinar no Mercado Pago</div></a>`).join("")}
 function abrirAssinatura(){const s=statusAssinatura();
   abrirModal(`<h3>💳 Minha assinatura</h3>
-  ${s.tipo==="ativa"?`<p>✅ Sua assinatura <b>${PLANOS[s.plano].nome}</b> está ativa desde ${dataBR(DB.assinatura.data)}. Obrigada!</p><p class="sub">Para cancelar ou trocar o cartão, entre no Mercado Pago, em Assinaturas.</p>`:
+  ${s.tipo==="ativa"?`<p>✅ Sua assinatura <b>${PLANOS[s.plano].nome}</b> está ativa. Obrigada!${DB.assinatura.proxima?` Próxima cobrança: ${dataBR(DB.assinatura.proxima)}.`:""}${s.conferindo?" <i>(conferindo o pagamento…)</i>":""}</p><p class="sub">Para cancelar ou trocar o cartão, entre no Mercado Pago, em Assinaturas.</p>`:
     s.tipo==="teste"?`<p>🎁 Você está no <b>teste grátis</b>: faltam <b>${s.resta} ${s.resta===1?"dia":"dias"}</b>. Pode assinar agora ou no fim do teste.</p>${cartaoPlanos()}`:
     s.tipo==="fimLanc"?`<p>O seu preço de lançamento terminou. Para continuar usando, assine o plano mensal:</p>${cartaoPlanos(true)}${cartaoPlanos().replace(/[\s\S]*?(<a[^>]*>\s*<b[^>]*>Anual[\s\S]*)/,"$1")}`:
     `<p>Seu teste grátis terminou. Para continuar usando, escolha um plano:</p>${cartaoPlanos()}`}
   <p class="sub" style="margin-top:10px">Pagamento seguro pelo Mercado Pago (Pix, cartão ou boleto). Depois de pagar, você volta para o app e ele já fica liberado.</p>
-  <p class="sub">Pagou e o app não liberou? <a href="${ZAP_DAYIA}" target="_blank" rel="noopener">Fale com a DayIA</a>.</p>
+  <p class="sub">Já assinou, ou trocou de celular? <a href="#" onclick="fecharModal();jaAssinei();return false">Toque aqui</a>. Precisa de ajuda? <a href="${ZAP_DAYIA}" target="_blank" rel="noopener">Fale com a DayIA</a>.</p>
   <button class="btn btn-sec btn-bloco" onclick="fecharModal()">Fechar</button>`)}
-function bloqueioAssinatura(){const s=statusAssinatura();if(s.tipo!=="fim"&&!(s.tipo==="fimLanc"&&s.resta<=0))return false;
-  $("#tela").innerHTML=`<div class="card" style="text-align:center;margin-top:16px"><div style="font-size:48px">💛</div><h2>${s.tipo==="fim"?"Seu teste grátis terminou":"Seu preço de lançamento terminou"}</h2>
+function bloqueioAssinatura(){const s=statusAssinatura();
+  if(s.tipo==="conferir"){$("#tela").innerHTML=`<div class="card" style="text-align:center;margin-top:16px"><div style="font-size:44px">📶</div><h2>Preciso conferir a sua assinatura</h2><p>Ligue a internet e toque no botão. É rapidinho.</p><button class="btn btn-pri btn-bloco" id="bqConf">🔄 Conferir agora</button></div>`;
+    $("#bqConf").onclick=()=>{$("#bqConf").textContent="⏳ Conferindo...";conferirAssinatura(true).then(()=>render())};return true}
+  if(s.tipo!=="fim"&&!(s.tipo==="fimLanc"&&s.resta<=0))return false;
+  $("#tela").innerHTML=`<div class="card" style="text-align:center;margin-top:16px"><div style="font-size:48px">💛</div><h2>${s.tipo==="fimLanc"?"Seu preço de lançamento terminou":s.motivo==="cancelada"?"Sua assinatura não está ativa":s.motivo==="pendente"?"O pagamento ainda não foi confirmado":"Seu teste grátis terminou"}</h2>
   <p>Gostou do Aula Fácil, ${esc(tratoProf())}? Assine para continuar criando atividades, fazendo chamada e tudo mais. <b>Seus dados continuam guardados</b> neste celular.</p>
   <div style="text-align:left">${s.tipo==="fim"?cartaoPlanos():cartaoPlanos(true)}</div>
-  <p class="sub">Pagou e o app não liberou? <a href="${ZAP_DAYIA}" target="_blank" rel="noopener">Fale com a DayIA</a>.</p>
+  <button class="btn btn-sec btn-bloco" onclick="jaAssinei()" style="margin-top:6px">✅ Já assinei (ou troquei de celular)</button>
+  <p class="sub">Precisa de ajuda? <a href="${ZAP_DAYIA}" target="_blank" rel="noopener">Fale com a DayIA</a>.</p>
   <button class="btn btn-sec btn-bloco" id="bqCopia">💾 Salvar uma cópia dos meus dados</button></div>`;
   $("#bqCopia").onclick=()=>salvarCopia();return true}
 function avisoAssinatura(){const s=statusAssinatura();

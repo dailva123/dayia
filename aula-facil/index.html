@@ -669,13 +669,22 @@ function mostrarAtividade(at,salva){
   ${!salva&&at.pronto?`<button class="btn btn-ama btn-bloco" id="outraAt" style="margin-top:10px">🔄 Gerar outra versão</button>`:""}
   ${salva||at.pronto?"":`<div class="ajuste"><div class="rotulo-mic"><label for="aAjuste"><b>Não gostou de algo?</b> Fale ou escreva o que mudar</label>${micBtn("#aAjuste")}</div>
   <textarea id="aAjuste" placeholder="Ex.: deixe mais fácil, troque a questão 3, coloque mais desenho, use só animais selvagens"></textarea>
-  <button class="btn btn-ama btn-bloco" id="refazAt" style="margin-top:8px">🔄 Refazer com essa mudança</button></div>`}`;
+  <button class="btn btn-ama btn-bloco" id="refazAt" style="margin-top:8px">🔄 Refazer com essa mudança</button></div>`}
+  <div class="card" style="margin-top:12px;background:var(--azul-l)"><div class="rotulo-mic"><label for="aDuvida"><b>❓ Ficou com dúvida nesta atividade?</b> Pergunte à IA</label>${micBtn("#aDuvida")}</div>
+  <textarea id="aDuvida" placeholder="Ex.: como a criança faz a questão 2? qual é a resposta da cruzadinha? como explico isso para a turma?"></textarea>
+  <button class="btn btn-pri btn-bloco" id="duvAt" style="margin-top:8px">💬 Perguntar</button><div id="respDuv"></div></div>`;
   ligarMics($("#resAt"));
   const ou=$("#outraAt");if(ou)ou.onclick=()=>{at.html=gerarPronto(at);mostrarAtividade(at,false);toast("Pronto! Uma versão nova.")};
   const rf=$("#refazAt");if(rf)rf.onclick=()=>{const aj=$("#aAjuste").value.trim();if(!aj){toast("Fale ou escreva o que você quer mudar.");return}
     rf.disabled=true;rf.textContent="⏳ Refazendo...";criarAtividadeIA(at,{ajuste:aj,anterior:tirarTags(at.html).replace(/\s+/g," ").slice(0,2500)})};
   const nomeF=()=>$("#nomeFolha").value.trim();
   $("#nomeFolha").oninput=()=>{const n=nomeF();$("#folhaAt").innerHTML=n?folhaComNome(at.html,n):at.html};
+  $("#duvAt").onclick=()=>{const q=$("#aDuvida").value.trim();if(!q){toast("Escreva ou fale a sua dúvida.");return}
+    pararDitado();const b=$("#duvAt");b.disabled=true;b.textContent="⏳ Pensando...";
+    const txt=tirarTags(at.html.replace(/<li>/g,"\n- ").replace(/<\/(p|div|h4|tr)>/g,"\n")).replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").slice(0,3500);
+    pedirIA({tipo:"duvida",atividade:txt,pergunta:q,idade:IDADES[at.idade]||""}).then(r=>{
+      $("#respDuv").innerHTML=typeof r==="string"&&r.trim()?`<div class="card" style="margin:10px 0 0;background:#fff">${textoParaHtml(r)}</div>`:`<p class="sub">Não consegui responder agora. Confira a internet e tente de novo.</p>`;
+    }).finally(()=>{b.disabled=false;b.textContent="💬 Perguntar"})};
   $("#impAt").onclick=()=>{const n=nomeF();imprimir(n?folhaComNome(at.html,n):at.html)};
   $("#impNomes").onclick=()=>escolherNomes(at.html);
   const s=$("#salAt");if(s)s.onclick=()=>{M().atividades.unshift(at);salvar();toast("Atividade salva em 📂 Salvos!");render()};

@@ -1073,8 +1073,8 @@ function abrirModal(html,ligar){
 }
 function fecharModal(){$("#modal").innerHTML=""}
 /* ===== Metodologias de ensino (consultora com IA) ===== */
-const METODOS={tradicional:"Tradicional por competências",investigativa:"Investigativa (perguntas e pesquisa)",pratica:"Prática / experimental (mão na massa com experiências)",maker:"Cultura Maker (criar projetos em grupo)",bilingue:"Bilíngue (com inglês no meio da aula)"};
-const MET_ICO={tradicional:"📘",investigativa:"🔎",pratica:"🧪",maker:"🛠️",bilingue:"🌎"};
+const METODOS={tradicional:"Tradicional por competências",investigativa:"Investigativa (perguntas e pesquisa)",pratica:"Prática / experimental (mão na massa com experiências)",maker:"Cultura Maker (criar projetos em grupo)",bilingue:"Bilíngue (com inglês no meio da aula)",reggio:"Reggio Emilia (a criança investiga e cria, Educação Infantil)",montessori:"Montessori (autonomia e material concreto)"};
+const MET_ICO={tradicional:"📘",investigativa:"🔎",pratica:"🧪",maker:"🛠️",bilingue:"🌎",reggio:"🌱",montessori:"🧩"};
 const MET_OBJ={comparar:"Comparar metodologias",recomendar:"Qual metodologia combina com a minha turma?",atividade:"Criar uma atividade com a metodologia",explicar:"Explicar um conteúdo com a metodologia"};
 const MET_IDADE={inf:"Educação Infantil",f1:"Fundamental I (1º ao 5º ano)",f2:"Fundamental II (6º ao 9º ano)",em:"Ensino Médio"};
 function seletorMetodo(id){return `<div class="campo"><label for="${id}">Metodologia (opcional)</label><select id="${id}"><option value="">Do meu jeito</option>${Object.entries(METODOS).map(([k,v])=>`<option value="${k}">${MET_ICO[k]} ${v}</option>`).join("")}</select></div>`}

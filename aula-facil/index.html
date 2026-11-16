@@ -381,7 +381,7 @@ function render(){
   $("#lblTurmas").textContent=md.turmas;
   document.querySelectorAll(".menu button").forEach(b=>b.classList.toggle("on",b.dataset.aba===aba));
   garantirOrg();
-  const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes,guia:telaGuia}[aba]||telaInicio;
+  const fn={inicio:telaInicio,turmas:telaTurmas,chamada:telaChamada,notas:telaNotas,atividades:telaAtividades,plano:telaPlano,pagamentos:telaPagamentos,diario:telaDiario,pendencias:telaPendencias,entregas:telaEntregas,busca:telaBusca,salvos:telaSalvos,avaliacoes:telaAvaliacoes,guia:telaInicio}[aba]||telaInicio;
   pararDitado();if(aba!=="guia")pararVoz();$("#tela").innerHTML="";fn($("#tela"));window.scrollTo(0,0);
   if(buscaInicial){const b=$("#"+buscaInicial.id);if(b){b.value=buscaInicial.q;b.dispatchEvent(new Event("input"))}buscaInicial=null}
 }
@@ -476,7 +476,6 @@ function telaInicio(el){
     <button onclick="ir('avaliacoes')"><span class="ic">📝</span>Avaliações</button>
     <button onclick="ir('salvos')"><span class="ic">📂</span>Salvos</button>
   </div>
-  <button class="card" style="width:100%;text-align:left;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#0E2238,#17345A);color:#fff;border:0" onclick="ir('guia')"><span style="font-size:40px">🧑‍🏫</span><span><b style="font-size:17px">Mentora do Professor</b><br><span style="color:#CFE2F2;font-size:13px">Converse por voz sobre a sua aula e veja o guia com ideias prontas</span></span></button>
   ${cardAvaliacoes()}
   ${cardPendencias()}
   ${pag}
@@ -660,6 +659,7 @@ function criarAtividadeIA(at,extra){
 function mostrarAtividade(at,salva){
   $("#resAt").innerHTML=`<div class="folha" id="folhaAt">${at.html}</div>
   <div class="linha-btns" style="margin-top:12px"><button class="btn btn-pri" id="impAt">🖨️ Imprimir</button>${salva?"":`<button class="btn btn-sec" id="salAt">💾 Salvar</button>`}</div>
+  <button class="btn btn-sec btn-bloco" id="impNomes" style="margin-top:10px">👧 Imprimir com o nome dos alunos</button>
   ${!salva&&at.pronto?`<button class="btn btn-ama btn-bloco" id="outraAt" style="margin-top:10px">🔄 Gerar outra versão</button>`:""}
   ${salva||at.pronto?"":`<div class="ajuste"><div class="rotulo-mic"><label for="aAjuste"><b>Não gostou de algo?</b> Fale ou escreva o que mudar</label>${micBtn("#aAjuste")}</div>
   <textarea id="aAjuste" placeholder="Ex.: deixe mais fácil, troque a questão 3, coloque mais desenho, use só animais selvagens"></textarea>
@@ -669,6 +669,7 @@ function mostrarAtividade(at,salva){
   const rf=$("#refazAt");if(rf)rf.onclick=()=>{const aj=$("#aAjuste").value.trim();if(!aj){toast("Fale ou escreva o que você quer mudar.");return}
     rf.disabled=true;rf.textContent="⏳ Refazendo...";criarAtividadeIA(at,{ajuste:aj,anterior:tirarTags(at.html).replace(/\s+/g," ").slice(0,2500)})};
   $("#impAt").onclick=()=>imprimir(at.html);
+  $("#impNomes").onclick=()=>escolherNomes(at.html);
   const s=$("#salAt");if(s)s.onclick=()=>{M().atividades.unshift(at);salvar();toast("Atividade salva em 📂 Salvos!");render()};
   $("#folhaAt").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -910,7 +911,6 @@ function listaSalvos(){
       L.push({tipo:"cham",ic:"✅",titulo:"Chamada"+(DB.modo==="aulas"?"":" – "+t.nome),det:(t.alunos.length-f)+" presentes · "+f+(f===1?" falta":" faltas"),data:d,busca:"chamada "+t.nome,acao:{a:"vercham",t:t.id,d}})});
     (m.entregas[t.id]||[]).forEach(e=>L.push({tipo:"ent",ic:"📥",titulo:e.nome,det:(nT(t)?nT(t)+" · ":"")+e.entregues.length+" entregaram",data:e.data,busca:e.nome,acao:{a:"entregas",t:t.id,id:e.id}}));
   });
-  (m.mentorChat||[]).forEach(c=>{if(c.plano)L.push({tipo:"plano",ic:"🧑‍🏫",titulo:"Plano da mentora – "+(c.plano.tema||""),det:"4 pilares",data:c.data||"",busca:tirarTags(htmlPlanoMentor(c.plano)),acao:{a:"guia"}})});
   (m.avaliacoes||[]).forEach(a=>L.push({tipo:"aval",ic:"📝",titulo:a.tipo+" – "+a.materia,det:(DB.modo==="aulas"?"":nomeTurma(a.turmaId)+" · ")+a.conteudo,data:a.data,busca:[a.tipo,a.materia,a.conteudo,nomeTurma(a.turmaId)].join(" "),acao:{a:"avaliacoes",b:"bAval",q:a.materia}}));
   m.atividades.forEach(a=>L.push({tipo:"ativ",ic:"✨",titulo:a.titulo,det:IDADES[a.idade],data:a.data,busca:a.titulo+" "+tirarTags(a.html),acao:{a:"atividade",id:a.id}}));
   m.planos.forEach(p=>L.push({tipo:"plano",ic:"📚",titulo:"Plano – "+p.tema,det:IDADES[p.idade],data:p.data,busca:[p.tema,p.obj,p.passos,p.mat].join(" "),acao:{a:"plano",id:p.id}}));
@@ -977,6 +977,23 @@ function abrirModal(html,ligar){
   ligar&&ligar();
 }
 function fecharModal(){$("#modal").innerHTML=""}
+/* Folha com o nome de cada aluno já escrito (os nomes não saem do celular) */
+function folhaComNome(html,nome){const n=`<b style="font-size:1.35em;letter-spacing:1px">${esc(nome)}</b>`;
+  return html.indexOf("Nome: ___")>=0?html.replace(/Nome: _+/,"Nome: "+n):`<div class="cabec">Nome: ${n}</div>`+html}
+function escolherNomes(html){let al=[];try{const t=turma();al=(t&&t.alunos)||[]}catch(e){}
+  abrirModal(`<h3>👧 Imprimir com o nome</h3><p class="sub">O app faz uma folha para cada aluno marcado, já com o nome escrito.</p>
+  ${al.length?`<div class="linha-btns" style="margin-bottom:8px"><button class="btn btn-sec" id="nTodos" style="padding:6px 10px">Marcar todos</button><button class="btn btn-sec" id="nNenhum" style="padding:6px 10px">Desmarcar todos</button></div>
+  <div style="max-height:40vh;overflow:auto;border:1px solid #dde;border-radius:12px;padding:6px 10px">${al.map(a=>`<label style="display:flex;gap:10px;align-items:center;padding:7px 0;font-size:1.05em"><input type="checkbox" data-nome="${esc(a.nome)}" checked style="width:22px;height:22px"> ${esc(a.nome)}</label>`).join("")}</div>`:`<p class="sub">Ainda não há alunos cadastrados nesta turma.</p>`}
+  <label for="nExtra" style="display:block;margin-top:12px"><b>Outros nomes</b> (um por linha, opcional)</label>
+  <textarea id="nExtra" placeholder="Ex.: Ana&#10;Pedro"></textarea>
+  <div class="linha-btns" style="margin-top:12px"><button class="btn btn-pri" id="nImp">🖨️ Imprimir</button><button class="btn btn-sec" onclick="fecharModal()">Cancelar</button></div>`,()=>{
+    const cx=()=>[...document.querySelectorAll("#modal input[data-nome]")];
+    const t1=$("#nTodos");if(t1)t1.onclick=()=>cx().forEach(c=>c.checked=true);
+    const t0=$("#nNenhum");if(t0)t0.onclick=()=>cx().forEach(c=>c.checked=false);
+    $("#nImp").onclick=()=>{const nomes=cx().filter(c=>c.checked).map(c=>c.dataset.nome).concat($("#nExtra").value.split("\n").map(x=>x.trim()).filter(Boolean));
+      if(!nomes.length){toast("Marque pelo menos um aluno ou escreva um nome.");return}
+      fecharModal();imprimir(nomes.map((n,i)=>`<div style="${i<nomes.length-1?"page-break-after:always;break-after:page;":""}">${folhaComNome(html,n)}</div>`).join(""));
+      toast("Imprimindo "+nomes.length+(nomes.length===1?" folha":" folhas")+" com nome.")}})}
 function formAluno(a){
   const t=turma(),aulas=DB.modo==="aulas",novo=!a;
   const p=(a&&a.pag)||{tipo:"mensal",valor:"[VALOR]",status:"Pendente"};

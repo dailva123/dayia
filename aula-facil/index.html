@@ -657,9 +657,11 @@ function criarAtividadeIA(at,extra){
   });
 }
 function mostrarAtividade(at,salva){
-  $("#resAt").innerHTML=`<div class="folha" id="folhaAt">${at.html}</div>
+  $("#resAt").innerHTML=`<div class="card" style="padding:12px 14px;margin-bottom:10px"><label for="nomeFolha"><b>✍️ Nome do aluno</b> — já sai escrito na folha</label>
+  <input id="nomeFolha" placeholder="Escreva o nome (ou deixe em branco)" autocomplete="off" style="font-size:18px">
+  <button class="btn btn-sec btn-bloco" id="impNomes" style="margin-top:8px">👧 Imprimir uma folha para cada aluno da turma</button></div>
+  <div class="folha" id="folhaAt">${at.html}</div>
   <div class="linha-btns" style="margin-top:12px"><button class="btn btn-pri" id="impAt">🖨️ Imprimir</button>${salva?"":`<button class="btn btn-sec" id="salAt">💾 Salvar</button>`}</div>
-  <button class="btn btn-sec btn-bloco" id="impNomes" style="margin-top:10px">👧 Imprimir com o nome dos alunos</button>
   ${!salva&&at.pronto?`<button class="btn btn-ama btn-bloco" id="outraAt" style="margin-top:10px">🔄 Gerar outra versão</button>`:""}
   ${salva||at.pronto?"":`<div class="ajuste"><div class="rotulo-mic"><label for="aAjuste"><b>Não gostou de algo?</b> Fale ou escreva o que mudar</label>${micBtn("#aAjuste")}</div>
   <textarea id="aAjuste" placeholder="Ex.: deixe mais fácil, troque a questão 3, coloque mais desenho, use só animais selvagens"></textarea>
@@ -668,7 +670,9 @@ function mostrarAtividade(at,salva){
   const ou=$("#outraAt");if(ou)ou.onclick=()=>{at.html=gerarPronto(at);mostrarAtividade(at,false);toast("Pronto! Uma versão nova.")};
   const rf=$("#refazAt");if(rf)rf.onclick=()=>{const aj=$("#aAjuste").value.trim();if(!aj){toast("Fale ou escreva o que você quer mudar.");return}
     rf.disabled=true;rf.textContent="⏳ Refazendo...";criarAtividadeIA(at,{ajuste:aj,anterior:tirarTags(at.html).replace(/\s+/g," ").slice(0,2500)})};
-  $("#impAt").onclick=()=>imprimir(at.html);
+  const nomeF=()=>$("#nomeFolha").value.trim();
+  $("#nomeFolha").oninput=()=>{const n=nomeF();$("#folhaAt").innerHTML=n?folhaComNome(at.html,n):at.html};
+  $("#impAt").onclick=()=>{const n=nomeF();imprimir(n?folhaComNome(at.html,n):at.html)};
   $("#impNomes").onclick=()=>escolherNomes(at.html);
   const s=$("#salAt");if(s)s.onclick=()=>{M().atividades.unshift(at);salvar();toast("Atividade salva em 📂 Salvos!");render()};
   $("#folhaAt").scrollIntoView({behavior:"smooth",block:"start"});

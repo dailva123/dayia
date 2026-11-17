@@ -373,7 +373,7 @@ function abrirAssinatura(){const s=statusAssinatura();
     s.tipo==="teste"?`<p>🎁 Você está no <b>teste grátis</b>: faltam <b>${s.resta} ${s.resta===1?"dia":"dias"}</b>. Pode assinar agora ou no fim do teste.</p>${cartaoPlanos()}`:
     s.tipo==="fimLanc"?`<p>O seu preço de lançamento terminou. Para continuar usando, assine o plano mensal:</p>${cartaoPlanos(true)}${cartaoPlanos().replace(/[\s\S]*?(<a[^>]*>\s*<b[^>]*>Anual[\s\S]*)/,"$1")}`:
     `<p>Seu teste grátis terminou. Para continuar usando, escolha um plano:</p>${cartaoPlanos()}`}
-  <p class="sub" style="margin-top:10px">Pagamento seguro pelo Mercado Pago (Pix, cartão ou boleto). Depois de pagar, você volta para o app e ele já fica liberado.</p>
+  <p class="sub" style="margin-top:10px">Pagamento seguro pelo Mercado Pago, no cartão. A mensalidade é cobrada sozinha todo mês. Depois de pagar, você volta para o app e ele já fica liberado.</p>
   <p class="sub">Já assinou, ou trocou de celular? <a href="#" onclick="fecharModal();jaAssinei();return false">Toque aqui</a>. Precisa de ajuda? <a href="${ZAP_DAYIA}" target="_blank" rel="noopener">Fale com a DayIA</a>.</p>
   <button class="btn btn-sec btn-bloco" onclick="fecharModal()">Fechar</button>`)}
 function bloqueioAssinatura(){const s=statusAssinatura();

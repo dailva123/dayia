@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aprova Fácil by DayIA</title>
+<meta name="description" content="Missões diárias, trilhas e pontos para passar no vestibular: Direito GV e Psicologia USP (Fuvest).">
+<meta name="theme-color" content="#0E2238">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<!-- Abertura padrão DayIA -->
+<div id="intro" aria-hidden="true">
+  <div class="quadro"><img src="logo-simbolo.png" alt=""></div>
+  <div class="by">by <img src="logo-by.png" alt="DayIA"></div>
+</div>
+
+<header class="topo">
+  <div class="marca">
+    <div class="simb"><img src="logo-simbolo.png" alt=""></div>
+    <div><h1>Aprova Fácil</h1><div class="assina">by <img src="logo-by.png" alt="DayIA"></div></div>
+  </div>
+  <div class="placar" id="placar" title="Seus pontos e sequência"></div>
+  <button id="btnInstalar" class="btn-instalar">⬇️ Instalar</button>
+</header>
+
+<main id="tela"></main>
+
+<nav class="menu" id="menu">
+  <button data-aba="inicio"><span>🏠</span>Início</button>
+  <button data-aba="trilha"><span>🗺️</span>Trilha</button>
+  <button data-aba="erros"><span>🔁</span>Revisar</button>
+  <button data-aba="progresso"><span>🏅</span>Conquistas</button>
+</nav>
+
+<div id="modal" class="modal oculto"><div class="caixa" id="modalCaixa"></div></div>
+<div id="toast" class="toast"></div>
+<div id="festa" class="festa"></div>
+
+<script src="questoes.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

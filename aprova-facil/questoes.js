@@ -35,4 +35,5 @@ const QUESTOES=[
 {m:"cid",e:"A Constituição Federal do Brasil que está em vigor foi promulgada em:",a:["1946","1967","1988","1891","2002"],c:2,x:"A Constituição atual é de **1988**, chamada de \"Constituição Cidadã\" por ampliar direitos depois da ditadura."},
 {m:"cid",e:"No Brasil, o poder responsável principalmente por criar as leis é o:",a:["Executivo","Judiciário","Legislativo","Ministério Público","Tribunal de Contas"],c:2,x:"O **Legislativo** (Câmara dos Deputados e Senado, no nível federal) cria as leis. O Executivo administra e o Judiciário julga."}
 ];
+const AREA_DE={port:"ling",lit:"ling",ing:"ling",hist:"hum",geo:"hum",filo:"hum",cid:"hum",bio:"nat",qui:"nat",fis:"nat",mat:"mat"};
 const MATERIAS={port:{n:"Português",i:"📝"},lit:{n:"Literatura",i:"📚"},mat:{n:"Matemática",i:"🔢"},hist:{n:"História",i:"🏛️"},geo:{n:"Geografia",i:"🌎"},bio:{n:"Biologia",i:"🧬"},qui:{n:"Química",i:"⚗️"},fis:{n:"Física",i:"🚀"},filo:{n:"Filosofia e Sociologia",i:"💭"},ing:{n:"Inglês",i:"🇬🇧"},cid:{n:"Cidadania e Direito",i:"⚖️"}};

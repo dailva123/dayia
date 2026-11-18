@@ -176,7 +176,7 @@ function telaInicio(){
   const h=new Date().getHours(),saud=h<12?"Bom dia":h<18?"Boa tarde":"Boa noite";
   const xpNivel=D.xp%100;
   $("#tela").innerHTML=`<p class="ola">${saud}${D.nome?", "+esc(D.nome):""}! 👋</p>
-  <div class="card contagem"><div class="sub">${o.ic} ${o.nome}</div><div class="num">${faltam}</div><div class="sub">dias para a prova (${new Date(D.dataProva+"T12:00:00").toLocaleDateString("pt-BR")})</div></div>
+  <div class="card contagem"><div class="sub">${o.ic} ${o.nome}</div><div class="num">${faltam}</div><div class="sub">${D.dataCerta?`dias para a prova (${new Date(D.dataProva+"T12:00:00").toLocaleDateString("pt-BR")})`:`dias, mais ou menos, até a prova · previsão: ${D.objetivo==="gv"?"outubro":"novembro"} de 2027`}</div>${D.dataCerta?"":`<div class="sub" style="font-size:13px;margin-top:6px">Quando sair a data oficial, coloque em ⚙️ Ajustes</div>`}</div>
   <div class="stats"><div class="stat"><b>🔥 ${sequencia()}</b><small>dias seguidos</small></div><div class="stat"><b>⭐ ${D.xp}</b><small>pontos</small></div><div class="stat"><b>🏅 ${D.medalhas.length}</b><small>conquistas</small></div></div>
   <div class="card"><b>Nível ${nivel()+1}: ${nomeNivel()}</b><div class="barra"><i style="width:${xpNivel}%"></i></div><div class="sub">Faltam ${100-xpNivel} pontos para o próximo nível</div></div>
   <div class="card missao ${feita?"feita":""}">${feita?`<h3>✅ Missão de hoje concluída!</h3><p class="sub">Você acertou ${D.missao.acertos} de ${D.missao.ids.length}. Amanhã tem mais. Se quiser, treine mais um pouco.</p><button class="btn btn-sec btn-bloco" id="btnExtra">Fazer uma missão extra ✨</button>`
@@ -341,13 +341,13 @@ function ajustes(){
   abrirModal(`<h3>⚙️ Ajustes</h3><label for="jNome">Seu nome</label><input id="jNome" value="${esc(D.nome)}">
   <label for="jObj">Objetivo</label><select id="jObj">${Object.entries(OBJETIVOS).map(([k,o])=>`<option value="${k}" ${k===D.objetivo?"selected":""}>${o.ic} ${o.nome}</option>`).join("")}</select>
   <label for="jData">Data da prova</label><input id="jData" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" value="${D.dataProva.split("-").reverse().join("/")}">
-  <p class="sub">A data já vem com uma previsão. Quando sair o edital, é só colocar a data certa.</p>
+  <p class="sub">${D.dataCerta?"Data informada por você.":"Por enquanto é só uma previsão. Quando a "+(D.objetivo==="gv"?"GV":"Fuvest")+" divulgar o dia da prova, coloque aqui."}</p>
   <label class="linha-som"><input type="checkbox" id="jSom" ${D.som?"checked":""}> 👏 Som de palminhas quando acertar</label>
   <button class="btn btn-pri btn-bloco" id="jSalvar" style="margin-top:12px">Salvar</button>
   <button class="btn btn-sec btn-bloco" id="jZerar" style="margin-top:10px">Começar do zero</button>`);
   $("#jData").oninput=e=>{let v=e.target.value.replace(/\D/g,"").slice(0,8);if(v.length>4)v=v.slice(0,2)+"/"+v.slice(2,4)+"/"+v.slice(4);else if(v.length>2)v=v.slice(0,2)+"/"+v.slice(2);e.target.value=v};
   $("#jSalvar").onclick=()=>{const m=$("#jData").value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return toast("Escreva a data assim: dd/mm/aaaa");
-    const nv=$("#jObj").value,mudou=nv!==D.objetivo||$("#jNome").value.trim()!==D.nome;D.nome=$("#jNome").value.trim();D.objetivo=nv;D.dataProva=`${m[3]}-${m[2]}-${m[1]}`;D.som=$("#jSom").checked;salvar();
+    const nv=$("#jObj").value,mudou=nv!==D.objetivo||$("#jNome").value.trim()!==D.nome;D.nome=$("#jNome").value.trim();const nova=`${m[3]}-${m[2]}-${m[1]}`,dataMudou=nova!==D.dataProva;if(nv!==D.objetivo&&!dataMudou){D.dataCerta=false;D.objetivo=nv;D.dataProva=OBJETIVOS[nv].prova}else{D.objetivo=nv;if(dataMudou){D.dataCerta=true;D.dataProva=nova}}D.som=$("#jSom").checked;salvar();
     if(mudou)enviar({acao:"cadastro",nome:D.nome,email:D.email,tel:D.tel,objetivo:OBJETIVOS[nv].nome});
     fecharModal();toast("Ajustes salvos ✅");render()};
   $("#jZerar").onclick=()=>{if(!confirm("Apagar todos os pontos e o progresso deste celular?"))return;const guarda={id:D.id,nome:D.nome,email:D.email,tel:D.tel};D=Object.assign(novo(),guarda);salvar();fecharModal();ir("inicio")};

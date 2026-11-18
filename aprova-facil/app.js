@@ -1,7 +1,7 @@
 /* ================= Aprova Fácil by DayIA ================= */
 const $=s=>document.querySelector(s);
 const CHAVE="aprovafacil-v1";
-const COFRE="__COFRE__"; // endereço do cofre (Apps Script) do Aprova Fácil
+const COFRE="https://script.google.com/macros/s/AKfycbxNQ6ujEny-MJkRQauSYr7uyjZTVxqXWnj2wnF4c-ceuUloBWsWvgCqhmhAU8NJGmhzpA/exec"; // endereço do cofre (Apps Script) do Aprova Fácil
 const AREAS={
   ling:{n:"Linguagens",i:"📖",sub:"Português, Literatura e Inglês"},
   hum:{n:"Ciências Humanas",i:"🌎",sub:"História, Geografia, Filosofia e Sociologia"},

@@ -183,6 +183,7 @@ function telaInicio(){
   const h=new Date().getHours(),saud=h<12?"Bom dia":h<18?"Boa tarde":"Boa noite";
   const xpNivel=D.xp%100;
   $("#tela").innerHTML=`<p class="ola">${saud}${D.nome?", "+esc(D.nome):""}! 👋</p>
+  <button class="busca-inicio" id="buscaInicio">🔍 <span>Procurar no app… (ex.: oral, relâmpago, redação)</span></button>
   <div class="card contagem"><div class="sub">${o.ic} ${o.nome}</div><div class="num">${faltam}</div><div class="sub">${D.dataCerta?`dias para a prova (${new Date(D.dataProva+"T12:00:00").toLocaleDateString("pt-BR")})`:`dias, mais ou menos, até a prova · previsão: ${D.objetivo==="gv"?"outubro":"novembro"} de 2027`}</div>${D.dataCerta?"":`<div class="sub" style="font-size:13px;margin-top:6px">Quando sair a data oficial, coloque em ⚙️ Ajustes</div>`}</div>
   <div class="stats"><div class="stat"><b>🔥 ${sequencia()}</b><small>dias seguidos</small></div><div class="stat"><b>⭐ ${D.xp}</b><small>pontos</small></div><div class="stat"><b>🏆 ${D.trofeus.length}</b><small>troféus</small></div></div>
   <div class="card"><b>Nível ${nivel()+1}: ${nomeNivel()}</b><div class="barra"><i style="width:${xpNivel}%"></i></div><div class="sub">Faltam ${100-xpNivel} pontos para o próximo nível</div></div>
@@ -205,6 +206,7 @@ function telaInicio(){
   $("#btnAjustes").onclick=ajustes;
   document.querySelectorAll("[data-ir]").forEach(b=>b.onclick=()=>({relampago:relampago,simulado:escolherSimulado,redacao:telaRedacao,oral:telaOral,discursiva:telaDiscursiva,provas:telaProvasIA,foto:telaFoto}[b.dataset.ir])());
   $("#cardDuelo").onclick=()=>ir("duelo");
+  $("#buscaInicio").onclick=abrirBusca;
   const av=$("#btnAviso");if(av){av.onclick=ativarAvisos;$("#btnAvisoNao").onclick=()=>{D.semAviso=Date.now();salvar();render()}}
 }
 
@@ -425,3 +427,43 @@ async function ativarAvisos(){
   else toast("Os avisos ficaram desligados. Tudo bem! 💛");
   render();
 }
+
+/* ---------- lupa: procurar qualquer coisa no app (atalho rápido) ---------- */
+const semAcento=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function rolarPara(sel){setTimeout(()=>{const e=document.querySelector(sel);if(e){e.scrollIntoView({behavior:"smooth",block:"center"})}},350)}
+async function treinarArea(a){if(!carregado){toast("Carregando as questões…");await carregando}const ids=[];for(let k=0;k<5;k++){const id=sortearDa(a,ids);if(id)ids.push(id)}treinar(ids,"treino")}
+function atalhos(){return [
+  ["🎯","Missão do dia","5 questões, uns 10 minutos","missao diaria questoes professora ia explica",()=>comecarMissao(false)],
+  ["🎤","Treino de oral","A professora (banca) pergunta em voz alta e você responde falando","oral banca professora voz fala falar microfone entrevista ia gv direito exame oral",()=>telaOral()],
+  ["⚡","Questão relâmpago","60 segundos, pontos em dobro","relampago rapido rapida 60 segundos dobro raio",()=>relampago()],
+  ["⏱️","Simulado","10, 20 ou 45 questões com cronômetro","simulado prova cronometro teste tempo",()=>escolherSimulado()],
+  ["✍️","Redação com IA","Tema novo, correção e nota","redacao texto escrever corrigir correcao nota tema dissertacao",()=>telaRedacao()],
+  ["🧪","Discursivas","Questões da 2ª fase corrigidas pela IA","discursiva discursivas segunda fase escrever resposta dissertativa",()=>telaDiscursiva()],
+  ["📄","Provas antigas","Fuvest e GV dentro do app, com ajuda da IA","provas antigas anteriores fuvest gv pdf vestibular ler",()=>telaProvasIA()],
+  ["🔎","Método LUPA","O jeito certo de ler qualquer questão","lupa metodo ler leitura questao interpretar interpretacao",()=>{telaProvasIA();rolarPara(".lupa-metodo")}],
+  ["📸","Foto de questão","Tire foto de uma questão e a IA explica","foto camera imagem apostila caderno tirar foto",()=>telaFoto()],
+  ["🗺️","Trilha","O seu mapa até a aprovação","trilha mapa caminho regiao regioes fase nivel",()=>ir("trilha")],
+  ["🐉","Chefão","10 questões para passar de região","chefao chefe boss desafio regiao",()=>{ir("trilha");rolarPara("#btnChefao")}],
+  ...Object.entries(AREAS).map(([k,a])=>[a.i,a.n,"Treinar 5 questões · "+a.sub,"treinar area materia "+a.n+" "+a.sub,()=>treinarArea(k)]),
+  ["❌","Revisar erros","Refazer as questões que você errou","erros errei revisar revisao refazer",()=>ir("erros")],
+  ["👯‍♀️","Duelo das gêmeas","Placar, meta, prêmio e recadinhos","duelo irma irmas gemeas placar recado recados meta premio codigo",()=>ir("duelo")],
+  ["🏁","Desafio com código","As mesmas 5 questões para as duas","desafio codigo irma competir",()=>telaDesafio()],
+  ["🏆","Troféus","A sua estante de conquistas","trofeus trofeu conquistas medalhas estante",()=>ir("progresso")],
+  ["🛍️","Loja","Cores do app e avatares com moedas","loja moedas comprar cores tema avatar",()=>{ir("progresso");telaLoja()}],
+  ["📲","Minha semana","Imagem para postar nos stories","minha semana stories resumo imagem instagram postar",()=>{ir("progresso");resumoSemana()}],
+  ["⚙️","Ajustes","Nome, objetivo, data da prova e palminhas","ajustes configuracoes configurar nome objetivo data prova som palminhas zerar",()=>{ir("inicio");ajustes()}],
+  ["🔔","Lembrete e aviso no celular","Lembrete das 17h por e-mail e no celular","lembrete aviso notificacao notificacoes 17h email e-mail celular",()=>{ir("inicio");ajustes();rolarPara("#jLem")}],
+  ["⬇️","Instalar o app","Colocar o Aprova Fácil na tela do celular","instalar app aplicativo tela inicial baixar",()=>{const b=$("#btnInstalar");if(b&&!b.classList.contains("oculto"))b.click();else toast("O app já está instalado 🎉")}],
+  ["🏠","Início","Tela inicial","inicio home comeco",()=>ir("inicio")]
+]}
+function abrirBusca(){
+  abrirModal(`<h3>🔍 Procurar no app</h3><input class="busca-campo" id="buscaTxt" placeholder="Ex.: oral, relâmpago, redação…" autocomplete="off"><div class="busca-lista" id="buscaLista"></div>`);
+  const lista=atalhos(),campo=$("#buscaTxt");
+  const mostrar=()=>{const t=semAcento(campo.value).trim().split(/\s+/).filter(Boolean);
+    const r=lista.filter(a=>{const txt=semAcento(a[1]+" "+a[2]+" "+a[3]);return t.every(p=>txt.includes(p))});
+    $("#buscaLista").innerHTML=r.length?r.map((a,i)=>`<button class="busca-item" data-b="${lista.indexOf(a)}"><span class="ic">${a[0]}</span><span><b>${a[1]}</b><small>${a[2]}</small></span></button>`).join(""):`<div class="busca-vazia">Não achei "${campo.value.replace(/[<>&"]/g,"")}" 🤔<br>Tente outra palavra, tipo <b>oral</b>, <b>simulado</b> ou <b>troféus</b>.</div>`;
+    document.querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>{fecharModal();if(typeof Q!=="undefined"&&Q&&aba==="quiz")Q=null;try{lista[+b.dataset.b][4]()}catch(e){console.error(e)}})};
+  campo.oninput=mostrar;campo.onkeydown=e=>{if(e.key==="Enter"){const p=document.querySelector("[data-b]");if(p)p.click()}};
+  mostrar();setTimeout(()=>campo.focus(),80);
+}
+$("#btnBusca").onclick=abrirBusca;

@@ -28,7 +28,7 @@ const MEDALHAS=[
 ];
 
 /* ---------- dados guardados no celular ---------- */
-function novo(){return {id:"",nome:"",email:"",tel:"",objetivo:"",dataProva:"",xp:0,dias:[],resp:{},erros:[],medalhas:[],missao:null,perfeita:false,corrigiu:false,som:true,fila:[]}}
+function novo(){return {id:"",nome:"",email:"",tel:"",objetivo:"",dataProva:"",xp:0,dias:[],resp:{},erros:[],medalhas:[],missao:null,perfeita:false,corrigiu:false,som:true,fila:[],moedas:0,compras:["tema-azul","av-🎓"],tema:"azul",avatar:"🎓",trofeus:[],grupo:"",stats:{},semanas:{},meses:{},regiao:0,premio:"",metaMes:600,redacoes:[],redacaoAtual:null,sim:null,recadoVisto:0}}
 let D;try{D=Object.assign(novo(),JSON.parse(localStorage.getItem(CHAVE))||{})}catch(e){D=novo()}
 // versão antiga guardava as questões pelo número: passa para o código novo
 Object.keys(D.resp).forEach(k=>{if(/^\d+$/.test(k)){D.resp["d"+k]=D.resp[k];delete D.resp[k]}});
@@ -108,8 +108,14 @@ async function esvaziarFila(){
 window.addEventListener("online",esvaziarFila);
 function enviarProgresso(feito,certas,total){
   let a=0,e=0;Object.values(D.resp).forEach(r=>{a+=r.a;e+=r.e});
-  enviar({acao:"progresso",nome:D.nome,feito,certas,total,xp:D.xp,dias:D.dias.length,seq:sequencia(),acertos:a,erros:e});
+  const w=D.semanas[semanaAtual()]||{xp:0},m=D.meses[mesAtual()]||{xp:0,q:0};
+  enviar({acao:"progresso",nome:D.nome,feito,certas,total,xp:D.xp,dias:D.dias.length,seq:sequencia(),acertos:a,erros:e,grupo:D.grupo||"",xpSemana:w.xp,semana:semanaAtual(),xpMes:m.xp,mes:mesAtual(),qMes:m.q,perfil:(D.avatar||"")+" "+D.nome});
 }
+
+/* ---------- semana e mês ---------- */
+function semanaAtual(){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+3-(d.getDay()+6)%7);const s=new Date(d.getFullYear(),0,4);return d.getFullYear()+"-S"+String(1+Math.round(((d-s)/864e5-3+(s.getDay()+6)%7)/7)).padStart(2,"0")}
+const mesAtual=()=>hoje().slice(0,7);
+function contarQuestao(certo){const h=new Date().getHours();if(h>=22)D.stats.coruja=1;if(h<7&&h>=4)D.stats.madrugadora=1;const w=semanaAtual(),m=mesAtual();D.semanas[w]=D.semanas[w]||{xp:0,q:0,a:0};D.meses[m]=D.meses[m]||{xp:0,q:0,a:0};D.semanas[w].q++;D.meses[m].q++;if(certo){D.semanas[w].a++;D.meses[m].a++;D.moedas+=1}salvar()}
 
 /* ---------- pontos, nível e sequência ---------- */
 const nivel=()=>Math.floor(D.xp/100);
@@ -126,20 +132,21 @@ function sequencia(){
   }
   return n;
 }
-function ganhar(pts){const antes=nivel();D.xp+=pts;salvar();placar();if(nivel()>antes){setTimeout(()=>{festa(40);toast("🎉 Subiu de nível: "+nomeNivel()+"!")},400)}}
+function ganhar(pts){const antes=nivel();D.xp+=pts;const w=semanaAtual(),m=mesAtual();D.semanas[w]=D.semanas[w]||{xp:0,q:0,a:0};D.meses[m]=D.meses[m]||{xp:0,q:0,a:0};D.semanas[w].xp+=pts;D.meses[m].xp+=pts;salvar();placar();if(nivel()>antes){setTimeout(()=>{festa(40);toast("🎉 Subiu de nível: "+nomeNivel()+"!")},400)}}
 function conferirMedalhas(){MEDALHAS.forEach(m=>{if(!D.medalhas.includes(m.id)&&m.ok(D)){D.medalhas.push(m.id);salvar();setTimeout(()=>{festa(20);toast("🏅 Nova conquista: "+m.n)},900)}})}
-function placar(){$("#placar").innerHTML=D.objetivo?`<span>🔥 ${sequencia()}</span><span class="xp">⭐ ${D.xp}</span>`:""}
+function placar(){$("#placar").innerHTML=D.objetivo?`<span>🔥 ${sequencia()}</span><span class="xp">🪙 ${D.moedas}</span>`:""}
 
 /* ---------- navegação ---------- */
 let aba="inicio";
 function ir(a){aba=a;render();window.scrollTo(0,0)}
 document.querySelectorAll(".menu button").forEach(b=>b.onclick=()=>ir(b.dataset.aba));
+function render0(){placar();$("#menu").classList.remove("oculto");document.querySelectorAll(".menu button").forEach(b=>b.classList.toggle("ativo",b.dataset.aba==="treinos"));window.scrollTo(0,0)}
 function render(){
   placar();
   $("#menu").classList.toggle("oculto",!D.objetivo||aba==="quiz");
   document.querySelectorAll(".menu button").forEach(b=>b.classList.toggle("ativo",b.dataset.aba===aba));
   if(!D.objetivo)return telaBoasVindas();
-  ({inicio:telaInicio,trilha:telaTrilha,erros:telaErros,progresso:telaProgresso,quiz:telaQuiz}[aba]||telaInicio)();
+  ({inicio:telaInicio,trilha:telaTrilha,erros:telaErros,progresso:telaProgresso,quiz:telaQuiz,treinos:telaTreinos,duelo:telaDuelo}[aba]||telaInicio)();
 }
 
 /* ---------- boas-vindas ---------- */
@@ -177,24 +184,26 @@ function telaInicio(){
   const xpNivel=D.xp%100;
   $("#tela").innerHTML=`<p class="ola">${saud}${D.nome?", "+esc(D.nome):""}! 👋</p>
   <div class="card contagem"><div class="sub">${o.ic} ${o.nome}</div><div class="num">${faltam}</div><div class="sub">${D.dataCerta?`dias para a prova (${new Date(D.dataProva+"T12:00:00").toLocaleDateString("pt-BR")})`:`dias, mais ou menos, até a prova · previsão: ${D.objetivo==="gv"?"outubro":"novembro"} de 2027`}</div>${D.dataCerta?"":`<div class="sub" style="font-size:13px;margin-top:6px">Quando sair a data oficial, coloque em ⚙️ Ajustes</div>`}</div>
-  <div class="stats"><div class="stat"><b>🔥 ${sequencia()}</b><small>dias seguidos</small></div><div class="stat"><b>⭐ ${D.xp}</b><small>pontos</small></div><div class="stat"><b>🏅 ${D.medalhas.length}</b><small>conquistas</small></div></div>
+  <div class="stats"><div class="stat"><b>🔥 ${sequencia()}</b><small>dias seguidos</small></div><div class="stat"><b>⭐ ${D.xp}</b><small>pontos</small></div><div class="stat"><b>🏆 ${D.trofeus.length}</b><small>troféus</small></div></div>
   <div class="card"><b>Nível ${nivel()+1}: ${nomeNivel()}</b><div class="barra"><i style="width:${xpNivel}%"></i></div><div class="sub">Faltam ${100-xpNivel} pontos para o próximo nível</div></div>
   <div class="card missao ${feita?"feita":""}">${feita?`<h3>✅ Missão de hoje concluída!</h3><p class="sub">Você acertou ${D.missao.acertos} de ${D.missao.ids.length}. Amanhã tem mais. Se quiser, treine mais um pouco.</p><button class="btn btn-sec btn-bloco" id="btnExtra">Fazer uma missão extra ✨</button>`
    :`<h3>🎯 Missão do dia</h3><p class="sub">5 questões · uns 10 minutos · até 70 pontos</p><button class="btn btn-pri btn-bloco" id="btnMissao">${D.missao&&D.missao.data===hoje()?"Continuar a missão":"Começar a missão"}</button>`}</div>
-  <button class="btn btn-sec btn-bloco" id="btnProvas" style="margin-bottom:10px">📄 Provas antigas ${D.objetivo==="gv"?"da GV":"da Fuvest"}</button>
-  <p class="sub centro">📚 ${carregado?Object.keys(BANCO).length.toLocaleString("pt-BR")+" questões no banco (ENEM 2009 a 2023 + DayIA)":"Carregando o banco de questões…"}</p>
-  <h3 style="margin-top:20px">Vem aí 👀</h3>
-  <div class="embreve">
-    <div>✍️ Redação com IA<small>Nota e dicas no padrão ${D.objetivo==="gv"?"da GV":"da Fuvest"}</small><span class="selo">em breve</span></div>
-    ${D.objetivo==="gv"?`<div>🎤 Treino de oral<small>A IA faz o papel da banca</small><span class="selo">em breve</span></div>`:`<div>🧪 Discursivas<small>Correção explicada</small><span class="selo">em breve</span></div>`}
-    <div>⏱️ Simulado<small>Com cronômetro, como no dia</small><span class="selo">em breve</span></div>
-    <div>👯 Desafio entre amigas<small>Quem acerta mais?</small><span class="selo">em breve</span></div>
+  <div class="atalhos">
+    <button data-ir="relampago"><span>⚡</span>Relâmpago</button>
+    <button data-ir="simulado"><span>⏱️</span>Simulado</button>
+    <button data-ir="redacao"><span>✍️</span>Redação</button>
+    <button data-ir="${D.objetivo==="gv"?"oral":"discursiva"}"><span>${D.objetivo==="gv"?"🎤":"🧪"}</span>${D.objetivo==="gv"?"Oral":"Discursivas"}</button>
+    <button data-ir="provas"><span>📄</span>Provas antigas</button>
+    <button data-ir="foto"><span>📸</span>Foto</button>
   </div>
+  <div class="card duelo-mini" id="cardDuelo"><b>⚔️ Duelo das gêmeas</b><p class="sub">${D.grupo?"Veja o placar da semana e os recadinhos 💌":"Ligue o app com a sua irmã e vejam quem estuda mais!"}</p></div>
+  <p class="sub centro">📚 ${carregado?Object.keys(BANCO).length.toLocaleString("pt-BR")+" questões no banco (ENEM 2009 a 2023 + DayIA)":"Carregando o banco de questões…"}</p>
   <button class="btn btn-sec btn-bloco" id="btnAjustes" style="margin-top:16px">⚙️ Ajustes</button>`;
   const b=$("#btnMissao");if(b)b.onclick=()=>comecarMissao(false);
   const x=$("#btnExtra");if(x)x.onclick=()=>comecarMissao(true);
   $("#btnAjustes").onclick=ajustes;
-  $("#btnProvas").onclick=telaProvas;
+  document.querySelectorAll("[data-ir]").forEach(b=>b.onclick=()=>({relampago:relampago,simulado:escolherSimulado,redacao:telaRedacao,oral:telaOral,discursiva:telaDiscursiva,provas:telaProvasIA,foto:telaFoto}[b.dataset.ir])());
+  $("#cardDuelo").onclick=()=>ir("duelo");
 }
 
 /* ---------- missão / quiz ---------- */
@@ -230,7 +239,7 @@ function responder(id,i){
   const r=D.resp[id]||{a:0,e:0};
   if(certo){r.a++;Q.acertos++;if(D.erros.includes(id)){D.erros=D.erros.filter(x=>x!==id);D.corrigiu=true}}
   else{r.e++;if(!D.erros.includes(id))D.erros.push(id)}
-  D.resp[id]=r;const pts=certo?10:2;ganhar(pts);
+  D.resp[id]=r;contarQuestao(certo);const pts=certo?10:2;ganhar(pts);
   if(certo)palmas();
   const elogios=["Isso aí! 👏","Mandou bem! 💪","Arrasou! 👏","Perfeito! 🎯","Que orgulho! 💛"],calmas=["Quase! Bora entender 💡","Tudo bem errar aqui 😉","Agora você não esquece mais 💡"];
   $("#volta").innerHTML=`<div class="explica ${certo?"ok":"nao"}"><h3>${certo?elogios[Math.floor(Math.random()*elogios.length)]:calmas[Math.floor(Math.random()*calmas.length)]} <span class="mais">+${pts}</span></h3>
@@ -255,8 +264,9 @@ async function explicarIA(id,marcada){
 }
 function fimQuiz(){
   const n=Q.ids.length,a=Q.acertos;let bonus=0;
-  if(Q.modo==="missao"&&!Q.fim){Q.fim=true;D.missao=Q;if(!D.dias.includes(hoje()))D.dias.push(hoje());bonus=20;if(a===n)D.perfeita=true;salvar();ganhar(bonus)}
-  conferirMedalhas();placar();festa(a>=n-1?40:18);
+  if(Q.modo==="desafio"){const qq=Q;Q=null;conferirMedalhas();conferirTrofeus();ganhar(a*5);if(a>=4)palmas();enviarProgresso("Desafio com código",a,n);return fimDesafio(a,n)}
+  if(Q.modo==="missao"&&!Q.fim){Q.fim=true;D.missao=Q;if(!D.dias.includes(hoje()))D.dias.push(hoje());bonus=20;D.moedas+=5;if(a===n){D.perfeita=true;stat("perfeitas")}salvar();ganhar(bonus)}
+  conferirMedalhas();conferirTrofeus();placar();festa(a>=n-1?40:18);
   enviarProgresso({missao:"Missão do dia",extra:"Missão extra",treino:"Treino na trilha",revisao:"Revisão de erros"}[Q.modo]||Q.modo,a,n);
   const msg=a===n?"Missão perfeita! Você está voando 🚀":a>=n*.6?"Muito bem! Cada missão te deixa mais perto da aprovação 💛":"Hoje foi dia de aprender com os erros, e isso conta muito! 💪";
   $("#tela").innerHTML=`<div class="card centro"><div class="grande">${a===n?"🏆":a>=n*.6?"🎉":"🌱"}</div><h2>${a} de ${n} certas</h2><p>${msg}</p>
@@ -271,7 +281,7 @@ function fimQuiz(){
 
 /* ---------- trilha ---------- */
 function telaTrilha(){
-  $("#tela").innerHTML=`<h2>🗺️ Sua trilha</h2><p class="sub">Escolha uma área e faça uma fase de 5 questões. Cada acerto acende um pedacinho do caminho.</p>
+  $("#tela").innerHTML=`<h2>🗺️ Sua trilha</h2>${htmlMapa()}<h3>📚 Treinar por área</h3><p class="sub">Faça uma fase de 5 questões. Cada acerto acende um pedacinho do caminho e chega mais perto do próximo chefão 🐉</p>
   <div class="lupa"><input id="busca" placeholder="Procurar área ou matéria" autocomplete="off"></div><div id="lista"></div>`;
   const desenhar=()=>{const t=$("#busca").value.trim().toLowerCase();
     $("#lista").innerHTML=Object.entries(AREAS).filter(([k,a])=>(a.n+" "+a.sub).toLowerCase().includes(t)).map(([k,a])=>{
@@ -279,7 +289,7 @@ function telaTrilha(){
       const fase=Math.floor(ok/5)+1,naFase=ok%5;
       return `<button class="materia" data-a="${k}"><span class="ic">${a.i}</span><span class="info"><b>${a.n}</b><span class="sub">${a.sub}</span><span class="sub">Fase ${fase} · ${ok} de ${ids.length} dominadas</span><span class="fases">${[0,1,2,3,4].map(x=>`<i class="${x<naFase?"ok":""}"></i>`).join("")}</span></span><span>▶️</span></button>`}).join("")||`<p class="sub">Nada com esse nome.</p>`;
     document.querySelectorAll("[data-a]").forEach(b=>b.onclick=async()=>{if(!carregado){toast("Carregando as questões…");await carregando}const ids=[];for(let k=0;k<5;k++){const id=sortearDa(b.dataset.a,ids);if(id)ids.push(id)}treinar(ids,"treino")});};
-  $("#busca").oninput=desenhar;desenhar();
+  $("#busca").oninput=desenhar;desenhar();ligarMapa();
 }
 
 /* ---------- revisar erros ---------- */
@@ -301,40 +311,46 @@ function telaProgresso(){
   const porArea=Object.keys(AREAS).map(k=>{let a=0,e=0;Object.entries(D.resp).forEach(([id,r])=>{const q=BANCO[id];if(q&&q.area===k){a+=r.a;e+=r.e}});return {k,a,e,p:a+e?Math.round(a/(a+e)*100):null}});
   const feitas=porArea.filter(x=>x.p!==null).sort((x,y)=>y.p-x.p);
   const forte=feitas.filter(x=>x.p>=70).slice(0,2),vale=feitas.filter(x=>x.p<60).slice(-2);
-  $("#tela").innerHTML=`<h2>🏅 Conquistas</h2>
+  $("#tela").innerHTML=`<h2>🏆 Conquistas</h2>
+  <div class="card perfil"><span class="avatar-grande">${D.avatar}</span><div><b>${esc(D.nome)}</b><div class="sub">Nível ${nivel()+1}: ${nomeNivel()} · ⭐ ${D.xp} · 🪙 ${D.moedas}</div></div></div>
+  <div class="dois"><button class="btn btn-pri" id="btnLoja">🛍️ Loja</button><button class="btn btn-sec" id="btnResumo">📸 Minha semana</button></div>
+  <h3>🏆 Estante de troféus · ${D.trofeus.length} de ${TROFEUS.length}</h3>
+  <div class="estante">${TROFEUS.map(t=>{const tem=D.trofeus.includes(t.id);return `<div class="trofeu ${tem?"":"bloq"}" title="${esc(t.d)}"><span>${tem||!t.secreto?t.i:"❓"}</span><b>${tem||!t.secreto?esc(t.n):"Secreto"}</b><small>${tem||!t.secreto?esc(t.d):"Descubra como ganhar 👀"}</small></div>`}).join("")}</div>
+  <h3>🏅 Medalhas</h3>
   <div class="medalhas">${MEDALHAS.map(m=>`<div class="medalha ${D.medalhas.includes(m.id)?"":"bloq"}"><span>${m.i}</span>${m.n}</div>`).join("")}</div>
   <div class="card" style="margin-top:14px"><h3>📊 Como você está</h3>
   ${feitas.length?`${forte.length?`<p>💪 Forte em: <b>${forte.map(x=>AREAS[x.k].n).join(" e ")}</b></p>`:""}${vale.length?`<p>💡 Vale treinar: <b>${vale.map(x=>AREAS[x.k].n).join(" e ")}</b></p>`:""}
   ${porArea.map(x=>`<div class="linhamat"><span class="nome">${AREAS[x.k].i} ${AREAS[x.k].n}</span><div class="barra"><i style="width:${x.p||0}%"></i></div><small>${x.p===null?"–":x.p+"%"}</small></div>`).join("")}`
   :`<p class="sub">Faça a primeira missão para ver aqui as áreas em que você brilha. ✨</p>`}</div>`;
+  $("#btnLoja").onclick=telaLoja;$("#btnResumo").onclick=resumoSemana;
 }
 
 
 /* ---------- provas antigas oficiais (abrem no site de origem) ---------- */
 const PROVAS={
   fuvest:[
-    {n:"Todas as provas da Fuvest (acervo oficial, com gabarito)",u:"https://www.fuvest.br/acervo-vestibular",d:"Site oficial da Fuvest · dezenas de edições"}
+    {n:"Fuvest 2027 · 1ª fase · prova",u:"https://www.curso-objetivo.br/vestibular/resolucao-comentada/fuvest/2027_1fase/fuvest2027_1fase_prova_V1.pdf",d:"Prova de Conhecimentos Gerais"},
+    {n:"Fuvest 2027 · 1ª fase · gabarito",u:"https://www.curso-objetivo.br/vestibular/resolucao-comentada/fuvest/2027_1fase/fuvest2027_1fase_gabarito.pdf",d:"Respostas certas",gab:1},
+    {n:"Fuvest 2026 · 1ª fase · prova",u:"https://www.curso-objetivo.br/vestibular/resolucao-comentada/fuvest/2026_1fase/fuvest2026_1fase_prova_V1.pdf",d:"Prova de Conhecimentos Gerais"},
+    {n:"Fuvest 2026 · 1ª fase · gabarito",u:"https://www.curso-objetivo.br/vestibular/resolucao-comentada/fuvest/2026_1fase/fuvest2026_1fase_gabarito.pdf",d:"Respostas certas",gab:1},
+    {n:"Fuvest 2025 · 1ª fase · prova",u:"https://www.curso-objetivo.br/vestibular/resolucao-comentada/fuvest/2025_1fase/fuvest2025_1fase_prova_V1.pdf",d:"Prova de Conhecimentos Gerais"},
+    {n:"Fuvest 2025 · 1ª fase · gabarito",u:"https://www.curso-objetivo.br/vestibular/resolucao-comentada/fuvest/2025_1fase/fuvest2025_1fase_gabarito.pdf",d:"Respostas certas",gab:1},
+    {n:"Fuvest 2024 · 1ª fase · prova",u:"https://www.fuvest.br/wp-content/uploads/fuvest2024_primeira_fase_prova_X.pdf",d:"Prova de Conhecimentos Gerais (versão X)"},
+    {n:"Fuvest 2024 · 1ª fase · gabarito",u:"https://www.fuvest.br/wp-content/uploads/fuvest2024_gabarito_primeira_fase.pdf",d:"Respostas certas",gab:1},
+    {n:"Fuvest 2021 · 1ª fase · prova",u:"https://www.curso-objetivo.br/vestibular/resolucao-comentada/fuvest/2021_1fase/fuvest2021_1fase_prova.pdf",d:"Prova de Conhecimentos Gerais"},
+    {n:"Fuvest 2021 · 1ª fase · gabarito",u:"https://www.curso-objetivo.br/vestibular/resolucao-comentada/fuvest/2021_1fase/fuvest2021_1fase_gabarito.pdf",d:"Respostas certas",gab:1}
   ],
   gv:[
-    {n:"Direito GV 2019 · 1ª fase · 1º dia",u:"https://www.curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2019_direito_1fase/1dia/fgvsp2019_direito_1dia.pdf",d:"Prova com resolução comentada (Curso Objetivo)"},
-    {n:"Direito GV 2018 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2018_direito_1fase/2dia/fgvsp2018_direito_2dia.pdf",d:"Prova com resolução comentada (Curso Objetivo)"},
-    {n:"Direito GV 2013 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2013_direito_1fase/1dia/fgvsp2013_direito_1dia_prova.pdf",d:"Prova (Curso Objetivo)"},
-    {n:"Direito GV 2013 · 1ª fase · 2º dia",u:"https://www.curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2013_direito_1fase/2dia/fgvsp2013_direito_2dia_prova.pdf",d:"Prova (Curso Objetivo)"},
-    {n:"Direito GV 2012 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2012_direito_1fase/1dia/fgvsp_direito_1dia_prova.pdf",d:"Prova (Curso Objetivo)"},
-    {n:"Direito GV 2011 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2011_direito_1fase/1dia/fgvsp_direito_1dia_prova.pdf",d:"Prova (Curso Objetivo)"},
-    {n:"Direito GV 2010 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2010_direito_1fase/2dia/fgv2010_direito_1fase_2dia_prova.pdf",d:"Prova (Curso Objetivo)"},
-    {n:"Direito GV 2009 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2009_direito_1fase/2dia/fgv2009_direito_1fase_2dia_prova.pdf",d:"Prova (Curso Objetivo)"}
+    {n:"Direito GV 2019 · 1ª fase · 1º dia",u:"https://www.curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2019_direito_1fase/1dia/fgvsp2019_direito_1dia.pdf",d:"Prova com resolução comentada",gab:1},
+    {n:"Direito GV 2018 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2018_direito_1fase/2dia/fgvsp2018_direito_2dia.pdf",d:"Prova com resolução comentada",gab:1},
+    {n:"Direito GV 2013 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2013_direito_1fase/1dia/fgvsp2013_direito_1dia_prova.pdf",d:"Prova"},
+    {n:"Direito GV 2013 · 1ª fase · 2º dia",u:"https://www.curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2013_direito_1fase/2dia/fgvsp2013_direito_2dia_prova.pdf",d:"Prova"},
+    {n:"Direito GV 2012 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2012_direito_1fase/1dia/fgvsp_direito_1dia_prova.pdf",d:"Prova"},
+    {n:"Direito GV 2011 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2011_direito_1fase/1dia/fgvsp_direito_1dia_prova.pdf",d:"Prova"},
+    {n:"Direito GV 2010 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2010_direito_1fase/2dia/fgv2010_direito_1fase_2dia_prova.pdf",d:"Prova"},
+    {n:"Direito GV 2009 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2009_direito_1fase/2dia/fgv2009_direito_1fase_2dia_prova.pdf",d:"Prova"}
   ]
 };
-function telaProvas(){
-  const lista=PROVAS[D.objetivo]||[];
-  abrirModal(`<h3>📄 Provas antigas · ${OBJETIVOS[D.objetivo].nome}</h3><p class="sub">Treine com a prova de verdade: imprima ou resolva no celular, com o tempo de prova. Depois confira o gabarito.</p>
-  <div class="lupa"><input id="bProva" placeholder="Procurar por ano" autocomplete="off"></div><div id="lProvas"></div>
-  <button class="btn btn-sec btn-bloco" onclick="fecharModal()" style="margin-top:10px">Fechar</button>`);
-  const desenhar=()=>{const t=$("#bProva").value.trim().toLowerCase();
-    $("#lProvas").innerHTML=lista.filter(p=>p.n.toLowerCase().includes(t)).map(p=>`<a class="materia" href="${p.u}" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">📄</span><span class="info"><b>${esc(p.n)}</b><span class="sub">${esc(p.d)}</span></span><span>↗️</span></a>`).join("")||`<p class="sub">Nada encontrado.</p>`};
-  $("#bProva").oninput=desenhar;desenhar();
-}
 
 /* ---------- ajustes ---------- */
 function ajustes(){
@@ -342,6 +358,7 @@ function ajustes(){
   <label for="jObj">Objetivo</label><select id="jObj">${Object.entries(OBJETIVOS).map(([k,o])=>`<option value="${k}" ${k===D.objetivo?"selected":""}>${o.ic} ${o.nome}</option>`).join("")}</select>
   <label for="jData">Data da prova</label><input id="jData" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" value="${D.dataProva.split("-").reverse().join("/")}">
   <p class="sub">${D.dataCerta?"Data informada por você.":"Por enquanto é só uma previsão. Quando a "+(D.objetivo==="gv"?"GV":"Fuvest")+" divulgar o dia da prova, coloque aqui."}</p>
+  ${D.grupo?`<p class="sub">⚔️ Código do duelo das gêmeas: <b>${esc(D.grupo)}</b></p>`:""}
   <label class="linha-som"><input type="checkbox" id="jSom" ${D.som?"checked":""}> 👏 Som de palminhas quando acertar</label>
   <button class="btn btn-pri btn-bloco" id="jSalvar" style="margin-top:12px">Salvar</button>
   <button class="btn btn-sec btn-bloco" id="jZerar" style="margin-top:10px">Começar do zero</button>`);
@@ -371,4 +388,4 @@ if("serviceWorker" in navigator&&location.protocol.startsWith("http"))window.add
   if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){i.remove();return}
   setTimeout(()=>i.classList.add("passo2"),1500);setTimeout(()=>i.classList.add("fim"),2700);setTimeout(()=>i.remove(),3400);})();
 
-render();esvaziarFila();
+aplicarTema();render();esvaziarFila();if(D.grupo)setTimeout(avisarRecados,4000);setTimeout(conferirTrofeus,2500);

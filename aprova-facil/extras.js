@@ -118,6 +118,7 @@ function telaTreinos(){
 /* =================== QUESTÃO RELÂMPAGO =================== */
 let tempoRel=null;
 async function relampago(){
+  try{fecharModal()}catch(e){}
   if(!carregado){toast("Carregando as questões…");await carregando}
   const areas=Object.keys(AREAS),id=sortearDa(areas[Math.floor(Math.random()*areas.length)],[]),q=BANCO[id];
   aba="quiz";$("#menu").classList.add("oculto");
@@ -133,14 +134,15 @@ async function relampago(){
 function fimRel(id,i){
   const q=BANCO[id],certo=i===q.c;
   document.querySelectorAll(".alt").forEach(b=>{b.disabled=true;const k=+b.dataset.i;if(k===q.c)b.classList.add("certa");else if(k===i)b.classList.add("errada")});
-  const r=D.resp[id]||{a:0,e:0};if(certo){r.a++;stat("relampagos")}else{r.e++;if(!D.erros.includes(id))D.erros.push(id)}D.resp[id]=r;
-  contarQuestao(certo);const pts=certo?20:i<0?0:2;if(pts)ganhar(pts);if(certo)palmas();
+  const pts=certo?20:i<0?0:2;
+  try{const r=D.resp[id]||{a:0,e:0};if(certo){r.a++;stat("relampagos")}else{r.e++;if(!D.erros.includes(id))D.erros.push(id)}D.resp[id]=r;contarQuestao(certo);if(pts)ganhar(pts)}catch(e){console.error(e)}
+  try{if(certo)palmas()}catch(e){}
   $("#volta").innerHTML=`<div class="explica ${certo?"ok":"nao"}"><h3>${certo?"Rápida e certeira! ⚡👏":i<0?"O tempo acabou! ⏰":"Quase! 💡"} ${pts?`<span class="mais">+${pts}</span>`:""}</h3>
   ${certo?"":`<p class="sub">A certa é a <b>${LETRAS[q.c]}</b>.</p>`}${q.x?texto(q.x):`<div id="expIA"><button class="btn btn-sec btn-bloco" id="btnIA">💡 Entender com a professora IA</button></div>`}
-  <button class="btn btn-pri btn-bloco" id="outraRel" style="margin-top:12px">Mais uma ⚡</button><button class="btn btn-sec btn-bloco" onclick="ir('treinos')" style="margin-top:8px">Voltar aos treinos</button></div>`;
+  <button class="btn btn-pri btn-bloco" id="outraRel" onclick="relampago()" style="margin-top:12px">Mais uma ⚡</button><button class="btn btn-sec btn-bloco" onclick="fecharModal();clearInterval(tempoRel);ir('treinos')" style="margin-top:8px">Voltar aos treinos</button></div>`;
   const bia=$("#btnIA");if(bia)bia.onclick=()=>explicarIA(id,i<0?q.c:i);
-  $("#outraRel").onclick=relampago;conferirMedalhas();conferirTrofeus();enviarProgresso("Questão relâmpago",certo?1:0,1);
-  $("#volta").scrollIntoView({behavior:"smooth",block:"nearest"});
+  try{conferirMedalhas();conferirTrofeus()}catch(e){console.error(e)}try{enviarProgresso("Questão relâmpago",certo?1:0,1)}catch(e){}
+  try{$("#volta").scrollIntoView({behavior:"smooth",block:"nearest"})}catch(e){}
 }
 
 /* =================== SIMULADO =================== */

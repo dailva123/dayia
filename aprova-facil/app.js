@@ -52,15 +52,16 @@ const diaMenos=(iso,n)=>{const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 // texto das questões e da IA: **negrito**, *itálico*, parágrafos
 function texto(s,ia){
+  if(ia)s=String(s||"").replace(/\\mathbf\{([^}]*)\}/g,"**$1**").replace(/\\(?:text|mathrm)\{([^}]*)\}/g,"$1").replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g,"$1/$2").replace(/\\times/g,"×").replace(/\\cdot/g,"·").replace(/\\%/g,"%").replace(/\\,/g," ").replace(/\$([^$\n]{1,80})\$/g,(m,x,o,str)=>str[o-1]==="R"?m:x);
   let t=esc(s||"");
   const guard=[];t=t.replace(/\\([\\*\[\]_#().!-])/g,(m,c)=>{guard.push(c);return "\u0000"+(guard.length-1)+"\u0000"});
-  if(ia)t=t.replace(/(^|[^R])\$([^$\n]{1,60})\$/g,"$1$2");
   t=t.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\n]+?)\*/g,"$1<i>$2</i>");
   t=t.replace(/\u0000(\d+)\u0000/g,(m,i)=>guard[i]);
   return t.split(/\n{2,}/).map(p=>{
-    const linhas=p.split("\n");
-    if(linhas.every(l=>/^\s*[-•]\s/.test(l)))return "<ul>"+linhas.map(l=>"<li>"+l.replace(/^\s*[-•]\s/,"")+"</li>").join("")+"</ul>";
-    return "<p>"+linhas.join("<br>")+"</p>"}).join("");
+    let html="",txt=[],itens=[];
+    const fecha=()=>{if(txt.length){html+="<p>"+txt.join("<br>")+"</p>";txt=[]}if(itens.length){html+="<ul>"+itens.map(x=>"<li>"+x+"</li>").join("")+"</ul>";itens=[]}};
+    p.split("\n").forEach(l=>{if(/^\s*[-•]\s/.test(l)){if(txt.length)fecha();itens.push(l.replace(/^\s*[-•]\s/,""))}else{if(itens.length)fecha();txt.push(l)}});
+    fecha();return html}).join("");
 }
 const LETRAS="ABCDE";
 function embaralhar(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}

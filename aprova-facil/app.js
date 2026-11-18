@@ -115,7 +115,7 @@ function enviarProgresso(feito,certas,total){
 /* ---------- semana e mês ---------- */
 function semanaAtual(){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+3-(d.getDay()+6)%7);const s=new Date(d.getFullYear(),0,4);return d.getFullYear()+"-S"+String(1+Math.round(((d-s)/864e5-3+(s.getDay()+6)%7)/7)).padStart(2,"0")}
 const mesAtual=()=>hoje().slice(0,7);
-function contarQuestao(certo){const h=new Date().getHours();if(h>=22)D.stats.coruja=1;if(h<7&&h>=4)D.stats.madrugadora=1;const w=semanaAtual(),m=mesAtual();D.semanas[w]=D.semanas[w]||{xp:0,q:0,a:0};D.meses[m]=D.meses[m]||{xp:0,q:0,a:0};D.semanas[w].q++;D.meses[m].q++;if(certo){D.semanas[w].a++;D.meses[m].a++;D.moedas+=1}salvar()}
+function contarQuestao(certo){if(certo)D.moedas=(D.moedas||0)+1;const h=new Date().getHours();if(h>=22)D.stats.coruja=1;if(h<7&&h>=4)D.stats.madrugadora=1;const w=semanaAtual(),m=mesAtual();D.semanas[w]=D.semanas[w]||{xp:0,q:0,a:0};D.meses[m]=D.meses[m]||{xp:0,q:0,a:0};D.semanas[w].q++;D.meses[m].q++;if(certo){D.semanas[w].a++;D.meses[m].a++;D.moedas+=1}salvar()}
 
 /* ---------- pontos, nível e sequência ---------- */
 const nivel=()=>Math.floor(D.xp/100);
@@ -188,6 +188,7 @@ function telaInicio(){
   <div class="card"><b>Nível ${nivel()+1}: ${nomeNivel()}</b><div class="barra"><i style="width:${xpNivel}%"></i></div><div class="sub">Faltam ${100-xpNivel} pontos para o próximo nível</div></div>
   <div class="card missao ${feita?"feita":""}">${feita?`<h3>✅ Missão de hoje concluída!</h3><p class="sub">Você acertou ${D.missao.acertos} de ${D.missao.ids.length}. Amanhã tem mais. Se quiser, treine mais um pouco.</p><button class="btn btn-sec btn-bloco" id="btnExtra">Fazer uma missão extra ✨</button>`
    :`<h3>🎯 Missão do dia</h3><p class="sub">5 questões · uns 10 minutos · até 70 pontos</p><button class="btn btn-pri btn-bloco" id="btnMissao">${D.missao&&D.missao.data===hoje()?"Continuar a missão":"Começar a missão"}</button>`}</div>
+  ${podeAviso()?`<div class="card aviso-card"><h3>🔔 Lembrete às 17h</h3><p class="sub">Um aviso no celular só nos dias em que você ainda não estudou. Nada de cobrança, é só um empurrãozinho 💛</p><button class="btn btn-pri btn-bloco" id="btnAviso">Quero o lembrete</button><button class="btn btn-sec btn-bloco" id="btnAvisoNao" style="margin-top:8px">Agora não</button></div>`:""}
   <div class="atalhos">
     <button data-ir="relampago"><span>⚡</span>Relâmpago</button>
     <button data-ir="simulado"><span>⏱️</span>Simulado</button>
@@ -196,7 +197,7 @@ function telaInicio(){
     <button data-ir="provas"><span>📄</span>Provas antigas</button>
     <button data-ir="foto"><span>📸</span>Foto</button>
   </div>
-  <div class="card duelo-mini" id="cardDuelo"><b>⚔️ Duelo das gêmeas</b><p class="sub">${D.grupo?"Veja o placar da semana e os recadinhos 💌":"Ligue o app com a sua irmã e vejam quem estuda mais!"}</p></div>
+  <div class="card duelo-mini" id="cardDuelo"><b>👯‍♀️ Duelo das gêmeas</b><p class="sub">${D.grupo?"Veja o placar da semana e os recadinhos 💌":"Ligue o app com a sua irmã e vejam quem estuda mais!"}</p></div>
   <p class="sub centro">📚 ${carregado?Object.keys(BANCO).length.toLocaleString("pt-BR")+" questões no banco (ENEM 2009 a 2023 + DayIA)":"Carregando o banco de questões…"}</p>
   <button class="btn btn-sec btn-bloco" id="btnAjustes" style="margin-top:16px">⚙️ Ajustes</button>`;
   const b=$("#btnMissao");if(b)b.onclick=()=>comecarMissao(false);
@@ -204,6 +205,7 @@ function telaInicio(){
   $("#btnAjustes").onclick=ajustes;
   document.querySelectorAll("[data-ir]").forEach(b=>b.onclick=()=>({relampago:relampago,simulado:escolherSimulado,redacao:telaRedacao,oral:telaOral,discursiva:telaDiscursiva,provas:telaProvasIA,foto:telaFoto}[b.dataset.ir])());
   $("#cardDuelo").onclick=()=>ir("duelo");
+  const av=$("#btnAviso");if(av){av.onclick=ativarAvisos;$("#btnAvisoNao").onclick=()=>{D.semAviso=Date.now();salvar();render()}}
 }
 
 /* ---------- missão / quiz ---------- */
@@ -358,15 +360,18 @@ function ajustes(){
   <label for="jObj">Objetivo</label><select id="jObj">${Object.entries(OBJETIVOS).map(([k,o])=>`<option value="${k}" ${k===D.objetivo?"selected":""}>${o.ic} ${o.nome}</option>`).join("")}</select>
   <label for="jData">Data da prova</label><input id="jData" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" value="${D.dataProva.split("-").reverse().join("/")}">
   <p class="sub">${D.dataCerta?"Data informada por você.":"Por enquanto é só uma previsão. Quando a "+(D.objetivo==="gv"?"GV":"Fuvest")+" divulgar o dia da prova, coloque aqui."}</p>
-  ${D.grupo?`<p class="sub">⚔️ Código do duelo das gêmeas: <b>${esc(D.grupo)}</b></p>`:""}
+  ${D.grupo?`<p class="sub">👯‍♀️ Código do duelo das gêmeas: <b>${esc(D.grupo)}</b></p>`:""}
   <label class="linha-som"><input type="checkbox" id="jSom" ${D.som?"checked":""}> 👏 Som de palminhas quando acertar</label>
+  <label class="linha-som"><input type="checkbox" id="jLem" ${D.lembrete!==false?"checked":""}> 📩 Lembrete por e-mail às 17h (só nos dias sem estudo)</label>
+  ${window.Notification&&Notification.permission!=="granted"?`<button class="btn btn-sec btn-bloco" id="jAviso" style="margin-top:8px">🔔 Ligar aviso no celular</button>`:""}
   <button class="btn btn-pri btn-bloco" id="jSalvar" style="margin-top:12px">Salvar</button>
   <button class="btn btn-sec btn-bloco" id="jZerar" style="margin-top:10px">Começar do zero</button>`);
   $("#jData").oninput=e=>{let v=e.target.value.replace(/\D/g,"").slice(0,8);if(v.length>4)v=v.slice(0,2)+"/"+v.slice(2,4)+"/"+v.slice(4);else if(v.length>2)v=v.slice(0,2)+"/"+v.slice(2);e.target.value=v};
   $("#jSalvar").onclick=()=>{const m=$("#jData").value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return toast("Escreva a data assim: dd/mm/aaaa");
-    const nv=$("#jObj").value,mudou=nv!==D.objetivo||$("#jNome").value.trim()!==D.nome;D.nome=$("#jNome").value.trim();const nova=`${m[3]}-${m[2]}-${m[1]}`,dataMudou=nova!==D.dataProva;if(nv!==D.objetivo&&!dataMudou){D.dataCerta=false;D.objetivo=nv;D.dataProva=OBJETIVOS[nv].prova}else{D.objetivo=nv;if(dataMudou){D.dataCerta=true;D.dataProva=nova}}D.som=$("#jSom").checked;salvar();
+    const nv=$("#jObj").value,mudou=nv!==D.objetivo||$("#jNome").value.trim()!==D.nome;D.nome=$("#jNome").value.trim();const nova=`${m[3]}-${m[2]}-${m[1]}`,dataMudou=nova!==D.dataProva;if(nv!==D.objetivo&&!dataMudou){D.dataCerta=false;D.objetivo=nv;D.dataProva=OBJETIVOS[nv].prova}else{D.objetivo=nv;if(dataMudou){D.dataCerta=true;D.dataProva=nova}}D.som=$("#jSom").checked;const lem=$("#jLem").checked;if(lem!==(D.lembrete!==false)){D.lembrete=lem;cofre({tipo:"lembrete",ativo:lem}).catch(()=>{})}salvar();
     if(mudou)enviar({acao:"cadastro",nome:D.nome,email:D.email,tel:D.tel,objetivo:OBJETIVOS[nv].nome});
     fecharModal();toast("Ajustes salvos ✅");render()};
+  const ja=$("#jAviso");if(ja)ja.onclick=()=>{fecharModal();ativarAvisos()};
   $("#jZerar").onclick=()=>{if(!confirm("Apagar todos os pontos e o progresso deste celular?"))return;const guarda={id:D.id,nome:D.nome,email:D.email,tel:D.tel};D=Object.assign(novo(),guarda);salvar();fecharModal();ir("inicio")};
 }
 
@@ -389,3 +394,34 @@ if("serviceWorker" in navigator&&location.protocol.startsWith("http"))window.add
   setTimeout(()=>i.classList.add("passo2"),1500);setTimeout(()=>i.classList.add("fim"),2700);setTimeout(()=>i.remove(),3400);})();
 
 aplicarTema();render();esvaziarFila();if(D.grupo)setTimeout(avisarRecados,4000);setTimeout(conferirTrofeus,2500);
+
+/* ---------- lembrete das 17h: aviso no celular (OneSignal, o mesmo da Agenda Fácil) ---------- */
+const OS_APP="7a1178de-2e8b-4205-aeb9-8171f97fb614";const PUSH={os:null,sub:null};
+function podeAviso(){return !!(window.Notification&&Notification.permission==="default"&&(!D.semAviso||Date.now()-D.semAviso>7*864e5)&&D.dias.length>0)}
+(function(){
+  if(!("serviceWorker" in navigator)||!window.PushManager||location.protocol!=="https:")return;
+  window.OneSignalDeferred=window.OneSignalDeferred||[];
+  OneSignalDeferred.push(async function(OS){
+    try{
+      await OS.init({appId:OS_APP,serviceWorkerPath:"push/OneSignalSDKWorker.js",serviceWorkerParam:{scope:"/push/"},autoResubscribe:true,notifyButton:{enable:false},welcomeNotification:{disable:true}});
+      PUSH.os=OS;
+      const at=()=>{const s=OS.User.PushSubscription;PUSH.sub=(s.optedIn&&s.id)?s.id:null;if(PUSH.sub)registrarAviso()};
+      OS.User.PushSubscription.addEventListener("change",at);
+      if(Notification.permission==="granted"&&!OS.User.PushSubscription.optedIn){try{await OS.User.PushSubscription.optIn()}catch(e){}}
+      at();
+    }catch(e){console.log("avisos indisponíveis",e)}
+  });
+  const s=document.createElement("script");s.src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";s.defer=true;document.head.appendChild(s);
+})();
+function registrarAviso(){if(!PUSH.sub||!D.id||!D.objetivo||D.avisoReg===PUSH.sub)return;cofre({tipo:"push_reg",sub:PUSH.sub}).then(()=>{D.avisoReg=PUSH.sub;salvar()}).catch(()=>{})}
+async function ativarAvisos(){
+  if(!PUSH.os){
+    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(ios&&!instalado())return abrirModal(`<h3>🔔 Aviso no celular</h3><p>No iPhone, o aviso só funciona com o app instalado. Toque em <b>⬇️ Instalar</b> lá em cima, abra o Aprova Fácil pela tela do celular e tente de novo.</p><button class="btn btn-pri btn-bloco" onclick="fecharModal()">Entendi</button>`);
+    return toast("Só um instantinho e tente de novo 🙂");
+  }
+  try{await PUSH.os.Notifications.requestPermission();if(Notification.permission==="granted"&&!PUSH.os.User.PushSubscription.optedIn)await PUSH.os.User.PushSubscription.optIn()}catch(e){}
+  if(Notification.permission==="granted"){toast("🔔 Prontinho! Às 17h eu te lembro, se você ainda não tiver estudado.");festa(16,["🔔","✨","💛"])}
+  else toast("Os avisos ficaram desligados. Tudo bem! 💛");
+  render();
+}

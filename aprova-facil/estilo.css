@@ -126,7 +126,7 @@ label{font-weight:800;display:block;margin:12px 0 6px}
 /* modal, toast, festa */
 .modal{position:fixed;inset:0;z-index:50;background:rgba(14,34,56,.55);display:flex;align-items:flex-end;justify-content:center}
 .modal .caixa{background:#fff;width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:sobe .3s}
-.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:var(--azul);color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;opacity:0;transition:.3s;z-index:60;max-width:90%;text-align:center}
+.toast{pointer-events:none;position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:var(--azul);color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;opacity:0;transition:.3s;z-index:60;max-width:90%;text-align:center}
 .toast.on{opacity:1;transform:translateX(-50%)}
 .festa{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
 .festa i{position:absolute;top:-40px;font-style:normal;font-size:28px;animation:cai 2.2s linear forwards}

@@ -31,7 +31,7 @@ const TROFEUS=[
   {id:"chef4",i:"🏰",n:"Metade do caminho",d:"Chegou na região 4 do mapa",ok:()=>D.regiao>=4},
   {id:"rel10",i:"⚡",n:"Raio veloz",d:"Acertou 10 questões relâmpago",ok:()=>D.stats.relampagos>=10},
   {id:"foto1",i:"📸",n:"Detetive de provas",d:"Pediu ajuda numa prova antiga",ok:()=>D.stats.fotos>=1},
-  {id:"duelo",i:"⚔️",n:"Vencedora da semana",d:"Fez mais pontos que a irmã numa semana",ok:()=>!!D.stats.venceuSemana},
+  {id:"duelo",i:"👯‍♀️",n:"Vencedora da semana",d:"Fez mais pontos que a irmã numa semana",ok:()=>!!D.stats.venceuSemana},
   {id:"recado",i:"💌",n:"Irmã parceira",d:"Mandou 5 recados para a irmã",ok:()=>D.stats.recados>=5},
   {id:"loja",i:"🛍️",n:"Estilosa",d:"Comprou algo na loja",ok:()=>D.compras.length>2},
   {id:"secreto1",i:"🌙",n:"Coruja estudiosa",d:"Estudou depois das 22h",secreto:true,ok:()=>!!D.stats.coruja},
@@ -191,7 +191,7 @@ function fimSimulado(){
   if(!chefao){stat("simulados");if(n>=20)D.stats.melhorSimulado=Math.max(D.stats.melhorSimulado||0,pct)}
   ganhar(a*5+(venceu?50:0));salvar();
   enviarProgresso(chefao?`Chefão do mapa (${venceu?"venceu":"tentou"})`:`Simulado de ${n} questões`,a,n);
-  $("#tela").innerHTML=`<div class="card centro"><div class="grande">${chefao?(venceu?"🐉⚔️":"🛡️"):pct>=70?"🏆":pct>=50?"🎉":"🌱"}</div>
+  $("#tela").innerHTML=`<div class="card centro"><div class="grande">${chefao?(venceu?"🐉🏆":"🛡️"):pct>=70?"🏆":pct>=50?"🎉":"🌱"}</div>
   <h2>${a} de ${n} certas (${pct}%)</h2>
   <p>${chefao?(venceu?`Você derrotou o chefão e chegou em <b>${REGIOES[D.objetivo][D.regiao]}</b>! 🎉`:"O chefão resistiu desta vez. Treine mais um pouco e volte para a revanche! 💪"):pct>=70?"Desempenho de aprovada! 🚀":pct>=50?"Muito bom! Está no caminho certo 💛":"Simulado é para aprender. Veja onde errou e bora! 💪"}</p>
   ${Object.entries(porArea).map(([k,v])=>`<div class="linhamat"><span class="nome">${AREAS[k].i} ${AREAS[k].n}</span><div class="barra"><i style="width:${v.a/v.n*100}%"></i></div><small>${v.a}/${v.n}</small></div>`).join("")}
@@ -245,15 +245,30 @@ let ORAL=null;
 function melhorVoz(){const vs=speechSynthesis.getVoices().filter(x=>/^pt[-_]BR/i.test(x.lang));if(!vs.length)return null;
   const nota=v=>{const n=v.name;let p=0;if(/natural|neural|online/i.test(n))p+=50;if(/premium|enhanced|aprimorad|melhorad/i.test(n))p+=40;if(/google/i.test(n))p+=30;if(/francisca|thalita|luciana|fernanda|vit[oó]ria|camila|maria/i.test(n))p+=15;if(/espeak|compact/i.test(n))p-=60;if(!v.localService)p+=5;return p};
   return vs.sort((a,b)=>nota(b)-nota(a))[0]}
-function falar(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="pt-BR";u.rate=0.95;u.pitch=1.05;const v=melhorVoz();if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
+function falarCelular(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="pt-BR";u.rate=0.95;u.pitch=1.05;const v=melhorVoz();if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
 try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
+/* voz da IA do Google (bem mais natural); se não der, usa a voz do celular */
+const VOZ={audio:null,url:null,texto:""};
+function audioUnico(){if(!VOZ.audio)VOZ.audio=new Audio();return VOZ.audio}
+function destravarAudio(){try{const a=audioUnico();a.src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";a.play().catch(()=>{})}catch(e){}}
+function pcmParaWav(b64,rate){const bin=atob(b64),n=bin.length,buf=new ArrayBuffer(44+n),v=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,"RIFF");v.setUint32(4,36+n,true);w(8,"WAVE");w(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,n,true);
+  for(let i=0;i<n;i++)v.setUint8(44+i,bin.charCodeAt(i));return URL.createObjectURL(new Blob([buf],{type:"audio/wav"}))}
+async function prepararVoz(t){
+  VOZ.texto=t;if(VOZ.url&&VOZ.url.startsWith("blob:"))URL.revokeObjectURL(VOZ.url);VOZ.url=null;
+  try{const r=await Promise.race([cofre({tipo:"voz",texto:t}),new Promise((_,x)=>setTimeout(()=>x(new Error("demorou")),15000))]);
+    if(!r||!r.audio||VOZ.texto!==t)return;const mime=r.mime||"",m=mime.match(/rate=(\d+)/);
+    VOZ.url=/L16|pcm/i.test(mime)?pcmParaWav(r.audio,m?+m[1]:24000):"data:"+mime+";base64,"+r.audio}catch(e){}}
+function falar(t){
+  if(VOZ.url&&VOZ.texto===t){try{speechSynthesis.cancel()}catch(e){}const a=audioUnico();a.src=VOZ.url;a.play().catch(()=>falarCelular(t));return}
+  falarCelular(t)}
 async function telaOral(){
   aba="oral";render0();
-  if(!ORAL)ORAL={n:0,historico:[],notas:[]};
+  if(!ORAL)ORAL={n:0,historico:[],notas:[]};destravarAudio();
   $("#tela").innerHTML=`<div class="topoq">${voltarTreinos()}<h2 style="margin:0">🎤 Treino de oral</h2></div>`+pensando("🎤 A banca está preparando a pergunta…");
   try{
     const p=await cofre({tipo:"oral_pergunta",historico:ORAL.historico.length?ORAL.historico.join(" | "):"nenhuma ainda. É a primeira pergunta: cumprimente a candidata e pergunte por que ela escolheu Direito."});
-    ORAL.atual=p;mostrarPerguntaOral();
+    await prepararVoz(p.pergunta);ORAL.atual=p;mostrarPerguntaOral();
   }catch(e){$("#tela").innerHTML+=`<p class="sub">${esc(e.message)}</p>`}
 }
 let reconhece=null;
@@ -382,7 +397,7 @@ function telaDesafio(){
   aba="desafio";render0();
   $("#tela").innerHTML=`<div class="topoq">${voltarTreinos()}<h2 style="margin:0">👯 Desafio com código</h2></div>
   <div class="card centro"><p>Crie um desafio e mande o código para a sua irmã (ou para quem quiser). Todo mundo responde as <b>mesmas 5 questões</b> e o placar mostra quem acertou mais e mais rápido.</p>
-  <button class="btn btn-pri btn-bloco" id="dCriar">Criar desafio novo ⚔️</button></div>
+  <button class="btn btn-pri btn-bloco" id="dCriar">Criar desafio novo 👯‍♀️</button></div>
   <div class="card"><label for="dCod">Recebeu um código?</label><input id="dCod" placeholder="Ex.: K7Q2PX" maxlength="8" style="text-transform:uppercase"><button class="btn btn-sec btn-bloco" id="dEntrar" style="margin-top:8px">Entrar no desafio</button></div>`;
   $("#dCriar").onclick=()=>{const L="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let c="";for(let i=0;i<6;i++)c+=L[Math.floor(Math.random()*L.length)];comecarDesafio(c,true)};
   $("#dEntrar").onclick=()=>{const c=$("#dCod").value.toUpperCase().replace(/[^A-Z0-9]/g,"");if(c.length<4)return toast("Confira o código 🙂");comecarDesafio(c,false)};
@@ -390,8 +405,8 @@ function telaDesafio(){
 let DES=null;
 async function comecarDesafio(cod,novo){
   if(!carregado){toast("Carregando…");await carregando}
-  if(novo){const txt=`Te desafio no Aprova Fácil! ⚔️ Código: ${cod}`;
-    abrirModal(`<h3>⚔️ Desafio criado!</h3><p>Código do desafio:</p><div class="codigo">${cod}</div><p class="sub">Mande esse código para a sua irmã. Ela entra em Treinos → Desafio com código.</p>
+  if(novo){const txt=`Te desafio no Aprova Fácil! 👯‍♀️ Código: ${cod}`;
+    abrirModal(`<h3>👯‍♀️ Desafio criado!</h3><p>Código do desafio:</p><div class="codigo">${cod}</div><p class="sub">Mande esse código para a sua irmã. Ela entra em Treinos → Desafio com código.</p>
     <button class="btn btn-sec btn-bloco" id="dComp">📤 Compartilhar o código</button><button class="btn btn-pri btn-bloco" id="dJa" style="margin-top:8px">Começar agora ▶️</button>`);
     $("#dComp").onclick=()=>{if(navigator.share)navigator.share({text:txt}).catch(()=>{});else{try{navigator.clipboard.writeText(txt);toast("Código copiado 📋")}catch(e){}}};
     $("#dJa").onclick=()=>{fecharModal();iniciarDes(cod)};return}
@@ -400,9 +415,9 @@ async function comecarDesafio(cod,novo){
 function iniciarDes(cod){DES={cod,inicio:Date.now()};Q={data:hoje(),ids:questoesDoDesafio(cod),idx:0,acertos:0,modo:"desafio",fim:false};ir("quiz")}
 async function fimDesafio(a,n){
   const seg=Math.round((Date.now()-DES.inicio)/1000);stat("desafios");
-  $("#tela").innerHTML=pensando("⚔️ Buscando o placar…");
+  $("#tela").innerHTML=pensando("👯‍♀️ Buscando o placar…");
   try{const pl=await cofre({tipo:"desafio",acao:"salvar",codigo:DES.cod,nome:(D.avatar||"")+" "+D.nome,acertos:a,total:n,segundos:seg});
-    $("#tela").innerHTML=`<div class="card centro"><div class="grande">⚔️</div><h2>Placar do desafio ${esc(DES.cod)}</h2>
+    $("#tela").innerHTML=`<div class="card centro"><div class="grande">🏁</div><h2>Placar do desafio ${esc(DES.cod)}</h2>
     ${pl.map((p,i)=>`<div class="placar-linha ${p.nome.includes(D.nome)?"eu":""}"><span>${["🥇","🥈","🥉"][i]||"🎖️"}</span><b>${esc(p.nome)}</b><span>${p.acertos}/${p.total} · ${Math.floor(p.segundos/60)}min${String(p.segundos%60).padStart(2,"0")}</span></div>`).join("")}
     <p class="sub">Volte depois para ver se sua irmã já jogou 😏</p><button class="btn btn-sec btn-bloco" id="dAtual">🔄 Atualizar placar</button><button class="btn btn-pri btn-bloco" onclick="ir('treinos')" style="margin-top:8px">Voltar</button></div>`;
     const cod=DES.cod;$("#dAtual").onclick=async()=>{try{const p2=await cofre({tipo:"desafio",acao:"ver",codigo:cod});toast(p2.map(p=>p.nome+": "+p.acertos).join(" · "))}catch(e){toast(e.message)}};
@@ -411,7 +426,7 @@ async function fimDesafio(a,n){
 }
 
 /* =================== DUELO DAS GÊMEAS =================== */
-const RECADOS=["Fiz a minha missão, e você? 😏","Bora estudar juntas hoje? 📚","Tô te passando, hein! 🏃‍♀️💨","Orgulho de você, irmã! 💛","Hoje é dia de revanche ⚔️","Vamos bater a meta do mês! 🎯","Quem acertar mais escolhe o filme 🍿"];
+const RECADOS=["Fiz a minha missão, e você? 😏","Bora estudar juntas hoje? 📚","Tô te passando, hein! 🏃‍♀️💨","Orgulho de você, irmã! 💛","Hoje é dia de revanche 🔥","Vamos bater a meta do mês! 🎯","Quem acertar mais escolhe o filme 🍿"];
 let GRUPO=null;
 async function atualizarGrupo(acao,texto_){
   if(!D.grupo||!navigator.onLine)return null;
@@ -419,16 +434,16 @@ async function atualizarGrupo(acao,texto_){
 }
 async function telaDuelo(){
   if(!D.grupo){
-    $("#tela").innerHTML=`<h2>⚔️ Duelo das gêmeas</h2><div class="card centro"><div class="grande">👯‍♀️</div><p>Liguem os aplicativos das duas para ver o placar da semana, a meta do mês juntas e trocar recadinhos.</p>
+    $("#tela").innerHTML=`<h2>👯‍♀️ Duelo das gêmeas</h2><div class="card centro"><div class="grande">👯‍♀️</div><p>Liguem os aplicativos das duas para ver o placar da semana, a meta do mês juntas e trocar recadinhos.</p>
     <button class="btn btn-pri btn-bloco" id="gCriar">Criar o código das gêmeas</button></div>
     <div class="card"><label for="gCod">A sua irmã já criou? Coloque o código dela:</label><input id="gCod" placeholder="Ex.: GEM-4K7Q" style="text-transform:uppercase"><button class="btn btn-sec btn-bloco" id="gEntrar" style="margin-top:8px">Entrar no duelo</button></div>`;
-    $("#gCriar").onclick=()=>{const L="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let c="GEM";for(let i=0;i<5;i++)c+=L[Math.floor(Math.random()*L.length)];D.grupo=c;salvar();enviarProgresso("Criou o duelo das gêmeas",0,0);
-      abrirModal(`<h3>👯‍♀️ Código das gêmeas</h3><div class="codigo">${c}</div><p class="sub">Mande para a sua irmã. Ela abre ⚔️ Duelo e coloca esse código.</p><button class="btn btn-sec btn-bloco" id="gComp">📤 Compartilhar</button><button class="btn btn-pri btn-bloco" onclick="fecharModal();telaDuelo()" style="margin-top:8px">Pronto</button>`);
-      $("#gComp").onclick=()=>{const t=`Entra no meu duelo do Aprova Fácil! ⚔️ Código: ${c}`;if(navigator.share)navigator.share({text:t}).catch(()=>{});else{try{navigator.clipboard.writeText(t);toast("Copiado 📋")}catch(e){}}}};
+    $("#gCriar").onclick=()=>{const L="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let c="GEM";for(let i=0;i<5;i++)c+=L[Math.floor(Math.random()*L.length)];D.grupo=c;salvar();enviarProgresso("Criou o duelo das gêmeas",0,0);telaDuelo();
+      abrirModal(`<h3>👯‍♀️ Código das gêmeas</h3><div class="codigo">${c}</div><p class="sub">Mande para a sua irmã. Ela abre 👯‍♀️ Duelo e coloca esse código.</p><button class="btn btn-sec btn-bloco" id="gComp">📤 Compartilhar</button><button class="btn btn-pri btn-bloco" onclick="fecharModal()" style="margin-top:8px">Pronto</button>`);
+      $("#gComp").onclick=()=>{const t=`Entra no meu duelo do Aprova Fácil! 👯‍♀️ Código: ${c}`;if(navigator.share)navigator.share({text:t}).catch(()=>{});else{try{navigator.clipboard.writeText(t);toast("Copiado 📋")}catch(e){}}}};
     $("#gEntrar").onclick=()=>{const c=$("#gCod").value.toUpperCase().replace(/[^A-Z0-9]/g,"");if(c.length<5)return toast("Confira o código 🙂");D.grupo=c;salvar();enviarProgresso("Entrou no duelo das gêmeas",0,0);palmas();setTimeout(telaDuelo,800)};
     return;
   }
-  $("#tela").innerHTML=`<h2>⚔️ Duelo das gêmeas</h2>`+pensando("⚔️ Buscando o placar…");
+  $("#tela").innerHTML=`<h2>👯‍♀️ Duelo das gêmeas</h2>`+pensando("👯‍♀️ Buscando o placar…");
   const g=await atualizarGrupo();
   const sem=semanaAtual(),mes=mesAtual();
   const membros=(g&&g.membros)||[];
@@ -436,7 +451,7 @@ async function telaDuelo(){
   const ord=membros.slice().sort((a,b)=>pontosSem(b)-pontosSem(a));
   const somaMes=membros.reduce((s,m)=>s+qMes(m),0),meta=D.metaMes||600;
   if(ord.length>1&&ord[0].eu&&pontosSem(ord[0])>pontosSem(ord[1])){const d=new Date().getDay();if(d===0){D.stats.venceuSemana=1;salvar();conferirTrofeus()}}
-  $("#tela").innerHTML=`<h2>⚔️ Duelo das gêmeas</h2>
+  $("#tela").innerHTML=`<h2>👯‍♀️ Duelo das gêmeas</h2>
   <div class="card"><h3>🏁 Placar da semana</h3>${ord.length?ord.map((m,i)=>`<div class="placar-linha ${m.eu?"eu":""}"><span>${i===0&&pontosSem(m)>0?"👑":"⭐"}</span><b>${esc(m.perfil||m.nome)}${m.eu?" (você)":""}</b><span>${pontosSem(m)} pts</span></div>`).join(""):`<p class="sub">${g?"Ninguém no duelo ainda.":"Sem internet agora."}</p>`}
   ${membros.length<2?`<p class="sub">Esperando a sua irmã entrar com o código <b>${esc(D.grupo)}</b> 👀</p>`:""}
   ${ord.length>1?`<p class="sub">${ord[0].eu?"Você está na frente! Não deixa ela passar 😏":`Faltam ${pontosSem(ord[0])-pontosSem(ord.find(x=>x.eu)||{})+1} pontos para você passar a sua irmã! 💪`}</p>`:""}</div>

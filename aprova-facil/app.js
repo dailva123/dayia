@@ -180,6 +180,7 @@ function telaInicio(){
   <div class="card"><b>Nível ${nivel()+1}: ${nomeNivel()}</b><div class="barra"><i style="width:${xpNivel}%"></i></div><div class="sub">Faltam ${100-xpNivel} pontos para o próximo nível</div></div>
   <div class="card missao ${feita?"feita":""}">${feita?`<h3>✅ Missão de hoje concluída!</h3><p class="sub">Você acertou ${D.missao.acertos} de ${D.missao.ids.length}. Amanhã tem mais. Se quiser, treine mais um pouco.</p><button class="btn btn-sec btn-bloco" id="btnExtra">Fazer uma missão extra ✨</button>`
    :`<h3>🎯 Missão do dia</h3><p class="sub">5 questões · uns 10 minutos · até 70 pontos</p><button class="btn btn-pri btn-bloco" id="btnMissao">${D.missao&&D.missao.data===hoje()?"Continuar a missão":"Começar a missão"}</button>`}</div>
+  <button class="btn btn-sec btn-bloco" id="btnProvas" style="margin-bottom:10px">📄 Provas antigas ${D.objetivo==="gv"?"da GV":"da Fuvest"}</button>
   <p class="sub centro">📚 ${carregado?Object.keys(BANCO).length.toLocaleString("pt-BR")+" questões no banco (ENEM 2009 a 2023 + DayIA)":"Carregando o banco de questões…"}</p>
   <h3 style="margin-top:20px">Vem aí 👀</h3>
   <div class="embreve">
@@ -192,6 +193,7 @@ function telaInicio(){
   const b=$("#btnMissao");if(b)b.onclick=()=>comecarMissao(false);
   const x=$("#btnExtra");if(x)x.onclick=()=>comecarMissao(true);
   $("#btnAjustes").onclick=ajustes;
+  $("#btnProvas").onclick=telaProvas;
 }
 
 /* ---------- missão / quiz ---------- */
@@ -304,6 +306,33 @@ function telaProgresso(){
   ${feitas.length?`${forte.length?`<p>💪 Forte em: <b>${forte.map(x=>AREAS[x.k].n).join(" e ")}</b></p>`:""}${vale.length?`<p>💡 Vale treinar: <b>${vale.map(x=>AREAS[x.k].n).join(" e ")}</b></p>`:""}
   ${porArea.map(x=>`<div class="linhamat"><span class="nome">${AREAS[x.k].i} ${AREAS[x.k].n}</span><div class="barra"><i style="width:${x.p||0}%"></i></div><small>${x.p===null?"–":x.p+"%"}</small></div>`).join("")}`
   :`<p class="sub">Faça a primeira missão para ver aqui as áreas em que você brilha. ✨</p>`}</div>`;
+}
+
+
+/* ---------- provas antigas oficiais (abrem no site de origem) ---------- */
+const PROVAS={
+  fuvest:[
+    {n:"Todas as provas da Fuvest (acervo oficial, com gabarito)",u:"https://www.fuvest.br/acervo-vestibular",d:"Site oficial da Fuvest · dezenas de edições"}
+  ],
+  gv:[
+    {n:"Direito GV 2019 · 1ª fase · 1º dia",u:"https://www.curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2019_direito_1fase/1dia/fgvsp2019_direito_1dia.pdf",d:"Prova com resolução comentada (Curso Objetivo)"},
+    {n:"Direito GV 2018 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2018_direito_1fase/2dia/fgvsp2018_direito_2dia.pdf",d:"Prova com resolução comentada (Curso Objetivo)"},
+    {n:"Direito GV 2013 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2013_direito_1fase/1dia/fgvsp2013_direito_1dia_prova.pdf",d:"Prova (Curso Objetivo)"},
+    {n:"Direito GV 2013 · 1ª fase · 2º dia",u:"https://www.curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2013_direito_1fase/2dia/fgvsp2013_direito_2dia_prova.pdf",d:"Prova (Curso Objetivo)"},
+    {n:"Direito GV 2012 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2012_direito_1fase/1dia/fgvsp_direito_1dia_prova.pdf",d:"Prova (Curso Objetivo)"},
+    {n:"Direito GV 2011 · 1ª fase · 1º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2011_direito_1fase/1dia/fgvsp_direito_1dia_prova.pdf",d:"Prova (Curso Objetivo)"},
+    {n:"Direito GV 2010 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2010_direito_1fase/2dia/fgv2010_direito_1fase_2dia_prova.pdf",d:"Prova (Curso Objetivo)"},
+    {n:"Direito GV 2009 · 1ª fase · 2º dia",u:"https://curso-objetivo.br/vestibular/resolucao_comentada/fgvsp/2009_direito_1fase/2dia/fgv2009_direito_1fase_2dia_prova.pdf",d:"Prova (Curso Objetivo)"}
+  ]
+};
+function telaProvas(){
+  const lista=PROVAS[D.objetivo]||[];
+  abrirModal(`<h3>📄 Provas antigas · ${OBJETIVOS[D.objetivo].nome}</h3><p class="sub">Treine com a prova de verdade: imprima ou resolva no celular, com o tempo de prova. Depois confira o gabarito.</p>
+  <div class="lupa"><input id="bProva" placeholder="Procurar por ano" autocomplete="off"></div><div id="lProvas"></div>
+  <button class="btn btn-sec btn-bloco" onclick="fecharModal()" style="margin-top:10px">Fechar</button>`);
+  const desenhar=()=>{const t=$("#bProva").value.trim().toLowerCase();
+    $("#lProvas").innerHTML=lista.filter(p=>p.n.toLowerCase().includes(t)).map(p=>`<a class="materia" href="${p.u}" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">📄</span><span class="info"><b>${esc(p.n)}</b><span class="sub">${esc(p.d)}</span></span><span>↗️</span></a>`).join("")||`<p class="sub">Nada encontrado.</p>`};
+  $("#bProva").oninput=desenhar;desenhar();
 }
 
 /* ---------- ajustes ---------- */

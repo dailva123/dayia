@@ -240,7 +240,11 @@ function mostrarCorrecao(c,R){
 
 /* =================== ORAL (GV) =================== */
 let ORAL=null;
-function falar(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="pt-BR";u.rate=1;const v=speechSynthesis.getVoices().find(x=>/pt[-_]BR/i.test(x.lang));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
+function melhorVoz(){const vs=speechSynthesis.getVoices().filter(x=>/^pt[-_]BR/i.test(x.lang));if(!vs.length)return null;
+  const nota=v=>{const n=v.name;let p=0;if(/natural|neural|online/i.test(n))p+=50;if(/premium|enhanced|aprimorad|melhorad/i.test(n))p+=40;if(/google/i.test(n))p+=30;if(/francisca|thalita|luciana|fernanda|vit[oó]ria|camila|maria/i.test(n))p+=15;if(/espeak|compact/i.test(n))p-=60;if(!v.localService)p+=5;return p};
+  return vs.sort((a,b)=>nota(b)-nota(a))[0]}
+function falar(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="pt-BR";u.rate=0.95;u.pitch=1.05;const v=melhorVoz();if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
+try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
 async function telaOral(){
   aba="oral";render0();
   if(!ORAL)ORAL={n:0,historico:[],notas:[]};

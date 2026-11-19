@@ -68,6 +68,10 @@ textarea{min-height:76px;resize:vertical}
 .item-nota .num{width:26px;height:26px;border-radius:50%;background:var(--azul);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
 .item-nota .campos{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:0}
 .item-nota .campos .cli{grid-column:1/-1}
+.item-nota .campos .mini:only-of-type{grid-column:1/-1}
+.caminho{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;font-size:12.5px}
+.caminho a,.caminho span.eu{background:var(--fundo);border-radius:20px;padding:3px 8px;text-decoration:none;color:var(--azul);font-weight:700}
+.caminho span.eu{background:var(--amarelo)}
 .item-nota .mini{font-size:12px;font-weight:700;color:var(--cinza);display:flex;flex-direction:column;gap:3px;min-width:0}
 .item-nota .liga{grid-column:1/-1;font-size:12.5px;color:#106B3A}
 .item-nota .liga:empty{display:none}
@@ -183,7 +187,10 @@ textarea{min-height:76px;resize:vertical}
 const API = "https://script.google.com/macros/s/AKfycbzKZOO4F-4TU9Q352Xtm_OYx9tFmUiVAhjP9quPiVQwVgdXKIO4ZgSrIBRd3AmjkbtulQ/exec";
 
 const PARTE = 5 * 1024 * 1024;           // envio em partes de 5 MB
-const TIPOS = ["Romaneio", "Nota fiscal", "Coleta agendada", "Outro"];
+const TIPOS = ["Orçamento para separação", "Romaneio para arquivo", "Nota fiscal", "Coleta agendada", "Outro"];
+const ICONE = { "Orçamento para separação": "📝", "Romaneio para arquivo": "📦", "Romaneio": "📦", "Nota fiscal": "🧾", "Coleta agendada": "🚚", "Outro": "📌" };
+const CAMPOS = { "Orçamento para separação": ["orc"], "Romaneio para arquivo": ["orc", "nf"], "Nota fiscal": ["nf", "coleta"], "Coleta agendada": ["nf", "coleta"], "Outro": ["orc", "nf", "coleta"] };
+const ROTULO = { orc: "Nº orçamento", nf: "Nº nota fiscal", coleta: "Nº coleta" };
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const espera = ms => new Promise(r => setTimeout(r, ms));
@@ -196,12 +203,13 @@ let aba = "novo";
 let F = novoForm();                       // formulário do novo registro
 const rasc = guarda.get("rf_rascunho", null);
 if (rasc && rasc.itens) { F = Object.assign(novoForm(), rasc, { arquivos: [] }); F.recuperado = true; }
+if (!CAMPOS[F.tipo]) F.tipo = TIPOS[0];
 function guardarRascunho() { const { arquivos, recuperado, ...resto } = F; guarda.set("rf_rascunho", resto); }
 let enviando = false, direto = true;      // direto = manda as partes direto pro Drive (se não der, passa pela ponte)
 let ultimo = null;                        // último registro salvo (tela de "Salvo ✅")
 let HIST = guarda.get("rf_hist", []);
 
-function novoForm() { return { tipo: "Nota fiscal", cliente: "", nf: "", coleta: "", obs: "", arquivos: [], itens: [{ cliente: "", nf: "", coleta: "" }], onde: guarda.get("rf_onde", "celular"), chave: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }; }
+function novoForm() { return { tipo: guarda.get("rf_tipo", "Orçamento para separação"), cliente: "", nf: "", coleta: "", obs: "", arquivos: [], itens: [{ cliente: "", nf: "", coleta: "", orc: "" }], onde: guarda.get("rf_onde", "celular"), chave: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }; }
 function toast(t, ms) { const e = $("#toast"); e.textContent = t; e.classList.add("ver"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("ver"), ms || 2600); }
 function abrirModal(h) { $("#modalCaixa").innerHTML = h; $("#modal").classList.remove("oculto"); }
 function fecharModal() { $("#modal").classList.add("oculto"); }
@@ -380,9 +388,9 @@ function telaNovo() {
   $("#tela").innerHTML = `<h2>➕ Novo registro</h2>
   <div class="card">
     <label class="rot" style="margin-top:0">O que você está registrando?</label>
-    <div class="tipos">${TIPOS.map(t => `<button class="tipo ${F.tipo === t ? "ativo" : ""}" data-tipo="${t}">${{ "Romaneio": "📦", "Nota fiscal": "🧾", "Coleta agendada": "🚚", "Outro": "📌" }[t]} ${t}</button>`).join("")}</div>
-    <label class="rot">Cliente, nº da nota fiscal e nº da coleta <small>(cliente obrigatório)</small></label>
-    <div id="fItens">${F.itens.map((it, i) => `<div class="item-nota">${F.itens.length > 1 ? `<div class="num">${i + 1}</div>` : ""}<div class="campos"><input type="text" class="cli" data-cli="${i}" value="${esc(it.cliente)}" placeholder="Nome do cliente" autocomplete="off"><label class="mini">Nº nota fiscal<input type="text" data-nf="${i}" value="${esc(it.nf)}" placeholder="Ex.: 74120" inputmode="numeric" autocomplete="off"></label><label class="mini">Nº coleta<input type="text" data-col="${i}" value="${esc(it.coleta || "")}" placeholder="Ex.: 20" autocomplete="off"></label><div class="liga" data-liga="${i}">${htmlLigacao(it.nf)}</div></div>${F.itens.length > 1 ? `<button class="tira" data-tiraitem="${i}" aria-label="Tirar esta nota">✖</button>` : ""}</div>`).join("")}</div>
+    <div class="tipos">${TIPOS.map(t => `<button class="tipo ${F.tipo === t ? "ativo" : ""}" data-tipo="${t}">${ICONE[t]} ${t}</button>`).join("")}</div>
+    <label class="rot">Cliente e ${CAMPOS[F.tipo].map(c => ROTULO[c].toLowerCase()).join(" e ")} <small>(cliente obrigatório)</small></label>
+    <div id="fItens">${F.itens.map((it, i) => `<div class="item-nota">${F.itens.length > 1 ? `<div class="num">${i + 1}</div>` : ""}<div class="campos"><input type="text" class="cli" data-cli="${i}" value="${esc(it.cliente)}" placeholder="Nome do cliente" autocomplete="off">${CAMPOS[F.tipo].map(c => `<label class="mini">${ROTULO[c]}<input type="text" data-${c}="${i}" value="${esc(it[c] || "")}" placeholder="${{ orc: "Ex.: 5531", nf: "Ex.: 74120", coleta: "Ex.: 20" }[c]}" inputmode="numeric" autocomplete="off"></label>`).join("")}<div class="liga" data-liga="${i}">${htmlLigacao(it)}</div></div>${F.itens.length > 1 ? `<button class="tira" data-tiraitem="${i}" aria-label="Tirar esta nota">✖</button>` : ""}</div>`).join("")}</div>
     <button class="btn btn-sec" id="fMaisNota" style="margin-top:8px;padding:11px">➕ Mais uma nota (no mesmo vídeo)</button>
     <label class="rot">Observação</label>
     <textarea id="fObs" placeholder="Ex.: deixei na caixinha de notas do financeiro">${esc(F.obs)}</textarea>
@@ -399,20 +407,20 @@ function telaNovo() {
   </div>
   <div id="fErro"></div>
   <button class="btn btn-pri" id="fSalvar">💾 Salvar registro${F.arquivos.length ? ` (${F.arquivos.length} arquivo${F.arquivos.length > 1 ? "s" : ""})` : ""}</button>`;
-  const ler = () => { document.querySelectorAll("[data-cli]").forEach(e => F.itens[+e.dataset.cli].cliente = e.value); document.querySelectorAll("[data-nf]").forEach(e => F.itens[+e.dataset.nf].nf = e.value); document.querySelectorAll("[data-col]").forEach(e => F.itens[+e.dataset.col].coleta = e.value); F.obs = $("#fObs").value; };
-  $("#fMaisNota").onclick = () => { ler(); F.itens.push({ cliente: "", nf: "", coleta: "" }); telaNovo(); const c = document.querySelector(`[data-cli="${F.itens.length - 1}"]`); if (c) { c.scrollIntoView({ block: "center" }); c.focus(); } };
+  const ler = () => { document.querySelectorAll("[data-cli]").forEach(e => F.itens[+e.dataset.cli].cliente = e.value); ["orc", "nf", "coleta"].forEach(c => document.querySelectorAll(`[data-${c}]`).forEach(e => F.itens[+e.getAttribute("data-" + c)][c] = e.value)); F.obs = $("#fObs").value; };
+  $("#fMaisNota").onclick = () => { ler(); F.itens.push({ cliente: "", nf: "", coleta: "", orc: "" }); telaNovo(); const c = document.querySelector(`[data-cli="${F.itens.length - 1}"]`); if (c) { c.scrollIntoView({ block: "center" }); c.focus(); } };
   document.querySelectorAll("[data-tiraitem]").forEach(b => b.onclick = () => { ler(); F.itens.splice(+b.dataset.tiraitem, 1); telaNovo(); });
-  document.querySelectorAll("[data-tipo]").forEach(b => b.onclick = () => { ler(); F.tipo = b.dataset.tipo; telaNovo(); });
+  document.querySelectorAll("[data-tipo]").forEach(b => b.onclick = () => { ler(); F.tipo = b.dataset.tipo; guarda.set("rf_tipo", F.tipo); telaNovo(); });
   document.querySelectorAll("[data-onde]").forEach(b => b.onclick = () => { ler(); F.onde = b.dataset.onde; guarda.set("rf_onde", F.onde); telaNovo(); });
   document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { ler(); guardarRascunho(); pegar(b.dataset.m, { lista: F.arquivos, depois: () => { F.recuperado = false; telaNovo(); } }); });
   ["#fObs"].forEach(s => $(s).addEventListener("change", () => { ler(); guardarRascunho(); }));
-  document.querySelectorAll("[data-nf]").forEach(e => e.addEventListener("input", () => { const d = document.querySelector(`[data-liga="${e.dataset.nf}"]`); if (d) d.innerHTML = htmlLigacao(e.value); }));
-  document.querySelectorAll("[data-cli],[data-nf],[data-col]").forEach(e => e.addEventListener("change", () => { ler(); guardarRascunho(); }));
+  document.querySelectorAll("[data-nf],[data-orc]").forEach(e => e.addEventListener("input", () => { ler(); const i = e.getAttribute("data-nf") || e.getAttribute("data-orc"); const d = document.querySelector(`[data-liga="${i}"]`); if (d) d.innerHTML = htmlLigacao(F.itens[+i]); }));
+  document.querySelectorAll("[data-cli],[data-nf],[data-coleta],[data-orc]").forEach(e => e.addEventListener("change", () => { ler(); guardarRascunho(); }));
   document.querySelectorAll("[data-tira]").forEach(b => b.onclick = () => { ler(); const i = +b.dataset.tira.slice(1); const a = F.arquivos[i]; if (a && a.url) URL.revokeObjectURL(a.url); F.arquivos.splice(i, 1); telaNovo(); });
   $("#fSalvar").onclick = () => { ler(); salvar(); };
 }
 async function salvar() {
-  F.itens = F.itens.filter((it, i) => i === 0 || it.cliente.trim() || it.nf.trim() || (it.coleta || "").trim());
+  F.itens = F.itens.filter((it, i) => i === 0 || it.cliente.trim() || CAMPOS[F.tipo].some(c => (it[c] || "").trim()));
   const semCli = F.itens.findIndex(it => !it.cliente.trim());
   if (semCli >= 0) { telaNovo(); $("#fErro").innerHTML = `<div class="erro">Preencha o <b>cliente</b>${F.itens.length > 1 ? " da nota " + (semCli + 1) : ""} 🙂</div>`; const c = document.querySelector(`[data-cli="${semCli}"]`); if (c) c.focus(); return; }
   if (!F.arquivos.length) {
@@ -426,9 +434,11 @@ async function salvarDeVerdade() {
   $("#fSalvar").disabled = true;
   enviando = true; travarTela(true); $("#envTitulo").textContent = "Criando o registro…"; $("#envArq").textContent = "Pegando a data e a hora do Google"; $("#envDet").textContent = "";
   let reg;
-  const its = F.itens.map(it => ({ cliente: it.cliente.trim(), nf: it.nf.trim(), coleta: (it.coleta || "").trim() }));
-  const clientes = [...new Set(its.map(it => it.cliente))].join("; "), nfs = its.map(it => it.nf).filter(Boolean).join(", "), coletas = [...new Set(its.map(it => it.coleta).filter(Boolean))].join(", ");
-  try { reg = await chamar("criar", { tipo: F.tipo, cliente: clientes, nf: nfs, itens: its, coleta: coletas, obs: F.obs.trim(), chave: F.chave }); }
+  const vis = CAMPOS[F.tipo] || [];
+  const its = F.itens.map(it => ({ cliente: it.cliente.trim(), orc: vis.includes("orc") ? (it.orc || "").trim() : "", nf: vis.includes("nf") ? (it.nf || "").trim() : "", coleta: vis.includes("coleta") ? (it.coleta || "").trim() : "" }));
+  const junta = k => [...new Set(its.map(it => it[k]).filter(Boolean))].join(", ");
+  const clientes = [...new Set(its.map(it => it.cliente))].join("; "), nfs = junta("nf"), coletas = junta("coleta"), orcs = junta("orc");
+  try { reg = await chamar("criar", { tipo: F.tipo, cliente: clientes, nf: nfs, orc: orcs, itens: its, coleta: coletas, obs: F.obs.trim(), chave: F.chave }); }
   catch (e) { enviando = false; travarTela(false); $("#fSalvar").disabled = false; if (e.senha) return render(); $("#fErro").innerHTML = `<div class="erro">${esc(e.message)}</div>`; return; }
   if (!reg.ok) { enviando = false; travarTela(false); $("#fSalvar").disabled = false; $("#fErro").innerHTML = `<div class="erro">${esc(reg.mensagem || "Não consegui salvar.")}</div>`; return; }
   const itens = F.arquivos.map((a, i) => ({ file: a.file, nome: nomeFinal(reg.id, i + 1, a.file) }));
@@ -464,22 +474,38 @@ function telaSalvo() {
     if (!r.falharam.length) toast("Pronto, agora foi tudo ✅");
   };
 }
-function notasDe(r) {   // lista de notas do registro: "NF 123 – Cliente A; NF 456 – Cliente B"
+function notasDe(r) {   // linhas do registro: "Gerdau – orçamento 5531 – NF 74120 – coleta 20; …"
   const t = String(r.notas || "").trim();
-  if (!t) return [{ cliente: r.cliente || "", nf: r.nf || "", coleta: r.coleta || "" }];
-  return t.split(/\s*;\s*/).filter(Boolean).map(p => { const s = p.split(" – "), m = (s[0] || "").match(/^NF\s+(.*)$/), c = (s[2] || "").match(/^coleta\s+(.*)$/); return { nf: m ? m[1] : "", cliente: s[1] || s[0] || "", coleta: c ? c[1] : "" }; });
+  if (!t) return [{ cliente: r.cliente || "", nf: r.nf || "", coleta: r.coleta || "", orc: r.orc || "" }];
+  return t.split(/\s*;\s*/).filter(Boolean).map(p => {
+    const n = { cliente: "", nf: "", coleta: "", orc: "" };
+    p.split(" – ").forEach(s => { let m; if ((m = s.match(/^NF\s+(.*)$/))) n.nf = m[1]; else if ((m = s.match(/^coleta\s+(.*)$/))) n.coleta = m[1]; else if ((m = s.match(/^orçamento\s+(.*)$/))) n.orc = m[1]; else if (s !== "sem número" && !n.cliente) n.cliente = s; });
+    return n;
+  });
+}
+function textoLinha(n, html) {
+  const b = v => html ? "<b>" + esc(v) + "</b>" : v;
+  return [n.orc ? "📝 orç. " + b(n.orc) : "", n.nf ? "🧾 NF " + b(n.nf) : "", n.coleta ? "🚚 coleta " + b(n.coleta) : ""].filter(Boolean).join(" · ");
 }
 function htmlNotas(u) {
   const l = notasDe(u);
-  if (l.length <= 1) return `Cliente: <b>${esc(u.cliente)}</b>${u.nf ? `<br>Nota fiscal: <b>${esc(u.nf)}</b>` : ""}`;
-  return `<b>${l.length} notas:</b>` + l.map(n => `<br>🧾 ${n.nf ? "NF <b>" + esc(n.nf) + "</b>" : "sem número"} – ${esc(n.cliente)}${n.coleta ? " · 🚚 coleta <b>" + esc(n.coleta) + "</b>" : ""}`).join("");
+  if (l.length <= 1) { const n = l[0] || {}; const t = textoLinha(n, true); return `Cliente: <b>${esc(u.cliente)}</b>${t ? "<br>" + t : ""}`; }
+  return `<b>${l.length} linhas:</b>` + l.map(n => `<br>${esc(n.cliente)} · ${textoLinha(n, true)}`).join("");
 }
-function nfsDe(r) { return notasDe(r).map(n => String(n.nf || "").replace(/\D/g, "")).filter(Boolean); }
-function ligadosA(x) { const meus = nfsDe(x); if (!meus.length) return []; return HIST.filter(o => o.id !== x.id && nfsDe(o).some(n => meus.includes(n))); }
-function htmlLigacao(nf) {
-  const n = String(nf || "").replace(/\D/g, ""); if (n.length < 3) return "";
-  const l = HIST.filter(o => nfsDe(o).includes(n)).slice(0, 4);
-  return l.length ? "🔗 Esta nota já tem registro: " + l.map(o => `<b>${esc(o.id)}</b> (${esc(o.tipo)}, ${esc(String(o.data).slice(0, 5))})`).join(", ") : "";
+function chavesDe(r) { const k = []; notasDe(r).forEach(n => { const nf = String(n.nf || "").replace(/\D/g, ""), o = String(n.orc || "").replace(/\D/g, ""); if (nf) k.push("n" + nf); if (o) k.push("o" + o); }); return k; }
+function ligadosA(x) { const meus = chavesDe(x); if (!meus.length) return []; return HIST.filter(o => o.id !== x.id && chavesDe(o).some(c => meus.includes(c))); }
+function caminhoDe(x) {   // todos os registros ligados (orçamento → romaneio → nota → coleta), em ordem de data
+  const visto = new Map([[x.id, x]]); let fila = [x];
+  while (fila.length) { const prox = []; fila.forEach(r => ligadosA(r).forEach(o => { if (!visto.has(o.id)) { visto.set(o.id, o); prox.push(o); } })); fila = prox; if (visto.size > 30) break; }
+  const quando = r => { const m = String(r.data).match(/(\d+)\/(\d+)\/(\d+)/); return m ? m[3] + m[2] + m[1] + String(r.hora || "") : ""; };
+  return [...visto.values()].sort((a, b) => quando(a) < quando(b) ? -1 : 1);
+}
+function htmlLigacao(it) {
+  const k = []; const nf = String((it && it.nf) || "").replace(/\D/g, ""), o = String((it && it.orc) || "").replace(/\D/g, "");
+  if (nf.length >= 3) k.push("n" + nf); if (o.length >= 3) k.push("o" + o);
+  if (!k.length) return "";
+  const l = HIST.filter(r => chavesDe(r).some(c => k.includes(c))).slice(0, 4);
+  return l.length ? "🔗 Já tem registro: " + l.map(r => `<b>${esc(r.id)}</b> (${ICONE[r.tipo] || ""} ${esc(r.tipo)}, ${esc(String(r.data).slice(0, 5))})`).join(", ") : "";
 }
 function abrirPasta(url) { if (!url) return toast("Pasta ainda não encontrada"); window.open(url, "_blank", "noopener"); }
 function horaCurta(h) { return String(h || "").slice(0, 5); }
@@ -557,11 +583,11 @@ async function subirLocal(id) {
 }
 function mensagemRegistro(r, final) {
   const lista = notasDe(r);
-  const partes = lista.length > 1
-    ? ["Olá! Segue o comprovante do registro " + r.id + " (" + r.tipo + ") com " + lista.length + " notas: " + lista.map(n => (n.nf ? "nota fiscal " + n.nf : "sem número") + " do cliente " + n.cliente + (n.coleta ? " (coleta " + n.coleta + ")" : "")).join("; ")]
-    : ["Olá! Segue o comprovante do registro " + r.id + " (" + r.tipo + ") do cliente " + r.cliente].concat(r.nf ? ["nota fiscal " + r.nf] : []);
-  if (r.coleta && lista.length <= 1) partes.push("coleta " + r.coleta);
-  return partes.join(", ") + ", feito em " + r.data + " às " + horaCurta(r.hora) + ". " + final;
+  const desc = n => [n.orc ? "orçamento " + n.orc : "", n.nf ? "nota fiscal " + n.nf : "", n.coleta ? "coleta " + n.coleta : ""].filter(Boolean).join(", ");
+  const corpo = lista.length > 1
+    ? "com " + lista.length + " itens: " + lista.map(n => n.cliente + (desc(n) ? " (" + desc(n) + ")" : "")).join("; ")
+    : "do cliente " + r.cliente + (desc(lista[0] || {}) ? ", " + desc(lista[0]) : "");
+  return "Olá! Segue o comprovante do registro " + r.id + " (" + r.tipo + ") " + corpo + ", feito em " + r.data + " às " + horaCurta(r.hora) + ". " + final;
 }
 async function zapLocal(id, l) {
   const r = HIST.find(x => x.id === id) || (ultimo && ultimo.id === id ? ultimo : { id, tipo: "", cliente: "", data: "", hora: "" });
@@ -577,14 +603,14 @@ async function zapLocal(id, l) {
 /* ---------------- histórico ---------------- */
 function atualizarHistLocal(r) {
   const i = HIST.findIndex(x => x.id === r.id);
-  const limpo = { id: r.id, data: r.data, hora: r.hora, tipo: r.tipo, cliente: r.cliente, nf: r.nf, notas: r.notas, coleta: r.coleta, obs: r.obs, arquivos: r.arquivos, situacao: r.situacao, pastaUrl: r.pastaUrl };
+  const limpo = { id: r.id, data: r.data, hora: r.hora, tipo: r.tipo, cliente: r.cliente, nf: r.nf, orc: r.orc, notas: r.notas, coleta: r.coleta, obs: r.obs, arquivos: r.arquivos, situacao: r.situacao, pastaUrl: r.pastaUrl };
   if (i >= 0) HIST[i] = Object.assign(HIST[i], limpo); else HIST.unshift(limpo);
   guarda.set("rf_hist", HIST.slice(0, 2000));
 }
 let buscaTxt = "";
 function telaHistorico() {
   $("#tela").innerHTML = `<h2>🗂️ Histórico</h2>
-    <div class="busca"><input type="search" id="hBusca" placeholder="Procurar: cliente, nota, coleta, data ou ID" value="${esc(buscaTxt)}" autocomplete="off"></div>
+    <div class="busca"><input type="search" id="hBusca" placeholder="Procurar: cliente, orçamento, nota, coleta, data ou ID" value="${esc(buscaTxt)}" autocomplete="off"></div>
     <div class="contagem" id="hCont"></div><div id="hLista"></div>`;
   $("#hBusca").oninput = e => { buscaTxt = e.target.value; listaHist(); };
   listaHist();
@@ -597,14 +623,15 @@ async function carregarHist() {
 }
 function listaHist() {
   const ps = semAcento(buscaTxt).trim().split(/\s+/).filter(Boolean);
-  const r = HIST.filter(x => { const t = semAcento([x.id, x.tipo, x.cliente, x.nf, x.notas, x.coleta, x.obs, x.data, x.hora].join(" ")); return ps.every(p => t.includes(p)); });
+  const r = HIST.filter(x => { const t = semAcento([x.id, x.tipo, x.cliente, x.nf, x.orc, x.notas, x.coleta, x.obs, x.data, x.hora].join(" ")); return ps.every(p => t.includes(p)); });
   $("#hCont").textContent = HIST.length ? (ps.length ? r.length + " encontrado(s)" : HIST.length + " registro(s)") : "";
   if (!HIST.length) { $("#hLista").innerHTML = `<div class="vazio">Nenhum registro ainda. Toque em ➕ Novo registro.</div>`; return; }
   if (!r.length) { $("#hLista").innerHTML = `<div class="vazio">Não achei nada com "${esc(buscaTxt)}" 🤔</div>`; return; }
   $("#hLista").innerHTML = r.slice(0, 300).map(x => `<div class="reg">
-    <div class="lin1"><span class="id">${esc(x.id)}</span><span class="etq">${esc(x.tipo)}</span><span style="margin-left:auto;font-size:13px;color:var(--cinza)">${esc(x.data)} · ${esc(horaCurta(x.hora))}</span></div>
-    <div class="cli">${notasDe(x).length > 1 ? notasDe(x).length + " notas" : esc(x.cliente)}</div>
-    <div class="info">${notasDe(x).length > 1 ? notasDe(x).map(n => `🧾 ${n.nf ? "NF " + esc(n.nf) : "sem nº"} – ${esc(n.cliente)}${n.coleta ? " · 🚚 " + esc(n.coleta) : ""}`).join("<br>") + "<br>" : (x.nf ? `🧾 NF ${esc(x.nf)} ` : "") + (x.coleta ? ` · 🚚 Coleta ${esc(x.coleta)}` : "")}${x.obs ? `<br>📝 ${esc(x.obs)}` : ""}<br>📎 ${x.arquivos || 0} arquivo(s)${ligadosA(x).length ? `<br>🔗 Mesma nota em: ${ligadosA(x).map(o => `<a href="#" data-ir-reg="${esc(o.id)}">${esc(o.id)}</a> (${esc(o.tipo)})`).join(", ")}` : ""}</div>
+    <div class="lin1"><span class="id">${esc(x.id)}</span><span class="etq">${ICONE[x.tipo] || ""} ${esc(x.tipo)}</span><span style="margin-left:auto;font-size:13px;color:var(--cinza)">${esc(x.data)} · ${esc(horaCurta(x.hora))}</span></div>
+    <div class="cli">${notasDe(x).length > 1 ? notasDe(x).length + " itens" : esc(x.cliente)}</div>
+    <div class="info">${notasDe(x).length > 1 ? notasDe(x).map(n => `${esc(n.cliente)} · ${textoLinha(n)}`).join("<br>") : textoLinha(notasDe(x)[0] || {})}${x.obs ? `<br>💬 ${esc(x.obs)}` : ""}<br>📎 ${x.arquivos || 0} arquivo(s)</div>
+    ${(() => { const c = caminhoDe(x); return c.length > 1 ? `<div class="caminho">🧭 ${c.map(o => o.id === x.id ? `<span class="eu">${ICONE[o.tipo] || ""} ${esc(String(o.data).slice(0, 5))}</span>` : `<a href="#" data-ir-reg="${esc(o.id)}">${ICONE[o.tipo] || ""} ${esc(o.id)} · ${esc(String(o.data).slice(0, 5))}</a>`).join(" → ")}</div>` : ""; })()}
     <div class="sit ${/Faltou/.test(x.situacao) ? "falta" : ""}">${esc(x.situacao || "")}</div>
     <div class="acoes">${ehLocal(x) ? `<button data-ver="${esc(x.id)}">📂 Ver arquivos</button>` : `<button data-pasta="${esc(x.id)}">📂 Abrir pasta</button>`}<button data-mais="${esc(x.id)}">➕ Arquivo</button><button class="zap" data-zap="${esc(x.id)}">📤 Enviar</button></div>
   </div>`).join("") + (r.length > 300 ? `<div class="vazio">Mostrando 300. Use a lupa para achar os outros.</div>` : "");

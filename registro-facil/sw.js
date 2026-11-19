@@ -1,6 +1,6 @@
 /* Registro Fácil by DayIA — deixa o app abrir rápido e instalar no celular.
    Os envios para o Google NUNCA passam pelo cache. */
-const CACHE = "registrofacil-v6";
+const CACHE = "registrofacil-v7";
 const ARQUIVOS = ["./", "./index.html", "./manifest.json", "./logo.png", "./logo-simbolo.png", "./logo-by.png"];
 
 self.addEventListener("install", e => {

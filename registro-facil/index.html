@@ -131,6 +131,9 @@ textarea{min-height:76px;resize:vertical}
 .reg .acoes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .reg .acoes button{border:0;border-radius:12px;background:var(--fundo);color:var(--azul);padding:10px 4px;font-weight:800;font-size:14px}
 .reg .acoes button.zap{background:#DFF5E8;color:#106B3A}
+.reg .acoes2{display:flex;justify-content:flex-end;gap:14px;margin-top:8px}
+.reg .acoes2 button{border:0;background:none;color:var(--cinza);font-weight:700;font-size:13px;padding:4px 2px}
+.btn-perigo{background:var(--vermelho);color:#fff}
 .contagem{font-size:13px;color:var(--cinza);margin:-4px 0 10px}
 
 /* janelinha */
@@ -600,6 +603,59 @@ async function zapLocal(id, l) {
   setTimeout(() => location.href = "https://wa.me/?text=" + encodeURIComponent(texto), 1200);
 }
 
+/* ---------------- editar e excluir (tudo fica anotado) ---------------- */
+async function apagarLocais(regId) {
+  try { const db = await banco(); await new Promise((ok, falha) => { const t = db.transaction("arquivos", "readwrite"); t.objectStore("arquivos").delete(IDBKeyRange.bound(regId + "|", regId + "|\uffff")); t.oncomplete = ok; t.onerror = () => falha(t.error); }); } catch (e) {}
+}
+function excluirRegistro(id) {
+  const r = HIST.find(x => x.id === id) || { id };
+  abrirModal(`<h3>🗑️ Excluir o ${esc(id)}?</h3><p><b>${esc(r.cliente || "")}</b> · ${esc(r.tipo || "")} · ${esc(r.data || "")}</p>
+    <p style="font-size:14px;color:var(--cinza)">Ele some do app. A pasta vai para <b>🗑️ Excluídos</b> no seu Drive e na planilha fica anotado que foi excluído, com data e hora. As fotos e vídeos guardados só neste celular são apagados.</p>
+    <button class="btn btn-perigo" id="eSim">Sim, excluir</button><button class="btn btn-sec" onclick="fecharModal()">Cancelar</button>`);
+  $("#eSim").onclick = async () => {
+    $("#eSim").disabled = true; $("#eSim").innerHTML = `<span class="girando">⏳</span> Excluindo…`;
+    try {
+      const j = await chamar("excluir", { id });
+      if (!j.ok) { fecharModal(); return toast(j.mensagem || "Não consegui excluir"); }
+      await apagarLocais(id);
+      HIST = HIST.filter(x => x.id !== id); guarda.set("rf_hist", HIST.slice(0, 2000));
+      if (ultimo && ultimo.id === id) ultimo = null;
+      fecharModal(); toast(id + " excluído ✅"); render();
+    } catch (e) { fecharModal(); toast(e.message); }
+  };
+}
+function editarRegistro(id) {
+  const r = HIST.find(x => x.id === id); if (!r) return;
+  const E = { tipo: CAMPOS[r.tipo] ? r.tipo : "Outro", itens: notasDe(r).map(n => ({ cliente: n.cliente, orc: n.orc, nf: n.nf, coleta: n.coleta })), obs: r.obs || "" };
+  if (!E.itens.length) E.itens = [{ cliente: r.cliente || "", nf: r.nf || "", orc: r.orc || "", coleta: r.coleta || "" }];
+  const ler = () => { document.querySelectorAll("[data-ecli]").forEach(e => E.itens[+e.dataset.ecli].cliente = e.value); ["orc", "nf", "coleta"].forEach(c => document.querySelectorAll(`[data-e${c}]`).forEach(e => E.itens[+e.getAttribute("data-e" + c)][c] = e.value)); const o = $("#eObs"); if (o) E.obs = o.value; };
+  const desenhar = () => {
+    abrirModal(`<h3>✏️ Editar o ${esc(id)}</h3><p style="margin-top:0;font-size:13px;color:var(--cinza)">A data e a hora do registro não mudam. A edição fica anotada no Drive e na planilha.</p>
+      <div class="tipos">${TIPOS.map(t => `<button class="tipo ${E.tipo === t ? "ativo" : ""}" data-etipo="${t}">${ICONE[t]} ${t}</button>`).join("")}</div>
+      <div style="margin-top:10px">${E.itens.map((it, i) => `<div class="item-nota">${E.itens.length > 1 ? `<div class="num">${i + 1}</div>` : ""}<div class="campos"><input type="text" class="cli" data-ecli="${i}" value="${esc(it.cliente || "")}" placeholder="Nome do cliente">${CAMPOS[E.tipo].map(c => `<label class="mini">${ROTULO[c]}<input type="text" data-e${c}="${i}" value="${esc(it[c] || "")}" inputmode="numeric"></label>`).join("")}</div>${E.itens.length > 1 ? `<button class="tira" data-etira="${i}">✖</button>` : ""}</div>`).join("")}</div>
+      <button class="btn btn-sec" id="eMais" style="padding:10px">➕ Mais uma linha</button>
+      <label class="rot">Observação</label><textarea id="eObs">${esc(E.obs)}</textarea>
+      <div id="eErro"></div>
+      <button class="btn btn-pri" id="eSalvar" style="margin-top:12px">💾 Salvar alterações</button><button class="btn btn-sec" onclick="fecharModal()">Cancelar</button>`);
+    document.querySelectorAll("[data-etipo]").forEach(b => b.onclick = () => { ler(); E.tipo = b.dataset.etipo; desenhar(); });
+    document.querySelectorAll("[data-etira]").forEach(b => b.onclick = () => { ler(); E.itens.splice(+b.dataset.etira, 1); desenhar(); });
+    $("#eMais").onclick = () => { ler(); E.itens.push({ cliente: "", nf: "", orc: "", coleta: "" }); desenhar(); };
+    $("#eSalvar").onclick = async () => {
+      ler();
+      const vis = CAMPOS[E.tipo];
+      const its = E.itens.map(it => ({ cliente: (it.cliente || "").trim(), orc: vis.includes("orc") ? (it.orc || "").trim() : "", nf: vis.includes("nf") ? (it.nf || "").trim() : "", coleta: vis.includes("coleta") ? (it.coleta || "").trim() : "" })).filter((it, i) => i === 0 || it.cliente || it.orc || it.nf || it.coleta);
+      if (its.some(it => !it.cliente)) { $("#eErro").innerHTML = `<div class="erro">Preencha o <b>cliente</b> de todas as linhas 🙂</div>`; return; }
+      $("#eSalvar").disabled = true; $("#eSalvar").innerHTML = `<span class="girando">⏳</span> Salvando…`;
+      try {
+        const j = await chamar("editar", { id, tipo: E.tipo, itens: its, obs: E.obs.trim(), locais: await locaisResumo(id) });
+        if (!j.ok) { $("#eErro").innerHTML = `<div class="erro">${esc(j.mensagem || "Não consegui salvar.")}</div>`; $("#eSalvar").disabled = false; $("#eSalvar").textContent = "💾 Salvar alterações"; return; }
+        atualizarHistLocal(Object.assign({}, r, j)); fecharModal(); toast(j.semMudanca ? "Nada mudou 🙂" : id + " atualizado ✅"); render();
+      } catch (e) { $("#eErro").innerHTML = `<div class="erro">${esc(e.message)}</div>`; $("#eSalvar").disabled = false; $("#eSalvar").textContent = "💾 Salvar alterações"; }
+    };
+  };
+  desenhar();
+}
+
 /* ---------------- histórico ---------------- */
 function atualizarHistLocal(r) {
   const i = HIST.findIndex(x => x.id === r.id);
@@ -634,12 +690,15 @@ function listaHist() {
     ${(() => { const c = caminhoDe(x); return c.length > 1 ? `<div class="caminho">🧭 ${c.map(o => o.id === x.id ? `<span class="eu">${ICONE[o.tipo] || ""} ${esc(String(o.data).slice(0, 5))}</span>` : `<a href="#" data-ir-reg="${esc(o.id)}">${ICONE[o.tipo] || ""} ${esc(o.id)} · ${esc(String(o.data).slice(0, 5))}</a>`).join(" → ")}</div>` : ""; })()}
     <div class="sit ${/Faltou/.test(x.situacao) ? "falta" : ""}">${esc(x.situacao || "")}</div>
     <div class="acoes">${ehLocal(x) ? `<button data-ver="${esc(x.id)}">📂 Ver arquivos</button>` : `<button data-pasta="${esc(x.id)}">📂 Abrir pasta</button>`}<button data-mais="${esc(x.id)}">➕ Arquivo</button><button class="zap" data-zap="${esc(x.id)}">📤 Enviar</button></div>
+    <div class="acoes2"><button data-editar="${esc(x.id)}">✏️ Editar</button><button data-excluir="${esc(x.id)}">🗑️ Excluir</button></div>
   </div>`).join("") + (r.length > 300 ? `<div class="vazio">Mostrando 300. Use a lupa para achar os outros.</div>` : "");
   document.querySelectorAll("[data-pasta]").forEach(b => b.onclick = () => abrirPasta((HIST.find(x => x.id === b.dataset.pasta) || {}).pastaUrl));
   document.querySelectorAll("[data-zap]").forEach(b => b.onclick = () => enviarZap(b.dataset.zap));
   document.querySelectorAll("[data-ir-reg]").forEach(a => a.onclick = e => { e.preventDefault(); buscaTxt = a.dataset.irReg; $("#hBusca").value = buscaTxt; listaHist(); window.scrollTo(0, 0); });
   document.querySelectorAll("[data-ver]").forEach(b => b.onclick = () => verLocal(b.dataset.ver));
   document.querySelectorAll("[data-mais]").forEach(b => b.onclick = () => maisArquivos(b.dataset.mais));
+  document.querySelectorAll("[data-editar]").forEach(b => b.onclick = () => editarRegistro(b.dataset.editar));
+  document.querySelectorAll("[data-excluir]").forEach(b => b.onclick = () => excluirRegistro(b.dataset.excluir));
 }
 function maisArquivos(id) {
   const reg = HIST.find(x => x.id === id) || { id };

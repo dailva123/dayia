@@ -189,7 +189,7 @@ const API = "https://script.google.com/macros/s/AKfycbzKZOO4F-4TU9Q352Xtm_OYx9tF
 const PARTE = 5 * 1024 * 1024;           // envio em partes de 5 MB
 const TIPOS = ["Orçamento para separação", "Romaneio para arquivo", "Nota fiscal", "Coleta agendada", "Outro"];
 const ICONE = { "Orçamento para separação": "📝", "Romaneio para arquivo": "📦", "Romaneio": "📦", "Nota fiscal": "🧾", "Coleta agendada": "🚚", "Outro": "📌" };
-const CAMPOS = { "Orçamento para separação": ["orc"], "Romaneio para arquivo": ["orc", "nf"], "Nota fiscal": ["nf", "coleta"], "Coleta agendada": ["nf", "coleta"], "Outro": ["orc", "nf", "coleta"] };
+const CAMPOS = { "Orçamento para separação": ["orc"], "Romaneio para arquivo": ["orc", "nf", "coleta"], "Nota fiscal": ["nf", "coleta"], "Coleta agendada": ["nf", "coleta"], "Outro": ["orc", "nf", "coleta"] };
 const ROTULO = { orc: "Nº orçamento", nf: "Nº nota fiscal", coleta: "Nº coleta" };
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));

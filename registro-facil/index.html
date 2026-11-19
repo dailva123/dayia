@@ -165,7 +165,7 @@ textarea{min-height:76px;resize:vertical}
 /* =====================================================================
    COLE AQUI o link do Apps Script (o que termina em /exec)
    ===================================================================== */
-const API = "COLE_AQUI_O_LINK_DO_EXEC";
+const API = "https://script.google.com/macros/s/AKfycbzKZOO4F-4TU9Q352Xtm_OYx9tFmUiVAhjP9quPiVQwVgdXKIO4ZgSrIBRd3AmjkbtulQ/exec";
 
 const PARTE = 5 * 1024 * 1024;           // envio em partes de 5 MB
 const TIPOS = ["Romaneio", "Nota fiscal", "Coleta agendada", "Outro"];
@@ -327,13 +327,22 @@ function render() {
   document.querySelectorAll("[data-aba]").forEach(b => b.classList.toggle("ativo", b.dataset.aba === aba));
   $("#menu").classList.toggle("oculto", !senha || /COLE_AQUI/.test(API));
   if (/COLE_AQUI/.test(API)) return telaConfigurar();
-  if (!senha) return telaSenha();
+  if (!senha) return tentarSemSenha();
   if (aba === "historico") return telaHistorico();
   if (ultimo) return telaSalvo();
   telaNovo();
 }
 function telaConfigurar() {
-  $("#tela").innerHTML = `<div class="card"><h2>⚙️ Falta só um passo</h2><p>Cole o link do Apps Script (o que termina em <b>/exec</b>) no arquivo <b>index.html</b>, no lugar de <b>COLE_AQUI_O_LINK_DO_EXEC</b>, e publique de novo.</p></div>`;
+  $("#tela").innerHTML = `<div class="card"><h2>⚙️ Falta só um passo</h2><p>Cole o link do Apps Script (o que termina em <b>/exec</b>) no arquivo <b>index.html</b>, no lugar de <b>https://script.google.com/macros/s/AKfycbzKZOO4F-4TU9Q352Xtm_OYx9tFmUiVAhjP9quPiVQwVgdXKIO4ZgSrIBRd3AmjkbtulQ/exec</b>, e publique de novo.</p></div>`;
+}
+let semSenhaTentado = false;
+async function tentarSemSenha() {   // se a ponte estiver sem senha, entra direto
+  if (semSenhaTentado) return telaSenha();
+  semSenhaTentado = true;
+  $("#tela").innerHTML = `<div class="vazio" style="padding:40px 0"><span class="girando">⏳</span> Abrindo…</div>`;
+  senha = "sem-senha";
+  try { const r = await chamar("entrar", {}, 2); if (r.ok) { guarda.set("rf_senha", senha); return render(); } } catch (e) {}
+  senha = ""; telaSenha();
 }
 function telaSenha() {
   $("#tela").innerHTML = `<div class="card"><h2>🔒 Digite a senha</h2><p style="margin-top:0;color:var(--cinza)">Só na primeira vez. Depois o app lembra sozinho neste celular.</p>

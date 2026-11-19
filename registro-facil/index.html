@@ -188,6 +188,9 @@ const guarda = { get(k, p) { try { const v = localStorage.getItem(k); return v =
 let senha = guarda.get("rf_senha", "");
 let aba = "novo";
 let F = novoForm();                       // formulário do novo registro
+const rasc = guarda.get("rf_rascunho", null);
+if (rasc && rasc.itens) { F = Object.assign(novoForm(), rasc, { arquivos: [] }); F.recuperado = true; }
+function guardarRascunho() { const { arquivos, recuperado, ...resto } = F; guarda.set("rf_rascunho", resto); }
 let enviando = false, direto = true;      // direto = manda as partes direto pro Drive (se não der, passa pela ponte)
 let ultimo = null;                        // último registro salvo (tela de "Salvo ✅")
 let HIST = guarda.get("rf_hist", []);
@@ -386,6 +389,8 @@ function telaNovo() {
     <p class="dica">${dicaOnde(F.onde)}</p>
     <label class="rot">Fotos e vídeos</label>
     <div class="midia"><button data-m="foto"><span>📷</span>Foto</button><button data-m="video"><span>🎥</span>Vídeo</button><button data-m="galeria"><span>🖼️</span>Galeria</button></div>
+    <p class="dica">Celular travando ao gravar? Grave pela câmera normal do celular e depois toque em <b>🖼️ Galeria</b> para escolher o vídeo.</p>
+    ${F.recuperado ? `<div class="aviso">📝 Recuperei o que você tinha digitado. Se a foto ou o vídeo não apareceram aqui embaixo, toque em <b>🖼️ Galeria</b> e escolha o arquivo que ficou salvo no celular.</div>` : ""}
     <div class="lista-arq" id="fLista">${htmlArquivos(F.arquivos, "f")}</div>
   </div>
   <div id="fErro"></div>
@@ -395,7 +400,9 @@ function telaNovo() {
   document.querySelectorAll("[data-tiraitem]").forEach(b => b.onclick = () => { ler(); F.itens.splice(+b.dataset.tiraitem, 1); telaNovo(); });
   document.querySelectorAll("[data-tipo]").forEach(b => b.onclick = () => { ler(); F.tipo = b.dataset.tipo; telaNovo(); });
   document.querySelectorAll("[data-onde]").forEach(b => b.onclick = () => { ler(); F.onde = b.dataset.onde; guarda.set("rf_onde", F.onde); telaNovo(); });
-  document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { ler(); pegar(b.dataset.m, { lista: F.arquivos, depois: telaNovo }); });
+  document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { ler(); guardarRascunho(); pegar(b.dataset.m, { lista: F.arquivos, depois: () => { F.recuperado = false; telaNovo(); } }); });
+  ["#fColeta", "#fObs"].forEach(s => $(s).addEventListener("change", () => { ler(); guardarRascunho(); }));
+  document.querySelectorAll("[data-cli],[data-nf]").forEach(e => e.addEventListener("change", () => { ler(); guardarRascunho(); }));
   document.querySelectorAll("[data-tira]").forEach(b => b.onclick = () => { ler(); const i = +b.dataset.tira.slice(1); const a = F.arquivos[i]; if (a && a.url) URL.revokeObjectURL(a.url); F.arquivos.splice(i, 1); telaNovo(); });
   $("#fSalvar").onclick = () => { ler(); salvar(); };
 }
@@ -427,7 +434,7 @@ async function salvarDeVerdade() {
   if (!itens.length) { enviando = false; travarTela(false); try { r.fim = await chamar("concluir", { id: reg.id, falhas: [] }); } catch (e) {} }
   ultimo = Object.assign({}, reg, r.fim && r.fim.ok ? r.fim : {}, { falharam: r.falharam, numero: itens.length, local: F.onde === "celular" && itens.length > 0 });
   F.arquivos.forEach(a => a.url && URL.revokeObjectURL(a.url));
-  F = novoForm();
+  F = novoForm(); guarda.set("rf_rascunho", null);
   atualizarHistLocal(ultimo);
   render(); window.scrollTo(0, 0);
 }

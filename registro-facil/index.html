@@ -64,6 +64,15 @@ textarea{min-height:76px;resize:vertical}
 .arq .nome b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .arq .nome small{color:var(--cinza)}
 .arq .tira{border:0;background:none;font-size:18px;color:var(--cinza);padding:6px}
+.item-nota{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.item-nota .num{width:26px;height:26px;border-radius:50%;background:var(--azul);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
+.item-nota .campos{flex:1;display:grid;grid-template-columns:1.4fr 1fr;gap:6px;min-width:0}
+.item-nota .tira{border:0;background:none;font-size:18px;color:var(--cinza);padding:6px}
+@media (max-width:360px){.item-nota .campos{grid-template-columns:1fr}}
+.dica{font-size:13px;color:var(--cinza);margin:6px 0 0}
+.galeria-local{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.galeria-local img,.galeria-local video{width:100%;border-radius:10px;background:#000;max-height:220px;object-fit:contain}
+.galeria-local .doc{background:var(--fundo);border-radius:10px;padding:10px;font-size:13px;word-break:break-word}
 .vazio{color:var(--cinza);font-size:14px;text-align:center;padding:8px}
 .btn{border:0;border-radius:14px;padding:15px 16px;font-weight:800;font-size:16px;width:100%}
 .btn-pri{background:var(--amarelo);color:var(--azul)}
@@ -183,7 +192,7 @@ let enviando = false, direto = true;      // direto = manda as partes direto pro
 let ultimo = null;                        // último registro salvo (tela de "Salvo ✅")
 let HIST = guarda.get("rf_hist", []);
 
-function novoForm() { return { tipo: "Nota fiscal", cliente: "", nf: "", coleta: "", obs: "", arquivos: [], chave: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }; }
+function novoForm() { return { tipo: "Nota fiscal", cliente: "", nf: "", coleta: "", obs: "", arquivos: [], itens: [{ cliente: "", nf: "" }], onde: guarda.get("rf_onde", "celular"), chave: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }; }
 function toast(t, ms) { const e = $("#toast"); e.textContent = t; e.classList.add("ver"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("ver"), ms || 2600); }
 function abrirModal(h) { $("#modalCaixa").innerHTML = h; $("#modal").classList.remove("oculto"); }
 function fecharModal() { $("#modal").classList.add("oculto"); }
@@ -287,7 +296,7 @@ async function enviarLista(regId, itens, titulo) {
   }
   $("#envTitulo").textContent = "Finalizando…"; $("#envArq").textContent = "Guardando os detalhes no Drive"; $("#envDet").textContent = "";
   let fim = null;
-  try { fim = await chamar("concluir", { id: regId, falhas: falharam.map(i => i.nome) }); } catch (e) {}
+  try { fim = await chamar("concluir", { id: regId, falhas: falharam.map(i => i.nome), locais: await locaisResumo(regId) }); } catch (e) {}
   enviando = false; travarTela(false);
   return { falharam, fim };
 }
@@ -363,30 +372,37 @@ function telaNovo() {
   <div class="card">
     <label class="rot" style="margin-top:0">O que você está registrando?</label>
     <div class="tipos">${TIPOS.map(t => `<button class="tipo ${F.tipo === t ? "ativo" : ""}" data-tipo="${t}">${{ "Romaneio": "📦", "Nota fiscal": "🧾", "Coleta agendada": "🚚", "Outro": "📌" }[t]} ${t}</button>`).join("")}</div>
-    <label class="rot">Cliente <small>(obrigatório)</small></label>
-    <input type="text" id="fCliente" value="${esc(F.cliente)}" placeholder="Nome do cliente" autocomplete="off">
-    <label class="rot">Nº da nota fiscal</label>
-    <input type="text" id="fNf" value="${esc(F.nf)}" placeholder="Ex.: 123456" inputmode="numeric" autocomplete="off">
+    <label class="rot">Cliente e nº da nota fiscal <small>(cliente obrigatório)</small></label>
+    <div id="fItens">${F.itens.map((it, i) => `<div class="item-nota">${F.itens.length > 1 ? `<div class="num">${i + 1}</div>` : ""}<div class="campos"><input type="text" data-cli="${i}" value="${esc(it.cliente)}" placeholder="Nome do cliente" autocomplete="off"><input type="text" data-nf="${i}" value="${esc(it.nf)}" placeholder="Nº da nota fiscal" inputmode="numeric" autocomplete="off"></div>${F.itens.length > 1 ? `<button class="tira" data-tiraitem="${i}" aria-label="Tirar esta nota">✖</button>` : ""}</div>`).join("")}</div>
+    <button class="btn btn-sec" id="fMaisNota" style="margin-top:8px;padding:11px">➕ Mais uma nota (no mesmo vídeo)</button>
     <label class="rot">Nº da coleta</label>
     <input type="text" id="fColeta" value="${esc(F.coleta)}" placeholder="Ex.: 7890" autocomplete="off">
     <label class="rot">Observação</label>
     <textarea id="fObs" placeholder="Ex.: deixei na caixinha de notas do financeiro">${esc(F.obs)}</textarea>
   </div>
   <div class="card">
-    <label class="rot" style="margin-top:0">Fotos e vídeos</label>
+    <label class="rot" style="margin-top:0">Onde guardar as fotos e vídeos?</label>
+    <div class="tipos">${htmlOnde(F.onde, "data-onde")}</div>
+    <p class="dica">${dicaOnde(F.onde)}</p>
+    <label class="rot">Fotos e vídeos</label>
     <div class="midia"><button data-m="foto"><span>📷</span>Foto</button><button data-m="video"><span>🎥</span>Vídeo</button><button data-m="galeria"><span>🖼️</span>Galeria</button></div>
     <div class="lista-arq" id="fLista">${htmlArquivos(F.arquivos, "f")}</div>
   </div>
   <div id="fErro"></div>
   <button class="btn btn-pri" id="fSalvar">💾 Salvar registro${F.arquivos.length ? ` (${F.arquivos.length} arquivo${F.arquivos.length > 1 ? "s" : ""})` : ""}</button>`;
-  const ler = () => { F.cliente = $("#fCliente").value; F.nf = $("#fNf").value; F.coleta = $("#fColeta").value; F.obs = $("#fObs").value; };
+  const ler = () => { document.querySelectorAll("[data-cli]").forEach(e => F.itens[+e.dataset.cli].cliente = e.value); document.querySelectorAll("[data-nf]").forEach(e => F.itens[+e.dataset.nf].nf = e.value); F.coleta = $("#fColeta").value; F.obs = $("#fObs").value; };
+  $("#fMaisNota").onclick = () => { ler(); F.itens.push({ cliente: "", nf: "" }); telaNovo(); const c = document.querySelector(`[data-cli="${F.itens.length - 1}"]`); if (c) { c.scrollIntoView({ block: "center" }); c.focus(); } };
+  document.querySelectorAll("[data-tiraitem]").forEach(b => b.onclick = () => { ler(); F.itens.splice(+b.dataset.tiraitem, 1); telaNovo(); });
   document.querySelectorAll("[data-tipo]").forEach(b => b.onclick = () => { ler(); F.tipo = b.dataset.tipo; telaNovo(); });
+  document.querySelectorAll("[data-onde]").forEach(b => b.onclick = () => { ler(); F.onde = b.dataset.onde; guarda.set("rf_onde", F.onde); telaNovo(); });
   document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { ler(); pegar(b.dataset.m, { lista: F.arquivos, depois: telaNovo }); });
   document.querySelectorAll("[data-tira]").forEach(b => b.onclick = () => { ler(); const i = +b.dataset.tira.slice(1); const a = F.arquivos[i]; if (a && a.url) URL.revokeObjectURL(a.url); F.arquivos.splice(i, 1); telaNovo(); });
   $("#fSalvar").onclick = () => { ler(); salvar(); };
 }
 async function salvar() {
-  if (!F.cliente.trim()) { $("#fErro").innerHTML = `<div class="erro">Preencha o <b>cliente</b> 🙂</div>`; $("#fCliente").focus(); return; }
+  F.itens = F.itens.filter((it, i) => i === 0 || it.cliente.trim() || it.nf.trim());
+  const semCli = F.itens.findIndex(it => !it.cliente.trim());
+  if (semCli >= 0) { telaNovo(); $("#fErro").innerHTML = `<div class="erro">Preencha o <b>cliente</b>${F.itens.length > 1 ? " da nota " + (semCli + 1) : ""} 🙂</div>`; const c = document.querySelector(`[data-cli="${semCli}"]`); if (c) c.focus(); return; }
   if (!F.arquivos.length) {
     abrirModal(`<h3>Salvar sem foto nem vídeo?</h3><p>O registro fica guardado com a data e a hora, mas sem imagem como prova. Depois dá para adicionar arquivos pelo Histórico.</p><button class="btn btn-pri" id="mSim">Salvar assim mesmo</button><button class="btn btn-sec" onclick="fecharModal()">Voltar e anexar</button>`);
     $("#mSim").onclick = () => { fecharModal(); salvarDeVerdade(); };
@@ -398,14 +414,18 @@ async function salvarDeVerdade() {
   $("#fSalvar").disabled = true;
   enviando = true; travarTela(true); $("#envTitulo").textContent = "Criando o registro…"; $("#envArq").textContent = "Pegando a data e a hora do Google"; $("#envDet").textContent = "";
   let reg;
-  try { reg = await chamar("criar", { tipo: F.tipo, cliente: F.cliente.trim(), nf: F.nf.trim(), coleta: F.coleta.trim(), obs: F.obs.trim(), chave: F.chave }); }
+  const its = F.itens.map(it => ({ cliente: it.cliente.trim(), nf: it.nf.trim() }));
+  const clientes = [...new Set(its.map(it => it.cliente))].join("; "), nfs = its.map(it => it.nf).filter(Boolean).join(", ");
+  try { reg = await chamar("criar", { tipo: F.tipo, cliente: clientes, nf: nfs, itens: its, coleta: F.coleta.trim(), obs: F.obs.trim(), chave: F.chave }); }
   catch (e) { enviando = false; travarTela(false); $("#fSalvar").disabled = false; if (e.senha) return render(); $("#fErro").innerHTML = `<div class="erro">${esc(e.message)}</div>`; return; }
   if (!reg.ok) { enviando = false; travarTela(false); $("#fSalvar").disabled = false; $("#fErro").innerHTML = `<div class="erro">${esc(reg.mensagem || "Não consegui salvar.")}</div>`; return; }
   const itens = F.arquivos.map((a, i) => ({ file: a.file, nome: nomeFinal(reg.id, i + 1, a.file) }));
   enviando = false;
-  const r = itens.length ? await enviarLista(reg.id, itens, "Enviando para o Drive…") : { falharam: [], fim: null };
+  let r;
+  if (F.onde === "celular" && itens.length) r = await guardarLista(reg.id, itens);
+  else r = itens.length ? await enviarLista(reg.id, itens, "Enviando para o Drive…") : { falharam: [], fim: null };
   if (!itens.length) { enviando = false; travarTela(false); try { r.fim = await chamar("concluir", { id: reg.id, falhas: [] }); } catch (e) {} }
-  ultimo = Object.assign({}, reg, r.fim && r.fim.ok ? r.fim : {}, { falharam: r.falharam, numero: itens.length });
+  ultimo = Object.assign({}, reg, r.fim && r.fim.ok ? r.fim : {}, { falharam: r.falharam, numero: itens.length, local: F.onde === "celular" && itens.length > 0 });
   F.arquivos.forEach(a => a.url && URL.revokeObjectURL(a.url));
   F = novoForm();
   atualizarHistLocal(ultimo);
@@ -414,13 +434,14 @@ async function salvarDeVerdade() {
 function telaSalvo() {
   const u = ultimo, falhou = (u.falharam || []).length;
   $("#tela").innerHTML = `<div class="card ok-grande"><div class="ic">${falhou ? "⚠️" : "✅"}</div><h2>${falhou ? "Salvo, mas faltou arquivo" : "Salvo ✅"}</h2>
-    <div class="dados"><b>${esc(u.id)}</b> · ${esc(u.tipo)}<br>Cliente: <b>${esc(u.cliente)}</b>${u.nf ? `<br>Nota fiscal: <b>${esc(u.nf)}</b>` : ""}${u.coleta ? `<br>Coleta: <b>${esc(u.coleta)}</b>` : ""}<br>Feito em <b>${esc(u.data)}</b> às <b>${esc(String(u.hora).slice(0, 5))}</b> <small>(horário do Google)</small><br>${(u.numero || 0) - falhou} de ${u.numero || 0} arquivo(s) no Drive</div></div>
+    <div class="dados"><b>${esc(u.id)}</b> · ${esc(u.tipo)}<br>${htmlNotas(u)}${u.coleta ? `<br>Coleta: <b>${esc(u.coleta)}</b>` : ""}<br>Feito em <b>${esc(u.data)}</b> às <b>${esc(String(u.hora).slice(0, 5))}</b> <small>(horário do Google)</small><br>${u.local ? `📱 ${(u.numero || 0) - falhou} arquivo(s) guardado(s) neste celular` : `${(u.numero || 0) - falhou} de ${u.numero || 0} arquivo(s) no Drive`}</div></div>
     ${falhou ? `<div class="erro">Não consegui enviar: <b>${u.falharam.map(i => esc(i.nome)).join(", ")}</b>.<br>Confira a internet e toque em tentar de novo.</div><button class="btn btn-azul" id="sDeNovo">🔁 Tentar de novo os que faltaram</button>` : ""}
     <button class="btn btn-pri" id="sZap" style="margin-top:10px">📤 Enviar pelo WhatsApp</button>
-    <button class="btn btn-sec" id="sPasta">📂 Abrir pasta no Drive</button>
+    ${u.local ? `<button class="btn btn-sec" id="sVer">📂 Ver fotos e vídeos</button><button class="btn btn-sec" id="sSubir">☁️ Guardar também no Drive</button>` : `<button class="btn btn-sec" id="sPasta">📂 Abrir pasta no Drive</button>`}
     <button class="btn btn-sec" id="sNovo">➕ Novo registro</button>`;
+  if (u.local) { $("#sVer").onclick = () => verLocal(u.id); $("#sSubir").onclick = () => subirLocal(u.id); }
   $("#sZap").onclick = () => enviarZap(u.id);
-  $("#sPasta").onclick = () => abrirPasta(u.pastaUrl);
+  if ($("#sPasta")) $("#sPasta").onclick = () => abrirPasta(u.pastaUrl);
   $("#sNovo").onclick = () => { ultimo = null; ir("novo"); };
   const dn = $("#sDeNovo");
   if (dn) dn.onclick = async () => {
@@ -431,25 +452,113 @@ function telaSalvo() {
     if (!r.falharam.length) toast("Pronto, agora foi tudo ✅");
   };
 }
+function notasDe(r) {   // lista de notas do registro: "NF 123 – Cliente A; NF 456 – Cliente B"
+  const t = String(r.notas || "").trim();
+  if (!t) return [{ cliente: r.cliente || "", nf: r.nf || "" }];
+  return t.split(/\s*;\s*/).filter(Boolean).map(p => { const m = p.match(/^(?:NF\s+(.*?)|sem número)\s+–\s+(.*)$/); return m ? { nf: m[1] || "", cliente: m[2] } : { nf: "", cliente: p }; });
+}
+function htmlNotas(u) {
+  const l = notasDe(u);
+  if (l.length <= 1) return `Cliente: <b>${esc(u.cliente)}</b>${u.nf ? `<br>Nota fiscal: <b>${esc(u.nf)}</b>` : ""}`;
+  return `<b>${l.length} notas:</b>` + l.map(n => `<br>🧾 ${n.nf ? "NF <b>" + esc(n.nf) + "</b>" : "sem número"} – ${esc(n.cliente)}`).join("");
+}
 function abrirPasta(url) { if (!url) return toast("Pasta ainda não encontrada"); window.open(url, "_blank", "noopener"); }
 function horaCurta(h) { return String(h || "").slice(0, 5); }
 async function enviarZap(id) {
+  const loc = await locais(id).catch(() => []);
+  if (loc.length) return zapLocal(id, loc);
   toast("Preparando o link…", 6000);
   try {
     const r = await chamar("compartilhar", { id });
     if (!r.ok) return toast(r.mensagem || "Não consegui liberar o link");
-    const partes = ["Olá! Segue o comprovante do registro " + r.id + " (" + r.tipo + ") do cliente " + r.cliente];
-    if (r.nf) partes.push("nota fiscal " + r.nf);
-    if (r.coleta) partes.push("coleta " + r.coleta);
-    const msg = partes.join(", ") + ", feito em " + r.data + " às " + horaCurta(r.hora) + ". Fotos e vídeos: " + r.link;
+    const msg = mensagemRegistro(r, "Fotos e vídeos: " + r.link);
     location.href = "https://wa.me/?text=" + encodeURIComponent(msg);
   } catch (e) { toast(e.message); }
+}
+
+/* ---------------- guardar só no celular ---------------- */
+function htmlOnde(atual, attr) { return `<button class="tipo ${atual === "celular" ? "ativo" : ""}" ${attr}="celular">📱 Só no celular</button><button class="tipo ${atual === "drive" ? "ativo" : ""}" ${attr}="drive">☁️ No Google Drive</button>`; }
+function dicaOnde(o) { return o === "celular" ? "Não ocupa espaço no Drive. A data, a hora e os dados vão para o Google; as fotos e os vídeos ficam só neste celular. Se trocar ou perder o celular, eles se perdem." : "Fica guardado no seu Google Drive, mesmo se o celular quebrar ou for trocado. Ocupa espaço no Drive."; }
+const ehLocal = x => /celular/i.test(String(x && x.situacao || "")) || !!(x && x.local);
+let bancoP = null;
+function banco() {
+  if (!bancoP) bancoP = new Promise((ok, falha) => { const r = indexedDB.open("registro-facil", 1); r.onupgradeneeded = () => r.result.createObjectStore("arquivos", { keyPath: "chave" }); r.onsuccess = () => ok(r.result); r.onerror = () => falha(r.error); });
+  return bancoP;
+}
+async function guardarLocal(regId, nome, file) {
+  const db = await banco();
+  return new Promise((ok, falha) => { const t = db.transaction("arquivos", "readwrite"); t.objectStore("arquivos").put({ chave: regId + "|" + nome, regId, nome, tipo: file.type || "", tamanho: file.size, blob: file, quando: Date.now() }); t.oncomplete = () => ok(); t.onerror = () => falha(t.error); t.onabort = () => falha(t.error || new Error("sem espaço")); });
+}
+async function locais(regId) {
+  const db = await banco();
+  return new Promise((ok, falha) => { const r = db.transaction("arquivos").objectStore("arquivos").getAll(IDBKeyRange.bound(regId + "|", regId + "|\uffff")); r.onsuccess = () => ok(r.result || []); r.onerror = () => falha(r.error); });
+}
+async function locaisResumo(regId) { try { return (await locais(regId)).map(a => ({ nome: a.nome, tamanho: a.tamanho })); } catch (e) { return []; } }
+async function guardarLista(regId, itens) {
+  enviando = true; travarTela(true);
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+  $("#envTitulo").textContent = "Guardando no celular…";
+  const falharam = [];
+  for (let k = 0; k < itens.length; k++) {
+    const it = itens[k];
+    $("#envArq").innerHTML = `Arquivo <b>${k + 1} de ${itens.length}</b><br>${esc(it.nome)} · ${tam(it.file.size)}`;
+    $("#envBarra").style.width = Math.round(k / itens.length * 100) + "%"; $("#envDet").textContent = "";
+    try { await guardarLocal(regId, it.nome, it.file); } catch (e) { falharam.push(it); console.warn(e); }
+  }
+  $("#envBarra").style.width = "100%"; $("#envTitulo").textContent = "Finalizando…"; $("#envArq").textContent = "Anotando no Google a data e a hora";
+  let fim = null;
+  try { fim = await chamar("concluir", { id: regId, falhas: falharam.map(i => i.nome), locais: await locaisResumo(regId) }); } catch (e) {}
+  enviando = false; travarTela(false);
+  if (falharam.length) toast("Pouco espaço no celular? Alguns arquivos não foram guardados.", 5000);
+  return { falharam, fim };
+}
+async function verLocal(id) {
+  const reg = HIST.find(x => x.id === id) || ultimo || { id };
+  let l = [];
+  try { l = await locais(id); } catch (e) {}
+  if (!l.length) return abrirModal(`<h3>📂 ${esc(id)}</h3><p>Os arquivos deste registro não estão neste celular.</p>${reg.pastaUrl ? `<button class="btn btn-sec" id="vPasta">Abrir a pasta no Drive</button>` : ""}<button class="btn btn-pri" onclick="fecharModal()">Fechar</button>`) || ($("#vPasta") && ($("#vPasta").onclick = () => abrirPasta(reg.pastaUrl)));
+  const urls = l.map(a => URL.createObjectURL(a.blob));
+  abrirModal(`<h3>📂 ${esc(id)} · ${l.length} arquivo(s) no celular</h3>
+    <div class="galeria-local">${l.map((a, i) => /^image\//.test(a.tipo) ? `<img src="${urls[i]}" alt="">` : /^video\//.test(a.tipo) ? `<video src="${urls[i]}" controls playsinline preload="metadata"></video>` : `<div class="doc">📎 ${esc(a.nome)}</div>`).join("")}</div>
+    <button class="btn btn-pri" id="vZap">📤 Enviar pelo WhatsApp</button>
+    <button class="btn btn-sec" id="vSubir">☁️ Guardar também no Drive</button>
+    <button class="btn btn-sec" id="vFechar">Fechar</button>`);
+  const solta = () => urls.forEach(u => URL.revokeObjectURL(u));
+  $("#vZap").onclick = () => { zapLocal(id, l); };
+  $("#vSubir").onclick = () => { fecharModal(); solta(); subirLocal(id); };
+  $("#vFechar").onclick = () => { fecharModal(); solta(); };
+}
+async function subirLocal(id) {
+  const l = await locais(id).catch(() => []);
+  if (!l.length) return toast("Não achei os arquivos neste celular");
+  const r = await enviarLista(id, l.map(a => ({ file: new File([a.blob], a.nome, { type: a.tipo }), nome: a.nome })), "Guardando no Drive…");
+  if (r.fim && r.fim.ok) { atualizarHistLocal(r.fim); if (ultimo && ultimo.id === id) ultimo = Object.assign(ultimo, r.fim); }
+  toast(r.falharam.length ? "Alguns arquivos não subiram. Tente de novo." : "Pronto, agora está no Drive também ☁️✅", 4000);
+  render();
+}
+function mensagemRegistro(r, final) {
+  const lista = notasDe(r);
+  const partes = lista.length > 1
+    ? ["Olá! Segue o comprovante do registro " + r.id + " (" + r.tipo + ") com " + lista.length + " notas: " + lista.map(n => (n.nf ? "nota fiscal " + n.nf : "sem número") + " do cliente " + n.cliente).join("; ")]
+    : ["Olá! Segue o comprovante do registro " + r.id + " (" + r.tipo + ") do cliente " + r.cliente].concat(r.nf ? ["nota fiscal " + r.nf] : []);
+  if (r.coleta) partes.push("coleta " + r.coleta);
+  return partes.join(", ") + ", feito em " + r.data + " às " + horaCurta(r.hora) + ". " + final;
+}
+async function zapLocal(id, l) {
+  const r = HIST.find(x => x.id === id) || (ultimo && ultimo.id === id ? ultimo : { id, tipo: "", cliente: "", data: "", hora: "" });
+  const files = l.map(a => new File([a.blob], a.nome, { type: a.tipo || "application/octet-stream" }));
+  const texto = mensagemRegistro(r, "Fotos e vídeos em anexo.");
+  try {
+    if (navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files, text: texto }); return; }
+  } catch (e) { if (e && e.name === "AbortError") return; }
+  toast("Este celular não deixa anexar direto. Vou abrir o WhatsApp só com o texto.", 4000);
+  setTimeout(() => location.href = "https://wa.me/?text=" + encodeURIComponent(texto), 1200);
 }
 
 /* ---------------- histórico ---------------- */
 function atualizarHistLocal(r) {
   const i = HIST.findIndex(x => x.id === r.id);
-  const limpo = { id: r.id, data: r.data, hora: r.hora, tipo: r.tipo, cliente: r.cliente, nf: r.nf, coleta: r.coleta, obs: r.obs, arquivos: r.arquivos, situacao: r.situacao, pastaUrl: r.pastaUrl };
+  const limpo = { id: r.id, data: r.data, hora: r.hora, tipo: r.tipo, cliente: r.cliente, nf: r.nf, notas: r.notas, coleta: r.coleta, obs: r.obs, arquivos: r.arquivos, situacao: r.situacao, pastaUrl: r.pastaUrl };
   if (i >= 0) HIST[i] = Object.assign(HIST[i], limpo); else HIST.unshift(limpo);
   guarda.set("rf_hist", HIST.slice(0, 2000));
 }
@@ -469,38 +578,41 @@ async function carregarHist() {
 }
 function listaHist() {
   const ps = semAcento(buscaTxt).trim().split(/\s+/).filter(Boolean);
-  const r = HIST.filter(x => { const t = semAcento([x.id, x.tipo, x.cliente, x.nf, x.coleta, x.obs, x.data, x.hora].join(" ")); return ps.every(p => t.includes(p)); });
+  const r = HIST.filter(x => { const t = semAcento([x.id, x.tipo, x.cliente, x.nf, x.notas, x.coleta, x.obs, x.data, x.hora].join(" ")); return ps.every(p => t.includes(p)); });
   $("#hCont").textContent = HIST.length ? (ps.length ? r.length + " encontrado(s)" : HIST.length + " registro(s)") : "";
   if (!HIST.length) { $("#hLista").innerHTML = `<div class="vazio">Nenhum registro ainda. Toque em ➕ Novo registro.</div>`; return; }
   if (!r.length) { $("#hLista").innerHTML = `<div class="vazio">Não achei nada com "${esc(buscaTxt)}" 🤔</div>`; return; }
   $("#hLista").innerHTML = r.slice(0, 300).map(x => `<div class="reg">
     <div class="lin1"><span class="id">${esc(x.id)}</span><span class="etq">${esc(x.tipo)}</span><span style="margin-left:auto;font-size:13px;color:var(--cinza)">${esc(x.data)} · ${esc(horaCurta(x.hora))}</span></div>
-    <div class="cli">${esc(x.cliente)}</div>
-    <div class="info">${x.nf ? `🧾 NF ${esc(x.nf)} ` : ""}${x.coleta ? ` · 🚚 Coleta ${esc(x.coleta)}` : ""}${x.obs ? `<br>📝 ${esc(x.obs)}` : ""}<br>📎 ${x.arquivos || 0} arquivo(s)</div>
+    <div class="cli">${notasDe(x).length > 1 ? notasDe(x).length + " notas" : esc(x.cliente)}</div>
+    <div class="info">${notasDe(x).length > 1 ? notasDe(x).map(n => `🧾 ${n.nf ? "NF " + esc(n.nf) : "sem nº"} – ${esc(n.cliente)}`).join("<br>") + "<br>" : (x.nf ? `🧾 NF ${esc(x.nf)} ` : "")}${x.coleta ? ` · 🚚 Coleta ${esc(x.coleta)}` : ""}${x.obs ? `<br>📝 ${esc(x.obs)}` : ""}<br>📎 ${x.arquivos || 0} arquivo(s)</div>
     <div class="sit ${/Faltou/.test(x.situacao) ? "falta" : ""}">${esc(x.situacao || "")}</div>
-    <div class="acoes"><button data-pasta="${esc(x.id)}">📂 Abrir pasta</button><button data-mais="${esc(x.id)}">➕ Arquivo</button><button class="zap" data-zap="${esc(x.id)}">📤 Enviar</button></div>
+    <div class="acoes">${ehLocal(x) ? `<button data-ver="${esc(x.id)}">📂 Ver arquivos</button>` : `<button data-pasta="${esc(x.id)}">📂 Abrir pasta</button>`}<button data-mais="${esc(x.id)}">➕ Arquivo</button><button class="zap" data-zap="${esc(x.id)}">📤 Enviar</button></div>
   </div>`).join("") + (r.length > 300 ? `<div class="vazio">Mostrando 300. Use a lupa para achar os outros.</div>` : "");
   document.querySelectorAll("[data-pasta]").forEach(b => b.onclick = () => abrirPasta((HIST.find(x => x.id === b.dataset.pasta) || {}).pastaUrl));
   document.querySelectorAll("[data-zap]").forEach(b => b.onclick = () => enviarZap(b.dataset.zap));
+  document.querySelectorAll("[data-ver]").forEach(b => b.onclick = () => verLocal(b.dataset.ver));
   document.querySelectorAll("[data-mais]").forEach(b => b.onclick = () => maisArquivos(b.dataset.mais));
 }
 function maisArquivos(id) {
   const reg = HIST.find(x => x.id === id) || { id };
-  const M = { lista: [] };
+  const M = { lista: [], onde: ehLocal(reg) ? "celular" : "drive" };
   const desenhar = () => {
     abrirModal(`<h3>➕ Adicionar arquivos ao ${esc(id)}</h3><p style="margin-top:0;color:var(--cinza);font-size:14px">${esc(reg.cliente || "")}${reg.nf ? " · NF " + esc(reg.nf) : ""}. A data e a hora de cada arquivo novo ficam anotadas.</p>
+      <div class="tipos" style="margin-bottom:10px">${htmlOnde(M.onde, "data-mo")}</div>
       <div class="midia"><button data-mm="foto"><span>📷</span>Foto</button><button data-mm="video"><span>🎥</span>Vídeo</button><button data-mm="galeria"><span>🖼️</span>Galeria</button></div>
       <div class="lista-arq">${htmlArquivos(M.lista, "m")}</div>
       <button class="btn btn-pri" id="mEnviar" style="margin-top:14px" ${M.lista.length ? "" : "disabled"}>📤 Enviar ${M.lista.length || ""} arquivo(s)</button>
       <button class="btn btn-sec" id="mFechar">Cancelar</button>`);
+    document.querySelectorAll("[data-mo]").forEach(b => b.onclick = () => { M.onde = b.dataset.mo; desenhar(); });
     document.querySelectorAll("[data-mm]").forEach(b => b.onclick = () => pegar(b.dataset.mm, { lista: M.lista, depois: desenhar }));
     document.querySelectorAll("[data-tira]").forEach(b => b.onclick = () => { const i = +b.dataset.tira.slice(1); const a = M.lista[i]; if (a && a.url) URL.revokeObjectURL(a.url); M.lista.splice(i, 1); desenhar(); });
     $("#mFechar").onclick = () => { M.lista.forEach(a => a.url && URL.revokeObjectURL(a.url)); fecharModal(); };
     $("#mEnviar").onclick = async () => {
       fecharModal();
-      const base = (reg.arquivos || 0);
+      const base = Math.max(reg.arquivos || 0, (await locais(id).catch(() => [])).length);
       const itens = M.lista.map((a, i) => ({ file: a.file, nome: nomeFinal(id, base + i + 1, a.file) }));
-      const r = await enviarLista(id, itens, "Adicionando ao " + id + "…");
+      const r = M.onde === "celular" ? await guardarLista(id, itens) : await enviarLista(id, itens, "Adicionando ao " + id + "…");
       M.lista.forEach(a => a.url && URL.revokeObjectURL(a.url));
       if (r.fim && r.fim.ok) atualizarHistLocal(r.fim);
       if (r.falharam.length) abrirModal(`<h3>⚠️ Faltou arquivo</h3><div class="erro">Não consegui enviar: <b>${r.falharam.map(i => esc(i.nome)).join(", ")}</b>. Confira a internet e tente de novo pelo ➕ Arquivo.</div><button class="btn btn-pri" onclick="fecharModal()">Entendi</button>`);

@@ -1,0 +1,17 @@
+{
+  "name": "Registro Fácil by DayIA",
+  "short_name": "Registro Fácil",
+  "description": "Registre romaneios, notas fiscais e coletas com foto e vídeo, com data e hora do Google.",
+  "lang": "pt-BR",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E2238",
+  "theme_color": "#0E2238",
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

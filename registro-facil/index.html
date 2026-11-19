@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Registro Fácil by DayIA</title>
+<meta name="description" content="Registre romaneios, notas fiscais e coletas com foto e vídeo, com data e hora do Google.">
+<meta name="theme-color" content="#0E2238">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Registro Fácil">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<style>
+:root{--azul:#0E2238;--azul2:#1B3A5C;--claro:#CFE2F2;--claro2:#9CC7EA;--amarelo:#F2B705;--fundo:#F4F7FB;--texto:#13263A;--cinza:#6B7C8D;--verde:#1E9E5A;--vermelho:#D64545}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fundo);color:var(--texto);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+button{font:inherit;cursor:pointer}
+.oculto{display:none!important}
+
+/* abertura padrão DayIA */
+#intro{position:fixed;inset:0;z-index:100;background:var(--azul);display:flex;align-items:center;justify-content:center;transition:opacity .5s ease}
+#intro.fim{opacity:0;pointer-events:none}
+#intro .quadro{width:76px;height:76px;background:#fff;border-radius:16px;padding:7px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:cresce 1.4s cubic-bezier(.2,.8,.2,1) forwards}
+#intro .quadro img{width:100%;height:100%;display:block;border-radius:10px;object-fit:contain}
+#intro .by{position:absolute;font-size:24px;color:var(--claro);opacity:0;transition:opacity .45s ease;letter-spacing:.3px}
+#intro .by b{color:#fff}
+#intro.passo2 .quadro{opacity:0;transition:opacity .3s}
+#intro.passo2 .by{opacity:1}
+@keyframes cresce{0%{transform:scale(.6);opacity:0}20%{opacity:1}55%{transform:scale(1.6)}100%{transform:scale(1.6) rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#intro{display:none}}
+
+/* topo */
+.topo{position:sticky;top:0;z-index:20;background:var(--azul);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top))}
+.topo .simb{width:38px;height:38px;background:#fff;border-radius:10px;padding:3px;flex:none}
+.topo .simb img{width:100%;height:100%;object-fit:contain;display:block;border-radius:7px}
+.topo h1{margin:0;font-size:18px;line-height:1.1}
+.topo .assina{font-size:12px;color:var(--claro2)}
+.topo .marca{flex:1;min-width:0}
+.btn-instalar{background:var(--amarelo);color:var(--azul);border:0;border-radius:12px;padding:9px 12px;font-weight:800;font-size:14px;white-space:nowrap}
+
+main{max-width:560px;margin:0 auto;padding:16px}
+h2{font-size:21px;margin:4px 0 14px}
+.card{background:#fff;border-radius:18px;padding:16px;box-shadow:0 2px 10px rgba(14,34,56,.06);margin-bottom:14px}
+label.rot{display:block;font-weight:700;font-size:14px;margin:12px 0 6px}
+label.rot small{font-weight:500;color:var(--cinza)}
+input[type=text],input[type=password],input[type=search],textarea{width:100%;border:2px solid #DDE6EF;border-radius:12px;padding:12px;font:inherit;font-size:16px;background:#fff;color:var(--texto);outline:none}
+input:focus,textarea:focus{border-color:var(--claro2)}
+textarea{min-height:76px;resize:vertical}
+.tipos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tipo{border:2px solid #DDE6EF;background:#fff;border-radius:14px;padding:12px 8px;font-weight:700;font-size:15px;color:var(--texto)}
+.tipo.ativo{border-color:var(--azul);background:var(--azul);color:#fff}
+.midia{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.midia button{border:0;border-radius:16px;background:var(--claro);color:var(--azul);padding:16px 4px;font-weight:800;font-size:15px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.midia button span{font-size:30px}
+.lista-arq{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.arq{display:flex;align-items:center;gap:10px;background:var(--fundo);border-radius:12px;padding:8px}
+.arq .mini{width:46px;height:46px;border-radius:9px;background:var(--azul2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;overflow:hidden}
+.arq .mini img{width:100%;height:100%;object-fit:cover}
+.arq .nome{flex:1;min-width:0;font-size:14px}
+.arq .nome b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arq .nome small{color:var(--cinza)}
+.arq .tira{border:0;background:none;font-size:18px;color:var(--cinza);padding:6px}
+.vazio{color:var(--cinza);font-size:14px;text-align:center;padding:8px}
+.btn{border:0;border-radius:14px;padding:15px 16px;font-weight:800;font-size:16px;width:100%}
+.btn-pri{background:var(--amarelo);color:var(--azul)}
+.btn-azul{background:var(--azul);color:#fff}
+.btn-sec{background:#fff;color:var(--azul);border:2px solid #DDE6EF}
+.btn:disabled{opacity:.55}
+.btn+.btn{margin-top:10px}
+.aviso{background:#FFF6D6;border:2px solid var(--amarelo);border-radius:14px;padding:12px;font-weight:700;font-size:14px;margin:12px 0}
+.erro{background:#FDEBEB;border:2px solid var(--vermelho);color:#8A1F1F;border-radius:14px;padding:12px;font-size:14px;margin:12px 0}
+
+/* menu de baixo */
+.menu{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;box-shadow:0 -2px 14px rgba(14,34,56,.1);padding-bottom:env(safe-area-inset-bottom);z-index:20}
+.menu button{flex:1;border:0;background:none;padding:10px 4px 12px;font-weight:700;font-size:13px;color:var(--cinza);display:flex;flex-direction:column;align-items:center;gap:2px}
+.menu button span{font-size:23px}
+.menu button.ativo{color:var(--azul)}
+.menu button.ativo span{transform:scale(1.1)}
+
+/* envio */
+.envio{position:fixed;inset:0;z-index:60;background:rgba(14,34,56,.92);display:flex;align-items:center;justify-content:center;padding:20px}
+.envio .caixa{background:#fff;border-radius:22px;padding:22px;width:100%;max-width:420px;text-align:center}
+.envio h3{margin:0 0 6px;font-size:20px}
+.barra{height:16px;background:#E3EAF2;border-radius:10px;overflow:hidden;margin:14px 0 8px}
+.barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--claro2),var(--amarelo));transition:width .3s}
+.envio .nao-feche{background:#FFF6D6;border-radius:12px;padding:10px;font-weight:800;color:var(--azul);margin-top:12px}
+.envio small{color:var(--cinza)}
+
+/* resultado */
+.ok-grande{text-align:center;padding:10px 0}
+.ok-grande .ic{font-size:64px}
+.ok-grande h2{margin:6px 0 2px;font-size:26px}
+.dados{font-size:15px;line-height:1.6}
+.dados b{color:var(--azul)}
+
+/* histórico */
+.busca{position:relative;margin-bottom:12px}
+.busca input{padding-left:42px}
+.busca::before{content:"🔍";position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:18px}
+.reg{background:#fff;border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(14,34,56,.05)}
+.reg .lin1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.reg .id{font-weight:900;color:var(--azul)}
+.etq{background:var(--claro);color:var(--azul);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:800}
+.reg .cli{font-size:17px;font-weight:800;margin:6px 0 2px}
+.reg .info{font-size:13.5px;color:var(--cinza);line-height:1.5}
+.reg .sit{font-size:13px;font-weight:700;margin-top:4px}
+.reg .sit.falta{color:var(--vermelho)}
+.reg .acoes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.reg .acoes button{border:0;border-radius:12px;background:var(--fundo);color:var(--azul);padding:10px 4px;font-weight:800;font-size:14px}
+.reg .acoes button.zap{background:#DFF5E8;color:#106B3A}
+.contagem{font-size:13px;color:var(--cinza);margin:-4px 0 10px}
+
+/* janelinha */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(14,34,56,.55);display:flex;align-items:flex-end;justify-content:center}
+.modal .caixa{background:#fff;width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto;animation:sobe .25s ease}
+.modal h3{margin:0 0 10px;font-size:19px}
+.modal ol{padding-left:20px;line-height:1.7}
+@keyframes sobe{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--azul);color:#fff;padding:12px 16px;border-radius:14px;font-weight:700;font-size:14px;z-index:90;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.ver{opacity:1}
+.girando{display:inline-block;animation:gira 1s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div id="intro" aria-hidden="true">
+  <div class="quadro"><img src="logo.png" alt=""></div>
+  <div class="by">by <b>DayIA</b></div>
+</div>
+
+<header class="topo">
+  <div class="simb"><img src="logo.png" alt="DayIA"></div>
+  <div class="marca"><h1>Registro Fácil</h1><div class="assina">by DayIA</div></div>
+  <button id="btnInstalar" class="btn-instalar">⬇ Instalar</button>
+</header>
+
+<main id="tela"></main>
+
+<nav class="menu" id="menu">
+  <button data-aba="novo"><span>➕</span>Novo registro</button>
+  <button data-aba="historico"><span>🗂️</span>Histórico</button>
+</nav>
+
+<!-- câmeras e galeria (escondidos) -->
+<input type="file" id="inFoto" accept="image/*" capture="environment" class="oculto">
+<input type="file" id="inVideo" accept="video/*" capture="environment" class="oculto">
+<input type="file" id="inGaleria" accept="image/*,video/*,application/pdf" multiple class="oculto">
+
+<div id="envio" class="envio oculto"><div class="caixa">
+  <h3 id="envTitulo">Enviando…</h3>
+  <div id="envArq" style="font-size:14px;word-break:break-word"></div>
+  <div class="barra"><i id="envBarra"></i></div>
+  <small id="envDet"></small>
+  <div class="nao-feche">⚠️ Não feche o app até aparecer Salvo ✅</div>
+</div></div>
+<div id="modal" class="modal oculto"><div class="caixa" id="modalCaixa"></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =====================================================================
+   COLE AQUI o link do Apps Script (o que termina em /exec)
+   ===================================================================== */
+const API = "COLE_AQUI_O_LINK_DO_EXEC";
+
+const PARTE = 5 * 1024 * 1024;           // envio em partes de 5 MB
+const TIPOS = ["Romaneio", "Nota fiscal", "Coleta agendada", "Outro"];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const espera = ms => new Promise(r => setTimeout(r, ms));
+const semAcento = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const tam = b => b >= 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+const guarda = { get(k, p) { try { const v = localStorage.getItem(k); return v == null ? p : JSON.parse(v); } catch (e) { return p; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+
+let senha = guarda.get("rf_senha", "");
+let aba = "novo";
+let F = novoForm();                       // formulário do novo registro
+let enviando = false, direto = true;      // direto = manda as partes direto pro Drive (se não der, passa pela ponte)
+let ultimo = null;                        // último registro salvo (tela de "Salvo ✅")
+let HIST = guarda.get("rf_hist", []);
+
+function novoForm() { return { tipo: "Nota fiscal", cliente: "", nf: "", coleta: "", obs: "", arquivos: [], chave: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }; }
+function toast(t, ms) { const e = $("#toast"); e.textContent = t; e.classList.add("ver"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("ver"), ms || 2600); }
+function abrirModal(h) { $("#modalCaixa").innerHTML = h; $("#modal").classList.remove("oculto"); }
+function fecharModal() { $("#modal").classList.add("oculto"); }
+$("#modal").addEventListener("click", e => { if (e.target.id === "modal") fecharModal(); });
+
+/* ---------------- conversa com o Apps Script ---------------- */
+async function chamar(acao, dados, tentativas) {
+  tentativas = tentativas || 3;
+  let ultimoErro;
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      const r = await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(Object.assign({}, dados, { acao, senha })) });
+      const j = await r.json();
+      if (!j.ok && j.erro === "senha") { senha = ""; guarda.set("rf_senha", ""); const e = new Error("Senha errada."); e.senha = true; throw e; }
+      return j;
+    } catch (e) {
+      if (e.senha) throw e;
+      ultimoErro = e;
+      if (i < tentativas - 1) await espera(1500 * (i + 1));
+    }
+  }
+  const e = new Error("Sem conexão com o Google. Confira a internet e tente de novo."); e.rede = true; e.causa = ultimoErro; throw e;
+}
+
+/* ---------------- envio de um arquivo em partes de 5 MB ---------------- */
+function lerBase64(blob) { return new Promise((ok, falha) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1] || ""); r.onerror = () => falha(r.error); r.readAsDataURL(blob); }); }
+function putDireto(sessao, pedaco, ini, total, prog) {
+  return new Promise((ok, falha) => {
+    const x = new XMLHttpRequest();
+    x.open("PUT", sessao);
+    x.setRequestHeader("Content-Range", "bytes " + ini + "-" + (ini + pedaco.size - 1) + "/" + total);
+    x.upload.onprogress = e => { if (e.lengthComputable) prog(ini + e.loaded); };
+    x.onload = () => {
+      if (x.status === 200 || x.status === 201) { let a = {}; try { a = JSON.parse(x.responseText); } catch (e) {} ok({ fim: true, arquivo: a }); }
+      else if (x.status === 308) { const m = String(x.getResponseHeader("Range") || "").match(/bytes=0-(\d+)/); ok({ fim: false, proximo: m ? Number(m[1]) + 1 : ini + pedaco.size }); }
+      else { const e = new Error("Drive respondeu " + x.status); e.status = x.status; falha(e); }
+    };
+    x.onerror = () => { const e = new Error("bloqueado"); e.bloqueado = true; falha(e); };
+    x.ontimeout = () => falha(new Error("demorou"));
+    x.timeout = 180000;
+    x.send(pedaco);
+  });
+}
+async function putPonte(sessao, pedaco, ini, total) {
+  const dados = await lerBase64(pedaco);
+  const r = await chamar("parte", { sessao, inicio: ini, total, dados }, 1);
+  if (!r.ok) { const e = new Error(r.mensagem || "falhou"); e.erro = r.erro; throw e; }
+  return r.fim ? { fim: true, arquivo: r.arquivo } : { fim: false, proximo: r.proximo || ini + pedaco.size };
+}
+async function enviarArquivo(regId, item, prog) {
+  const total = item.file.size;
+  let comecos = 0;
+  recomecar: while (comecos < 3) {
+    comecos++;
+    const ini = await chamar("iniciar_envio", { id: regId, nome: item.nome, tamanho: total, tipo: item.file.type || "application/octet-stream", origem: location.origin });
+    if (!ini.ok) throw new Error(ini.mensagem || "Não consegui começar o envio.");
+    const sessao = ini.sessao;
+    let pos = 0, falhas = 0;
+    prog(0);
+    while (true) {
+      const pedaco = item.file.slice(pos, Math.min(pos + PARTE, total));
+      try {
+        let r;
+        if (direto) {
+          try { r = await putDireto(sessao, pedaco, pos, total, prog); }
+          catch (e) { if (e.bloqueado && pos === 0 && falhas === 0) { direto = false; continue; } throw e; }  // o celular não deixou mandar direto: usa a ponte
+        } else r = await putPonte(sessao, pedaco, pos, total);
+        falhas = 0;
+        if (r.fim) { prog(total); return r.arquivo || {}; }
+        pos = r.proximo; prog(pos);
+      } catch (e) {
+        if (e.erro === "expirou" || e.status === 404 || e.status === 410) continue recomecar;
+        falhas++;
+        if (falhas > 6) throw new Error("A internet caiu várias vezes.");
+        $("#envDet").textContent = "A conexão falhou. Tentando de novo (" + falhas + " de 6)…";
+        await espera(Math.min(30000, 2000 * falhas * falhas));
+        try {   // pergunta ao Drive onde parou, para continuar dali
+          const s = await chamar("situacao_envio", { sessao, total }, 2);
+          if (s.ok && s.fim) { prog(total); return s.arquivo || {}; }
+          if (s.ok) pos = s.proximo || 0;
+          else if (s.erro === "expirou") continue recomecar;
+        } catch (x) {}
+      }
+    }
+  }
+  throw new Error("Não consegui enviar.");
+}
+async function enviarLista(regId, itens, titulo) {
+  enviando = true; travarTela(true);
+  const falharam = [], totalBytes = itens.reduce((s, i) => s + i.file.size, 0) || 1;
+  let feitos = 0;
+  $("#envTitulo").textContent = titulo || "Enviando…";
+  for (let k = 0; k < itens.length; k++) {
+    const it = itens[k];
+    $("#envArq").innerHTML = `Arquivo <b>${k + 1} de ${itens.length}</b><br>${esc(it.nome)} · ${tam(it.file.size)}`;
+    $("#envDet").textContent = "";
+    const prog = p => { const pct = Math.round((feitos + p) / totalBytes * 100); $("#envBarra").style.width = pct + "%"; if (!/Tentando/.test($("#envDet").textContent)) $("#envDet").textContent = pct + "% enviado"; else if (p > 0) $("#envDet").textContent = pct + "% enviado"; };
+    try { await enviarArquivo(regId, it, prog); it.ok = true; }
+    catch (e) { it.ok = false; falharam.push(it); console.warn("falhou", it.nome, e); }
+    feitos += it.file.size;
+  }
+  $("#envTitulo").textContent = "Finalizando…"; $("#envArq").textContent = "Guardando os detalhes no Drive"; $("#envDet").textContent = "";
+  let fim = null;
+  try { fim = await chamar("concluir", { id: regId, falhas: falharam.map(i => i.nome) }); } catch (e) {}
+  enviando = false; travarTela(false);
+  return { falharam, fim };
+}
+let trava = null;
+async function travarTela(sim) {
+  $("#envio").classList.toggle("oculto", !sim);
+  if (sim) { $("#envBarra").style.width = "0%"; try { trava = await navigator.wakeLock.request("screen"); } catch (e) {} }
+  else { try { trava && trava.release(); } catch (e) {} trava = null; }
+}
+window.addEventListener("beforeunload", e => { if (enviando) { e.preventDefault(); e.returnValue = ""; } });
+document.addEventListener("visibilitychange", async () => { if (enviando && document.visibilityState === "visible" && !trava) { try { trava = await navigator.wakeLock.request("screen"); } catch (e) {} } });
+
+/* ---------------- arquivos escolhidos ---------------- */
+let destinoArquivos = null;   // para onde vão os arquivos escolhidos (lista do formulário ou de um registro)
+function pegar(qual, destino) { destinoArquivos = destino; $({ foto: "#inFoto", video: "#inVideo", galeria: "#inGaleria" }[qual]).click(); }
+["#inFoto", "#inVideo", "#inGaleria"].forEach(s => $(s).addEventListener("change", e => {
+  const fs = [...e.target.files]; e.target.value = "";
+  if (!fs.length || !destinoArquivos) return;
+  fs.forEach(f => { if (f.size > 0) destinoArquivos.lista.push({ file: f, url: /^image\//.test(f.type) ? URL.createObjectURL(f) : "" }); else toast("Um arquivo veio vazio e foi ignorado"); });
+  destinoArquivos.depois();
+}));
+function iconeDe(f) { return /^video\//.test(f.type) ? "🎥" : /^image\//.test(f.type) ? "📷" : /pdf/.test(f.type) ? "📄" : "📎"; }
+function htmlArquivos(lista, prefixo) {
+  if (!lista.length) return `<div class="vazio">Nenhum arquivo ainda. Use os botões acima 👆</div>`;
+  return lista.map((a, i) => `<div class="arq"><div class="mini">${a.url ? `<img src="${a.url}" alt="">` : iconeDe(a.file)}</div><div class="nome"><b>${esc(a.file.name || "arquivo")}</b><small>${iconeDe(a.file)} ${tam(a.file.size)}</small></div><button class="tira" data-tira="${prefixo}${i}" aria-label="Tirar da lista">✖</button></div>`).join("");
+}
+function nomeFinal(regId, n, f) {
+  const ext = (String(f.name || "").match(/\.[a-z0-9]{1,5}$/i) || [""])[0] || ({ "image/jpeg": ".jpg", "image/png": ".png", "video/mp4": ".mp4", "video/quicktime": ".mov", "application/pdf": ".pdf" }[f.type] || "");
+  const base = String(f.name || "").replace(/\.[a-z0-9]{1,5}$/i, "").slice(0, 60) || (iconeDe(f) === "🎥" ? "Video" : "Foto");
+  return regId + " - " + String(n).padStart(2, "0") + " - " + base + ext;
+}
+
+/* ---------------- telas ---------------- */
+function ir(a) { if (enviando) return; aba = a; render(); window.scrollTo(0, 0); }
+document.querySelectorAll("[data-aba]").forEach(b => b.onclick = () => { if (b.dataset.aba === "novo") ultimo = null; ir(b.dataset.aba); });
+function render() {
+  document.querySelectorAll("[data-aba]").forEach(b => b.classList.toggle("ativo", b.dataset.aba === aba));
+  $("#menu").classList.toggle("oculto", !senha || /COLE_AQUI/.test(API));
+  if (/COLE_AQUI/.test(API)) return telaConfigurar();
+  if (!senha) return telaSenha();
+  if (aba === "historico") return telaHistorico();
+  if (ultimo) return telaSalvo();
+  telaNovo();
+}
+function telaConfigurar() {
+  $("#tela").innerHTML = `<div class="card"><h2>⚙️ Falta só um passo</h2><p>Cole o link do Apps Script (o que termina em <b>/exec</b>) no arquivo <b>index.html</b>, no lugar de <b>COLE_AQUI_O_LINK_DO_EXEC</b>, e publique de novo.</p></div>`;
+}
+function telaSenha() {
+  $("#tela").innerHTML = `<div class="card"><h2>🔒 Digite a senha</h2><p style="margin-top:0;color:var(--cinza)">Só na primeira vez. Depois o app lembra sozinho neste celular.</p>
+    <input type="password" id="sSenha" placeholder="Sua senha" autocomplete="current-password">
+    <div id="sErro"></div>
+    <button class="btn btn-pri" id="sEntrar" style="margin-top:12px">Entrar</button></div>`;
+  const ir2 = async () => {
+    const v = $("#sSenha").value.trim(); if (!v) return $("#sSenha").focus();
+    $("#sEntrar").disabled = true; $("#sEntrar").innerHTML = `<span class="girando">⏳</span> Conferindo…`;
+    senha = v;
+    try { const r = await chamar("entrar", {}, 2); if (r.ok) { guarda.set("rf_senha", v); toast("Tudo certo! 🎉"); render(); return; } throw new Error(r.mensagem); }
+    catch (e) { senha = ""; $("#sErro").innerHTML = `<div class="erro">${esc(e.senha ? "Senha errada. Tente de novo." : e.message)}</div>`; $("#sEntrar").disabled = false; $("#sEntrar").textContent = "Entrar"; }
+  };
+  $("#sEntrar").onclick = ir2; $("#sSenha").onkeydown = e => { if (e.key === "Enter") ir2(); };
+}
+function telaNovo() {
+  $("#tela").innerHTML = `<h2>➕ Novo registro</h2>
+  <div class="card">
+    <label class="rot" style="margin-top:0">O que você está registrando?</label>
+    <div class="tipos">${TIPOS.map(t => `<button class="tipo ${F.tipo === t ? "ativo" : ""}" data-tipo="${t}">${{ "Romaneio": "📦", "Nota fiscal": "🧾", "Coleta agendada": "🚚", "Outro": "📌" }[t]} ${t}</button>`).join("")}</div>
+    <label class="rot">Cliente <small>(obrigatório)</small></label>
+    <input type="text" id="fCliente" value="${esc(F.cliente)}" placeholder="Nome do cliente" autocomplete="off">
+    <label class="rot">Nº da nota fiscal</label>
+    <input type="text" id="fNf" value="${esc(F.nf)}" placeholder="Ex.: 123456" inputmode="numeric" autocomplete="off">
+    <label class="rot">Nº da coleta</label>
+    <input type="text" id="fColeta" value="${esc(F.coleta)}" placeholder="Ex.: 7890" autocomplete="off">
+    <label class="rot">Observação</label>
+    <textarea id="fObs" placeholder="Ex.: deixei na caixinha de notas do financeiro">${esc(F.obs)}</textarea>
+  </div>
+  <div class="card">
+    <label class="rot" style="margin-top:0">Fotos e vídeos</label>
+    <div class="midia"><button data-m="foto"><span>📷</span>Foto</button><button data-m="video"><span>🎥</span>Vídeo</button><button data-m="galeria"><span>🖼️</span>Galeria</button></div>
+    <div class="lista-arq" id="fLista">${htmlArquivos(F.arquivos, "f")}</div>
+  </div>
+  <div id="fErro"></div>
+  <button class="btn btn-pri" id="fSalvar">💾 Salvar registro${F.arquivos.length ? ` (${F.arquivos.length} arquivo${F.arquivos.length > 1 ? "s" : ""})` : ""}</button>`;
+  const ler = () => { F.cliente = $("#fCliente").value; F.nf = $("#fNf").value; F.coleta = $("#fColeta").value; F.obs = $("#fObs").value; };
+  document.querySelectorAll("[data-tipo]").forEach(b => b.onclick = () => { ler(); F.tipo = b.dataset.tipo; telaNovo(); });
+  document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { ler(); pegar(b.dataset.m, { lista: F.arquivos, depois: telaNovo }); });
+  document.querySelectorAll("[data-tira]").forEach(b => b.onclick = () => { ler(); const i = +b.dataset.tira.slice(1); const a = F.arquivos[i]; if (a && a.url) URL.revokeObjectURL(a.url); F.arquivos.splice(i, 1); telaNovo(); });
+  $("#fSalvar").onclick = () => { ler(); salvar(); };
+}
+async function salvar() {
+  if (!F.cliente.trim()) { $("#fErro").innerHTML = `<div class="erro">Preencha o <b>cliente</b> 🙂</div>`; $("#fCliente").focus(); return; }
+  if (!F.arquivos.length) {
+    abrirModal(`<h3>Salvar sem foto nem vídeo?</h3><p>O registro fica guardado com a data e a hora, mas sem imagem como prova. Depois dá para adicionar arquivos pelo Histórico.</p><button class="btn btn-pri" id="mSim">Salvar assim mesmo</button><button class="btn btn-sec" onclick="fecharModal()">Voltar e anexar</button>`);
+    $("#mSim").onclick = () => { fecharModal(); salvarDeVerdade(); };
+    return;
+  }
+  salvarDeVerdade();
+}
+async function salvarDeVerdade() {
+  $("#fSalvar").disabled = true;
+  enviando = true; travarTela(true); $("#envTitulo").textContent = "Criando o registro…"; $("#envArq").textContent = "Pegando a data e a hora do Google"; $("#envDet").textContent = "";
+  let reg;
+  try { reg = await chamar("criar", { tipo: F.tipo, cliente: F.cliente.trim(), nf: F.nf.trim(), coleta: F.coleta.trim(), obs: F.obs.trim(), chave: F.chave }); }
+  catch (e) { enviando = false; travarTela(false); $("#fSalvar").disabled = false; if (e.senha) return render(); $("#fErro").innerHTML = `<div class="erro">${esc(e.message)}</div>`; return; }
+  if (!reg.ok) { enviando = false; travarTela(false); $("#fSalvar").disabled = false; $("#fErro").innerHTML = `<div class="erro">${esc(reg.mensagem || "Não consegui salvar.")}</div>`; return; }
+  const itens = F.arquivos.map((a, i) => ({ file: a.file, nome: nomeFinal(reg.id, i + 1, a.file) }));
+  enviando = false;
+  const r = itens.length ? await enviarLista(reg.id, itens, "Enviando para o Drive…") : { falharam: [], fim: null };
+  if (!itens.length) { enviando = false; travarTela(false); try { r.fim = await chamar("concluir", { id: reg.id, falhas: [] }); } catch (e) {} }
+  ultimo = Object.assign({}, reg, r.fim && r.fim.ok ? r.fim : {}, { falharam: r.falharam, numero: itens.length });
+  F.arquivos.forEach(a => a.url && URL.revokeObjectURL(a.url));
+  F = novoForm();
+  atualizarHistLocal(ultimo);
+  render(); window.scrollTo(0, 0);
+}
+function telaSalvo() {
+  const u = ultimo, falhou = (u.falharam || []).length;
+  $("#tela").innerHTML = `<div class="card ok-grande"><div class="ic">${falhou ? "⚠️" : "✅"}</div><h2>${falhou ? "Salvo, mas faltou arquivo" : "Salvo ✅"}</h2>
+    <div class="dados"><b>${esc(u.id)}</b> · ${esc(u.tipo)}<br>Cliente: <b>${esc(u.cliente)}</b>${u.nf ? `<br>Nota fiscal: <b>${esc(u.nf)}</b>` : ""}${u.coleta ? `<br>Coleta: <b>${esc(u.coleta)}</b>` : ""}<br>Feito em <b>${esc(u.data)}</b> às <b>${esc(String(u.hora).slice(0, 5))}</b> <small>(horário do Google)</small><br>${(u.numero || 0) - falhou} de ${u.numero || 0} arquivo(s) no Drive</div></div>
+    ${falhou ? `<div class="erro">Não consegui enviar: <b>${u.falharam.map(i => esc(i.nome)).join(", ")}</b>.<br>Confira a internet e toque em tentar de novo.</div><button class="btn btn-azul" id="sDeNovo">🔁 Tentar de novo os que faltaram</button>` : ""}
+    <button class="btn btn-pri" id="sZap" style="margin-top:10px">📤 Enviar pelo WhatsApp</button>
+    <button class="btn btn-sec" id="sPasta">📂 Abrir pasta no Drive</button>
+    <button class="btn btn-sec" id="sNovo">➕ Novo registro</button>`;
+  $("#sZap").onclick = () => enviarZap(u.id);
+  $("#sPasta").onclick = () => abrirPasta(u.pastaUrl);
+  $("#sNovo").onclick = () => { ultimo = null; ir("novo"); };
+  const dn = $("#sDeNovo");
+  if (dn) dn.onclick = async () => {
+    const itens = u.falharam.map(i => ({ file: i.file, nome: i.nome }));
+    const r = await enviarLista(u.id, itens, "Tentando de novo…");
+    ultimo = Object.assign({}, u, r.fim && r.fim.ok ? r.fim : {}, { falharam: r.falharam });
+    atualizarHistLocal(ultimo); render();
+    if (!r.falharam.length) toast("Pronto, agora foi tudo ✅");
+  };
+}
+function abrirPasta(url) { if (!url) return toast("Pasta ainda não encontrada"); window.open(url, "_blank", "noopener"); }
+function horaCurta(h) { return String(h || "").slice(0, 5); }
+async function enviarZap(id) {
+  toast("Preparando o link…", 6000);
+  try {
+    const r = await chamar("compartilhar", { id });
+    if (!r.ok) return toast(r.mensagem || "Não consegui liberar o link");
+    const partes = ["Olá! Segue o comprovante do registro " + r.id + " (" + r.tipo + ") do cliente " + r.cliente];
+    if (r.nf) partes.push("nota fiscal " + r.nf);
+    if (r.coleta) partes.push("coleta " + r.coleta);
+    const msg = partes.join(", ") + ", feito em " + r.data + " às " + horaCurta(r.hora) + ". Fotos e vídeos: " + r.link;
+    location.href = "https://wa.me/?text=" + encodeURIComponent(msg);
+  } catch (e) { toast(e.message); }
+}
+
+/* ---------------- histórico ---------------- */
+function atualizarHistLocal(r) {
+  const i = HIST.findIndex(x => x.id === r.id);
+  const limpo = { id: r.id, data: r.data, hora: r.hora, tipo: r.tipo, cliente: r.cliente, nf: r.nf, coleta: r.coleta, obs: r.obs, arquivos: r.arquivos, situacao: r.situacao, pastaUrl: r.pastaUrl };
+  if (i >= 0) HIST[i] = Object.assign(HIST[i], limpo); else HIST.unshift(limpo);
+  guarda.set("rf_hist", HIST.slice(0, 2000));
+}
+let buscaTxt = "";
+function telaHistorico() {
+  $("#tela").innerHTML = `<h2>🗂️ Histórico</h2>
+    <div class="busca"><input type="search" id="hBusca" placeholder="Procurar: cliente, nota, coleta, data ou ID" value="${esc(buscaTxt)}" autocomplete="off"></div>
+    <div class="contagem" id="hCont"></div><div id="hLista"></div>`;
+  $("#hBusca").oninput = e => { buscaTxt = e.target.value; listaHist(); };
+  listaHist();
+  carregarHist();
+}
+async function carregarHist() {
+  if (!HIST.length) $("#hLista").innerHTML = `<div class="vazio"><span class="girando">⏳</span> Carregando…</div>`;
+  try { const r = await chamar("listar", {}, 2); if (r.ok) { HIST = r.registros || []; guarda.set("rf_hist", HIST.slice(0, 2000)); if (aba === "historico") listaHist(); } }
+  catch (e) { if (aba === "historico") { if (e.senha) return render(); $("#hCont").textContent = "Sem internet agora: mostrando o que já estava salvo neste celular."; if (!HIST.length) $("#hLista").innerHTML = `<div class="vazio">Sem internet para carregar o histórico.</div>`; } }
+}
+function listaHist() {
+  const ps = semAcento(buscaTxt).trim().split(/\s+/).filter(Boolean);
+  const r = HIST.filter(x => { const t = semAcento([x.id, x.tipo, x.cliente, x.nf, x.coleta, x.obs, x.data, x.hora].join(" ")); return ps.every(p => t.includes(p)); });
+  $("#hCont").textContent = HIST.length ? (ps.length ? r.length + " encontrado(s)" : HIST.length + " registro(s)") : "";
+  if (!HIST.length) { $("#hLista").innerHTML = `<div class="vazio">Nenhum registro ainda. Toque em ➕ Novo registro.</div>`; return; }
+  if (!r.length) { $("#hLista").innerHTML = `<div class="vazio">Não achei nada com "${esc(buscaTxt)}" 🤔</div>`; return; }
+  $("#hLista").innerHTML = r.slice(0, 300).map(x => `<div class="reg">
+    <div class="lin1"><span class="id">${esc(x.id)}</span><span class="etq">${esc(x.tipo)}</span><span style="margin-left:auto;font-size:13px;color:var(--cinza)">${esc(x.data)} · ${esc(horaCurta(x.hora))}</span></div>
+    <div class="cli">${esc(x.cliente)}</div>
+    <div class="info">${x.nf ? `🧾 NF ${esc(x.nf)} ` : ""}${x.coleta ? ` · 🚚 Coleta ${esc(x.coleta)}` : ""}${x.obs ? `<br>📝 ${esc(x.obs)}` : ""}<br>📎 ${x.arquivos || 0} arquivo(s)</div>
+    <div class="sit ${/Faltou/.test(x.situacao) ? "falta" : ""}">${esc(x.situacao || "")}</div>
+    <div class="acoes"><button data-pasta="${esc(x.id)}">📂 Abrir pasta</button><button data-mais="${esc(x.id)}">➕ Arquivo</button><button class="zap" data-zap="${esc(x.id)}">📤 Enviar</button></div>
+  </div>`).join("") + (r.length > 300 ? `<div class="vazio">Mostrando 300. Use a lupa para achar os outros.</div>` : "");
+  document.querySelectorAll("[data-pasta]").forEach(b => b.onclick = () => abrirPasta((HIST.find(x => x.id === b.dataset.pasta) || {}).pastaUrl));
+  document.querySelectorAll("[data-zap]").forEach(b => b.onclick = () => enviarZap(b.dataset.zap));
+  document.querySelectorAll("[data-mais]").forEach(b => b.onclick = () => maisArquivos(b.dataset.mais));
+}
+function maisArquivos(id) {
+  const reg = HIST.find(x => x.id === id) || { id };
+  const M = { lista: [] };
+  const desenhar = () => {
+    abrirModal(`<h3>➕ Adicionar arquivos ao ${esc(id)}</h3><p style="margin-top:0;color:var(--cinza);font-size:14px">${esc(reg.cliente || "")}${reg.nf ? " · NF " + esc(reg.nf) : ""}. A data e a hora de cada arquivo novo ficam anotadas.</p>
+      <div class="midia"><button data-mm="foto"><span>📷</span>Foto</button><button data-mm="video"><span>🎥</span>Vídeo</button><button data-mm="galeria"><span>🖼️</span>Galeria</button></div>
+      <div class="lista-arq">${htmlArquivos(M.lista, "m")}</div>
+      <button class="btn btn-pri" id="mEnviar" style="margin-top:14px" ${M.lista.length ? "" : "disabled"}>📤 Enviar ${M.lista.length || ""} arquivo(s)</button>
+      <button class="btn btn-sec" id="mFechar">Cancelar</button>`);
+    document.querySelectorAll("[data-mm]").forEach(b => b.onclick = () => pegar(b.dataset.mm, { lista: M.lista, depois: desenhar }));
+    document.querySelectorAll("[data-tira]").forEach(b => b.onclick = () => { const i = +b.dataset.tira.slice(1); const a = M.lista[i]; if (a && a.url) URL.revokeObjectURL(a.url); M.lista.splice(i, 1); desenhar(); });
+    $("#mFechar").onclick = () => { M.lista.forEach(a => a.url && URL.revokeObjectURL(a.url)); fecharModal(); };
+    $("#mEnviar").onclick = async () => {
+      fecharModal();
+      const base = (reg.arquivos || 0);
+      const itens = M.lista.map((a, i) => ({ file: a.file, nome: nomeFinal(id, base + i + 1, a.file) }));
+      const r = await enviarLista(id, itens, "Adicionando ao " + id + "…");
+      M.lista.forEach(a => a.url && URL.revokeObjectURL(a.url));
+      if (r.fim && r.fim.ok) atualizarHistLocal(r.fim);
+      if (r.falharam.length) abrirModal(`<h3>⚠️ Faltou arquivo</h3><div class="erro">Não consegui enviar: <b>${r.falharam.map(i => esc(i.nome)).join(", ")}</b>. Confira a internet e tente de novo pelo ➕ Arquivo.</div><button class="btn btn-pri" onclick="fecharModal()">Entendi</button>`);
+      else toast("Arquivo(s) adicionado(s) ✅");
+      if (aba === "historico") { listaHist(); carregarHist(); }
+    };
+  };
+  desenhar();
+}
+
+/* ---------------- instalar ---------------- */
+let pedidoInstalar = null;
+const instalado = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); pedidoInstalar = e; });
+window.addEventListener("appinstalled", () => { $("#btnInstalar").classList.add("oculto"); toast("Registro Fácil instalado! 🎉"); });
+if (instalado()) $("#btnInstalar").classList.add("oculto");
+$("#btnInstalar").onclick = () => {
+  if (pedidoInstalar) { pedidoInstalar.prompt(); pedidoInstalar.userChoice.finally(() => pedidoInstalar = null); return; }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  abrirModal(`<h3>⬇ Instalar o Registro Fácil</h3>${ios
+    ? `<p>No iPhone, pelo <b>Safari</b>:</p><ol><li>Toque em <b>Compartilhar</b> (o quadrado com a setinha para cima).</li><li>Role e toque em <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>.</li></ol>`
+    : `<p>No Android, pelo <b>Chrome</b>:</p><ol><li>Toque nos <b>três pontinhos ⋮</b> no canto de cima.</li><li>Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</li><li>Confirme em <b>Instalar</b>.</li></ol>`}
+    <button class="btn btn-pri" onclick="fecharModal()">Entendi</button>`);
+};
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+
+/* ---------------- abertura ---------------- */
+(function () {
+  const i = $("#intro"); if (!i) return;
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { i.remove(); return; }
+  setTimeout(() => i.classList.add("passo2"), 1500); setTimeout(() => i.classList.add("fim"), 2700); setTimeout(() => i.remove(), 3400);
+})();
+
+render();
+</script>
+</body>
+</html>

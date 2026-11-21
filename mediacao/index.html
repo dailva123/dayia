@@ -112,6 +112,14 @@ mark{background:#F6E7B8;padding:0 2px;border-radius:3px}
 .spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:rot .8s linear infinite;display:inline-block}
 @keyframes rot{to{transform:rotate(360deg)}}
 /* voz */
+.fab-voz{position:fixed;right:max(16px,calc(50% - 364px));bottom:calc(84px + env(safe-area-inset-bottom));z-index:25;display:flex;align-items:center;gap:8px;border:0;background:none;padding:0;cursor:pointer}
+.fab-voz .mini{width:62px;height:62px;border-radius:50%;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 35%,#BFE3FF 0%,#7CC0FF 30%,#3D97F5 58%,#1E6FE0 82%,#1557C2 100%);box-shadow:0 8px 22px rgba(40,120,240,.40);animation:breathe 5s ease-in-out infinite}
+.fab-voz .mini i{position:absolute;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,.9) 0%,rgba(255,255,255,.4) 45%,rgba(255,255,255,0) 72%);filter:blur(4px)}
+.fab-voz .mini i:nth-child(1){width:52px;height:26px;left:-10px;top:8px;animation:drift1 12s ease-in-out infinite}
+.fab-voz .mini i:nth-child(2){width:46px;height:24px;right:-14px;top:30px;animation:drift2 14s ease-in-out infinite}
+.fab-voz .mini i:nth-child(3){width:62px;height:62px;left:0;top:0;background:radial-gradient(circle at 38% 28%,rgba(255,255,255,.5),transparent 45%);filter:blur(2px)}
+.fab-voz .lbl{background:#fff;color:var(--navy);font-size:12px;font-weight:600;padding:6px 10px;border-radius:14px;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+.app{padding-bottom:160px}
 .voice{position:fixed;inset:0;z-index:60;background:#FFFFFF;color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:26px 20px 34px}
 .voice .vtop{width:100%;display:flex;justify-content:space-between;align-items:center;max-width:560px}
 .voice .vtop b{font-family:"Playfair Display",serif;font-size:17px;color:var(--navy)}
@@ -181,6 +189,7 @@ mark{background:#F6E7B8;padding:0 2px;border-radius:3px}
 </div>
 <nav><div class="in" id="nav"></div></nav>
 <div id="modalRoot"></div>
+<button class="fab-voz" data-act="voz" aria-label="Conversar com a IA por voz"><span class="lbl">Falar com a IA</span><span class="mini"><i></i><i></i><i></i></span></button>
 <div id="voiceRoot"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>

@@ -529,7 +529,7 @@ function vLeis(){
   ls.forEach(l=>{
     const arts=l.arts.filter(a=>!q||(a.t+' '+a.n+' '+l.nome).toLowerCase().includes(q));
     if(!arts.length)return;count+=arts.length;
-    html+=`<div class="sec-title"><h2>${esc(l.nome)}</h2><button class="link" data-leicompleta="${l.id}">Lei completa</button></div><p class="note" style="margin:-6px 0 10px">${esc(l.num)} · ${esc(l.area)}</p><div class="list">`+
+    html+=`<div class="sec-title"><h2>${esc(l.nome)}</h2><span class="row" style="gap:12px"><button class="link" data-leicompleta="${l.id}">Lei completa</button><a class="link" href="${l.url}" target="_blank" rel="noopener">Site oficial</a></span></div><p class="note" style="margin:-6px 0 10px">${esc(l.num)} · ${esc(l.area)}</p><div class="list">`+
     arts.map(a=>`<div class="law"><b>${esc(a.n)}</b><p>${mark(a.t)}</p><div class="row"><button class="link" data-explica="${l.id}|${esc(a.n)}">Me explica esse artigo</button><button class="link" data-copy="${l.id}|${esc(a.n)}">Copiar</button></div><div class="exp"></div></div>`).join('')+'</div>';
   });
   if(!count)html+='<div class="card">Nada encontrado nessa busca. Pergunte para a Assistente.</div>';

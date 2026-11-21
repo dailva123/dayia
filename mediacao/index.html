@@ -205,6 +205,11 @@ plus:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="curren
 speaker:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>',
 upload:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>',
 trash:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+wa:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.7-5A8.5 8.5 0 1 1 8 19.3z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1.2-1.4-2-1-1 .8a4 4 0 0 1-2.1-2.1l.8-1-1-2z"/></svg>',
+mail:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+edit:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+money:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>',
+people:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6 6 0 0 0-4-5.6"/></svg>',
 stop:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>'
 };
 document.getElementById('icScale').innerHTML=IC.scale;
@@ -283,7 +288,7 @@ chat:[],docs:[],regras:[],soDocs:false
 let DB;
 try{DB=JSON.parse(localStorage.getItem('mf-demo-v1'))}catch(e){}
 if(!DB||!DB.casos)DB=demoData();
-DB.docs=DB.docs||[];DB.regras=DB.regras||[];DB.soDocs=!!DB.soDocs;
+DB.docs=DB.docs||[];DB.regras=DB.regras||[];DB.soDocs=!!DB.soDocs;DB.contatos=DB.contatos||[];DB.receb=DB.receb||[];
 function save(){try{localStorage.setItem('mf-demo-v1',JSON.stringify(DB))}catch(e){}}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 
@@ -461,7 +466,7 @@ function aiErr(e){
 const TABS=[['inicio','Início',IC.home],['casos','Casos',IC.folder],['agenda','Agenda',IC.cal],['leis','Leis',IC.book],['assistente','Assistente',IC.spark]];
 let route='inicio',param=null;
 function go(r,p){route=r;param=p||null;try{location.hash=r==='caso'?'caso-'+p:r==='doc'?'doc-'+p:r}catch(e){}render();window.scrollTo(0,0)}
-function fromHash(){const h=(location.hash||'').slice(1);if(h.startsWith('caso-')){route='caso';param=h.slice(5)}else if(h.startsWith('doc-')){route='doc';param=h.slice(4)}else if(['inicio','casos','agenda','leis','assistente','perfil','biblioteca'].includes(h)){route=h;param=null}}
+function fromHash(){const h=(location.hash||'').slice(1);if(h.startsWith('caso-')){route='caso';param=h.slice(5)}else if(h.startsWith('doc-')){route='doc';param=h.slice(4)}else if(['inicio','casos','agenda','leis','assistente','perfil','biblioteca','contatos','escrever','financeiro'].includes(h)){route=h;param=null}}
 window.addEventListener('hashchange',()=>{fromHash();render()});
 
 function header(){
@@ -474,7 +479,7 @@ function header(){
   document.getElementById('btnAvatar').textContent=ini||'AV';
 }
 function navBar(){
-  const cur=route==='caso'?'casos':(route==='biblioteca'||route==='doc')?'leis':route;
+  const cur=route==='caso'?'casos':(route==='biblioteca'||route==='doc')?'leis':['contatos','escrever','financeiro','perfil'].includes(route)?'inicio':route;
   document.getElementById('nav').innerHTML=TABS.map(([k,l,i])=>`<button data-go="${k}" class="${cur===k?'on':''}">${i}<span>${l}</span></button>`).join('');
 }
 function caso(id){return DB.casos.find(c=>c.id===id)}
@@ -501,7 +506,7 @@ function vInicio(){
   <div class="sec-title"><h2>Próximas sessões</h2></div>
   <div class="list">${prox.map(sessItem).join('')||'<div class="card">Nada agendado ainda.</div>'}</div>
   <div class="sec-title"><h2>Atalhos</h2></div>
-  <div class="ai-actions"><button data-act="novo">${IC.plus}Novo caso</button><button data-act="voz">${IC.wave}Conversar por voz</button><button data-go="leis">${IC.book}Vade Mecum</button><button data-act="relatorio">${IC.spark}Relatório do mês</button></div>`;
+  <div class="ai-actions"><button data-act="novo">${IC.plus}Novo caso</button><button data-act="voz">${IC.wave}Conversar por voz</button><button data-go="leis">${IC.book}Vade Mecum</button><button data-act="relatorio">${IC.spark}Relatório do mês</button><button data-go="escrever">${IC.edit}Escrever com IA</button><button data-go="contatos">${IC.people}Contatos</button><button data-go="financeiro" style="grid-column:1/-1">${IC.money}Faturamento · ${brl(resumoFin().rm)} recebido no mês</button></div>`;
 }
 
 let fCasos={q:'',tipo:'Todos'};
@@ -523,11 +528,13 @@ function vCaso(){
   <div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><h2 style="font-size:20px;color:var(--navy)">${esc(c.titulo)}</h2>${statusTag(c.status)}</div>
   <p style="color:var(--muted);font-size:13px;margin:4px 0 12px">${esc(c.tipo)} · Processo ${esc(c.numero)}</p>
   <p style="font-size:14.5px">${esc(c.resumo)}</p>
-  <div class="kv" style="margin-top:12px"><span>Partes</span><div>${c.partes.map(p=>esc(p.nome)+' <small style="color:var(--muted)">('+esc(p.papel)+')</small>').join('<br>')}</div><span>Advogados</span><div>${esc(c.advogados)}</div><span>Próxima sessão</span><div>${next?dayLabel(next.data)+' às '+esc(next.hora):'Não agendada'}</div></div>
-  <div class="row" style="margin-top:14px">${c.link?`<a class="btn navy" href="${esc(c.link)}" target="_blank" rel="noopener">${IC.video}Entrar na sessão</a>`:''}<button class="btn line" data-act="agendar" data-id="${c.id}">${IC.cal}Agendar</button><button class="btn line" data-act="status" data-id="${c.id}">Mudar situação</button></div></div>
+  <div class="kv" style="margin-top:12px"><span>Partes</span><div>${c.partes.map((p,i)=>esc(p.nome)+' <small style="color:var(--muted)">('+esc(p.papel)+')</small> '+(telDe(p)?`<a href="${waLink(telDe(p),'Olá, '+p.nome.split(' ')[0]+'!')}" target="_blank" rel="noopener" style="color:#1E8E4E;vertical-align:-3px" aria-label="WhatsApp">${IC.wa}</a> `:'')+(emailDe(p)?`<a href="${mailLink(emailDe(p),'','')}" style="color:var(--navy);vertical-align:-3px" aria-label="E-mail">${IC.mail}</a> `:'')+`<button class="link" style="font-size:12px" data-partecont="${c.id}|${i}">${telDe(p)||emailDe(p)?'editar':'+ contato'}</button>`).join('<br>')}</div><span>Advogados</span><div>${esc(c.advogados)}</div><span>Próxima sessão</span><div>${next?dayLabel(next.data)+' às '+esc(next.hora):'Não agendada'}</div></div>
+  <div class="row" style="margin-top:14px">${c.link?`<a class="btn navy" href="${esc(c.link)}" target="_blank" rel="noopener">${IC.video}Entrar na sessão</a>`:''}<button class="btn line" data-act="agendar" data-id="${c.id}">${IC.cal}Agendar</button><button class="btn line" data-convite="${c.id}">${IC.wa}Enviar convite</button><button class="btn line" data-act="status" data-id="${c.id}">Mudar situação</button></div></div>
   <div class="sec-title"><h2>Ajuda da IA</h2></div>
-  <div class="ai-actions"><button data-ai="resumo">Resumo antes da sessão</button><button data-ai="roteiro">Roteiro da sessão</button><button data-ai="ideias">Ideias de acordo</button><button data-ai="termo">Escrever termo de acordo</button><button data-ai="destravar">Frases para acalmar</button><button data-ai="leis">Leis que se aplicam</button></div>
+  <div class="ai-actions"><button data-escrever="${c.id}" style="grid-column:1/-1">${IC.edit}Escrever e-mail, WhatsApp ou relatório</button><button data-ai="resumo">Resumo antes da sessão</button><button data-ai="roteiro">Roteiro da sessão</button><button data-ai="ideias">Ideias de acordo</button><button data-ai="termo">Escrever termo de acordo</button><button data-ai="destravar">Frases para acalmar</button><button data-ai="leis">Leis que se aplicam</button></div>
   <div id="aiOut"></div>
+  <div class="sec-title"><h2>Recebimentos</h2><button class="link" data-novoreceb="${c.id}">+ Adicionar</button></div>
+  <div class="list">${DB.receb.filter(r=>r.casoId===c.id).map(r=>`<div class="item"><div class="info"><b>${brl(r.valor)} · ${esc(r.desc)}</b><small>${fmtBR(r.data)}</small></div><button class="tag ${r.pago?'ok':'warn'}" data-pago="${r.id}" style="cursor:pointer">${r.pago?'Pago':'A receber'}</button></div>`).join('')||'<div class="card" style="font-size:14px">Nenhum recebimento registrado neste caso.</div>'}</div>
   <div class="sec-title"><h2>Anotações</h2></div>
   <div class="card"><textarea id="nota" placeholder="O que foi conversado e o que ficou combinado"></textarea>
   <div class="row" style="margin-top:8px">${DICT?`<button class="btn line" id="notaMic">${IC.mic}Ditar</button>`:''}<button class="btn gold" data-act="nota" data-id="${c.id}">Salvar anotação</button></div>
@@ -647,6 +654,162 @@ async function perguntaDoc(){
     docAns='<div class="ai-out" style="color:var(--text)"><p class="note" style="margin:0 0 6px">'+esc(q)+'</p>'+md(t)+'</div>';out.innerHTML=docAns}
   catch(e){b.textContent=aiErr(e)}
 }
+/* ===================== CONTATOS ===================== */
+const so=s=>String(s||'').replace(/\D/g,'');
+const brl=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+function waLink(tel,txt){let n=so(tel);if(n.length>=10&&n.length<=11)n='55'+n;return 'https://wa.me/'+n+'?text='+encodeURIComponent(txt||'')}
+function mailLink(to,assunto,txt){return 'mailto:'+(to||'')+'?subject='+encodeURIComponent(assunto||'')+'&body='+encodeURIComponent(txt||'')}
+function contatoDe(nome){const n=norm(nome);return DB.contatos.find(c=>norm(c.nome)===n)}
+function telDe(p){return p.tel||(contatoDe(p.nome)||{}).tel||''}
+function emailDe(p){return p.email||(contatoDe(p.nome)||{}).email||''}
+let fCont={q:''};
+function vContatos(){
+  const q=norm(fCont.q.trim());
+  const l=DB.contatos.filter(c=>!q||norm([c.nome,c.tel,c.email,c.papel].join(' ')).includes(q)).sort((a,b)=>a.nome.localeCompare(b.nome));
+  const temPicker='contacts' in navigator&&'ContactsManager' in window;
+  return `<button class="back" data-go="inicio">${IC.back}Início</button>
+  <h2 style="color:var(--navy);font-size:20px">Contatos</h2><p class="note">Partes, advogados e fórum. Daqui você manda o link da sessão por WhatsApp ou e-mail.</p>
+  <div class="search" style="margin-top:12px">${IC.search}<input id="qCont" placeholder="Buscar por nome, telefone ou e-mail" value="${esc(fCont.q)}"></div>
+  <div class="row" style="margin-bottom:12px">${temPicker?`<button class="btn gold" data-act="impCel" style="flex:1">Importar do celular</button>`:''}<button class="btn line" data-act="impArq" style="flex:1">Importar arquivo</button><button class="btn navy" data-act="novoCont" style="flex:1">${IC.plus}Novo</button></div>
+  <input type="file" id="contArq" accept=".vcf,.csv,text/vcard,text/csv" class="hide">
+  <p class="note" id="contMsg" style="margin:-4px 0 10px"></p>
+  <div class="list">${l.map(c=>`<div class="item"><div class="info"><b>${esc(c.nome)}</b><small>${esc([c.papel,c.tel,c.email].filter(Boolean).join(' · '))}</small></div>
+  ${c.tel?`<a class="round" style="width:38px;height:38px;min-width:38px;background:#E7F6EC;color:#1E8E4E" href="${waLink(c.tel,'Olá, '+c.nome.split(' ')[0]+'!')}" target="_blank" rel="noopener" aria-label="WhatsApp">${IC.wa}</a>`:''}
+  ${c.email?`<a class="round" style="width:38px;height:38px;min-width:38px;background:var(--bluel);color:var(--navy)" href="${mailLink(c.email,'','')}" aria-label="E-mail">${IC.mail}</a>`:''}
+  <button class="round" style="width:38px;height:38px;min-width:38px;color:var(--muted)" data-editcont="${c.id}" aria-label="Editar">${IC.edit}</button></div>`).join('')||'<div class="card">Nenhum contato ainda. Importe do celular, de um arquivo, ou adicione um novo.</div>'}</div>`;
+}
+function editarContato(id){
+  const c=DB.contatos.find(x=>x.id===id)||{id:'',nome:'',tel:'',email:'',papel:''};
+  const m=modal(`<h3>${c.id?'Editar contato':'Novo contato'}</h3>
+  <label>Nome</label><input id="ctN" value="${esc(c.nome)}"><label>WhatsApp / telefone</label><input id="ctT" inputmode="tel" placeholder="(19) 90000-0000" value="${esc(c.tel)}">
+  <label>E-mail</label><input id="ctE" type="email" placeholder="nome@email.com" value="${esc(c.email)}"><label>Quem é</label><input id="ctP" placeholder="Parte, advogado, fórum..." value="${esc(c.papel)}">
+  <p class="note" id="ctMsg"></p>
+  <div class="row" style="margin-top:14px">${c.id?`<button class="btn line" id="ctDel" style="color:var(--bad)">Apagar</button>`:''}<button class="btn line" data-close>Cancelar</button><button class="btn navy" id="ctOk" style="flex:1">Salvar</button></div>`);
+  m.querySelector('#ctOk').onclick=()=>{const n=m.querySelector('#ctN').value.trim();if(!n){const x=m.querySelector('#ctN');x.style.borderColor='var(--bad)';x.focus();m.querySelector('#ctMsg').textContent='Escreva o nome.';return}
+    const novo={id:c.id||'k'+Date.now(),nome:n,tel:m.querySelector('#ctT').value.trim(),email:m.querySelector('#ctE').value.trim(),papel:m.querySelector('#ctP').value.trim()};
+    DB.contatos=DB.contatos.filter(x=>x.id!==novo.id);DB.contatos.push(novo);save();closeModal();render()};
+  const del=m.querySelector('#ctDel');if(del)del.onclick=()=>{DB.contatos=DB.contatos.filter(x=>x.id!==c.id);save();closeModal();render()};
+}
+function juntarContatos(lista){let n=0;lista.forEach(c=>{if(!c.nome)return;const ja=contatoDe(c.nome);if(ja){ja.tel=ja.tel||c.tel;ja.email=ja.email||c.email}else{DB.contatos.push({id:'k'+Date.now()+Math.floor(Math.random()*9999),nome:c.nome,tel:c.tel||'',email:c.email||'',papel:c.papel||''});n++}});save();return n}
+async function importarCelular(){
+  const msg=document.getElementById('contMsg');
+  try{const r=await navigator.contacts.select(['name','tel','email'],{multiple:true});
+    const n=juntarContatos(r.map(x=>({nome:(x.name||[])[0]||'',tel:(x.tel||[])[0]||'',email:(x.email||[])[0]||''})));render();
+    const m2=document.getElementById('contMsg');if(m2)m2.textContent=n+' contato(s) importado(s).'}
+  catch(e){if(msg)msg.textContent='A importação foi cancelada.'}
+}
+function lerArquivoContatos(f){
+  f.text().then(t=>{let lista=[];
+    if(/BEGIN:VCARD/i.test(t)){t.split(/BEGIN:VCARD/i).slice(1).forEach(b=>{const g=re=>{const m=b.match(re);return m?m[1].trim():''};lista.push({nome:g(/\nFN[^:]*:(.+)/i)||g(/\nN[^:]*:(.+)/i).replace(/;+/g,' ').trim(),tel:g(/\nTEL[^:]*:(.+)/i),email:g(/\nEMAIL[^:]*:(.+)/i)})})}
+    else{const ls=t.split(/\r?\n/).filter(Boolean);const sep=ls[0].includes(';')?';':',';const cab=ls[0].split(sep).map(x=>norm(x.replace(/"/g,'')));
+      const iN=cab.findIndex(x=>/nome|name/.test(x)),iT=cab.findIndex(x=>/tel|fone|phone|celular|whats/.test(x)),iE=cab.findIndex(x=>/mail/.test(x));
+      ls.slice(1).forEach(l=>{const c=l.split(sep).map(x=>x.replace(/"/g,'').trim());lista.push({nome:c[iN>=0?iN:0]||'',tel:iT>=0?c[iT]:'',email:iE>=0?c[iE]:''})})}
+    const n=juntarContatos(lista);render();const m2=document.getElementById('contMsg');if(m2)m2.textContent=n+' contato(s) importado(s).';
+  }).catch(()=>{const m2=document.getElementById('contMsg');if(m2)m2.textContent='Não consegui ler esse arquivo.'})
+}
+/* Enviar convite da sessão: cada pessoa recebe pelo WhatsApp ou e-mail, ela mesma aperta enviar */
+function textoConvite(c,s){const p=DB.perfil;
+  return `Olá!\n\nVocê está convidado(a) para a sessão de mediação online do processo ${c.numero} (${c.titulo}).\n\n${s?'Data: '+fmtBR(s.data)+'\nHorário: '+s.hora+'\n':''}${c.link?'Link da sessão: '+c.link+'\n':''}\nPor favor, entre alguns minutos antes, em um lugar tranquilo, com câmera e microfone funcionando. Tudo o que for conversado na mediação é sigiloso.\n\nAtenciosamente,\n${(p.titulo?p.titulo+' ':'')+p.nome}${p.oab?'\n'+p.oab:''}\nMediadora`}
+function enviarConvite(cid,sid){
+  const c=caso(cid);const s=sid?DB.sessoes.find(x=>x.id===sid):DB.sessoes.filter(x=>x.casoId===cid&&x.data>=iso(new Date())).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora))[0];
+  const txt=textoConvite(c,s);const assunto='Sessão de mediação – processo '+c.numero;
+  const pessoas=c.partes.map(p=>({nome:p.nome,papel:p.papel,tel:telDe(p),email:emailDe(p)}));
+  const emails=pessoas.map(p=>p.email).filter(Boolean);
+  const m=modal(`<h3>Enviar convite</h3><p class="note">Toque em cada pessoa. O WhatsApp ou o e-mail abre com a mensagem pronta e você só aperta enviar.</p>
+  <div class="list" style="margin-top:10px">${pessoas.map((p,i)=>`<div class="item"><div class="info"><b>${esc(p.nome)}</b><small>${esc(p.papel)}${!p.tel&&!p.email?' · sem contato':''}</small></div>
+  ${p.tel?`<a class="btn" style="background:#E7F6EC;color:#1E8E4E;padding:9px 12px" href="${waLink(p.tel,txt)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a>`:''}
+  ${p.email?`<a class="btn line" style="padding:9px 12px" href="${mailLink(p.email,assunto,txt)}">${IC.mail}E-mail</a>`:''}
+  ${!p.tel&&!p.email?`<button class="btn line" style="padding:9px 12px" data-partecont="${cid}|${i}">Adicionar</button>`:''}</div>`).join('')}</div>
+  ${emails.length>1?`<a class="btn navy full" style="margin-top:12px" href="${mailLink(emails.join(','),assunto,txt)}">${IC.mail}Um e-mail para todos</a>`:''}
+  <details style="margin-top:12px"><summary class="link">Ver a mensagem</summary><div class="ai-out" style="white-space:pre-wrap">${esc(txt)}</div></details>
+  <div class="row" style="margin-top:12px"><button class="btn line" data-close>Fechar</button><button class="btn line" id="cvCp" style="flex:1">Copiar mensagem</button></div>`);
+  m.querySelector('#cvCp').onclick=e=>copyText(txt,e.target);
+}
+function contatoDaParte(cid,i){
+  const c=caso(cid),p=c.partes[i];
+  const m=modal(`<h3>Contato de ${esc(p.nome)}</h3>
+  ${DB.contatos.length?`<label>Escolher dos contatos</label><select id="pcSel"><option value="">—</option>${DB.contatos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(k=>`<option value="${k.id}">${esc(k.nome)}</option>`).join('')}</select>`:''}
+  <label>WhatsApp / telefone</label><input id="pcT" inputmode="tel" value="${esc(telDe(p))}"><label>E-mail</label><input id="pcE" type="email" value="${esc(emailDe(p))}">
+  <div class="row" style="margin-top:14px"><button class="btn line" data-close>Cancelar</button><button class="btn navy" id="pcOk" style="flex:1">Salvar</button></div>`);
+  const sel=m.querySelector('#pcSel');if(sel)sel.onchange=()=>{const k=DB.contatos.find(x=>x.id===sel.value);if(k){m.querySelector('#pcT').value=k.tel;m.querySelector('#pcE').value=k.email}};
+  m.querySelector('#pcOk').onclick=()=>{p.tel=m.querySelector('#pcT').value.trim();p.email=m.querySelector('#pcE').value.trim();if(!contatoDe(p.nome)&&(p.tel||p.email))DB.contatos.push({id:'k'+Date.now(),nome:p.nome,tel:p.tel,email:p.email,papel:p.papel});save();closeModal();render()};
+}
+
+/* ===================== ESCREVER COM IA ===================== */
+function guardarEsc(){const g=s=>document.querySelector(s);if(!g('#esTipo'))return;ESC.tipo=g('#esTipo').value;ESC.contatoId=g('#esCont').value;ESC.para=g('#esPara').value.trim();ESC.casoId=g('#esCaso').value;ESC.pedido=g('#esPed').value}
+const TIPOS_ESC=['E-mail para o juiz','E-mail para o fórum / cartório','WhatsApp para a parte','Mensagem para o advogado','Relatório da mediação','Ofício','Outro'];
+let ESC={tipo:TIPOS_ESC[0],casoId:'',para:'',contatoId:'',pedido:'',tom:'Formal',saida:''};
+function vEscrever(){
+  return `<button class="back" data-go="inicio">${IC.back}Início</button>
+  <h2 style="color:var(--navy);font-size:20px">Escrever com IA</h2><p class="note">Diga o que você quer escrever e a IA prepara o texto no tom certo. Você revisa antes de mandar.</p>
+  <div class="card" style="margin-top:12px">
+  <label>O que vai escrever</label><select id="esTipo">${TIPOS_ESC.map(t=>`<option ${t===ESC.tipo?'selected':''}>${t}</option>`).join('')}</select>
+  <label>Para quem</label><select id="esCont"><option value="">Escolher dos contatos (opcional)</option>${DB.contatos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(k=>`<option value="${k.id}" ${k.id===ESC.contatoId?'selected':''}>${esc(k.nome)}</option>`).join('')}</select>
+  <input id="esPara" placeholder="Ou escreva: Exmo. Juiz da 2ª Vara de Família..." value="${esc(ESC.para)}" style="margin-top:8px">
+  <label>Sobre qual caso (opcional)</label><select id="esCaso"><option value="">Nenhum</option>${DB.casos.map(c=>`<option value="${c.id}" ${c.id===ESC.casoId?'selected':''}>${esc(c.titulo)}</option>`).join('')}</select>
+  <label>Tom</label><div class="chips">${['Formal','Cordial','Acolhedor','Firme'].map(t=>`<button class="chip ${t===ESC.tom?'on':''}" data-tom="${t}">${t}</button>`).join('')}</div>
+  <label>O que você quer dizer</label><textarea id="esPed" placeholder="Ex.: informar que a sessão do dia 25 foi remarcada a pedido das partes" style="min-height:110px">${esc(ESC.pedido)}</textarea>
+  <div class="row" style="margin-top:10px">${DICT?`<button class="btn line" id="esMic">${IC.mic}Falar</button>`:''}<button class="btn gold" id="esGo" style="flex:1">${IC.spark}Escrever</button></div><p class="note" id="esMsg"></p></div>
+  <div id="esOut">${ESC.saida?saidaEsc():''}</div>`;
+}
+function saidaEsc(){
+  const k=DB.contatos.find(x=>x.id===ESC.contatoId);const txt=ESC.saida;
+  const assunto=(txt.match(/^Assunto:\s*(.+)$/im)||[])[1]||ESC.tipo;const corpo=txt.replace(/^Assunto:.*\n+/im,'');
+  return `<div class="ai-out">${md(txt)}</div><div class="row" style="margin-top:10px">
+  <button class="btn line" data-esc="copiar">Copiar</button>
+  ${k&&k.tel?`<a class="btn" style="background:#E7F6EC;color:#1E8E4E" href="${waLink(k.tel,corpo)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a>`:`<a class="btn" style="background:#E7F6EC;color:#1E8E4E" href="https://wa.me/?text=${encodeURIComponent(corpo)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a>`}
+  <a class="btn line" href="${mailLink(k&&k.email||'',assunto,corpo)}">${IC.mail}E-mail</a>
+  <button class="btn line" data-esc="refazer">Refazer</button>${ESC.casoId?`<button class="btn line" data-esc="nota">Salvar no caso</button>`:''}</div>`;
+}
+async function gerarEsc(){
+  ESC.pedido=document.getElementById('esPed').value.trim();const msg=document.getElementById('esMsg');
+  if(!ESC.pedido){msg.textContent='Escreva ou fale o que você quer dizer.';msg.style.color='var(--bad)';document.getElementById('esPed').focus();return}
+  if(!AI){msg.textContent=aiErr({code:'off'});return}
+  msg.style.color='';msg.innerHTML='<span class="spin"></span> Escrevendo...';
+  const c=ESC.casoId?caso(ESC.casoId):null;const k=DB.contatos.find(x=>x.id===ESC.contatoId);const p=DB.perfil;
+  const ass=(p.titulo?p.titulo+' ':'')+p.nome+(p.oab?', '+p.oab:'')+', mediadora';
+  const pedido='Escreva um texto do tipo "'+ESC.tipo+'"'+(ESC.para||k?' para '+(ESC.para||k.nome+(k.papel?' ('+k.papel+')':'')):'')+', em tom '+ESC.tom.toLowerCase()+'. O que a mediadora quer dizer: '+ESC.pedido+'\n\nRegras: português correto, claro e educado. Para juiz, fórum ou ofício use linguagem jurídica formal e o tratamento adequado (por exemplo, Excelentíssimo(a)). Para WhatsApp, texto curto e simples, sem formalidade excessiva. Se for e-mail, comece com uma linha "Assunto: ...". Assine como: '+ass+'. Respeite o sigilo da mediação: não exponha o conteúdo das conversas, só o necessário. Não invente fatos, datas nem números; onde faltar informação, deixe [preencher]. Entregue só o texto final, sem comentários.'+(c?'\n\n'+caseCtx(c):'');
+  try{const t=await ask(base()+'\n\n'+pedido,x=>{},{modelTier:'default'});ESC.saida=t.trim();msg.textContent='';document.getElementById('esOut').innerHTML=saidaEsc()}
+  catch(e){msg.textContent=aiErr(e)}
+}
+
+/* ===================== FATURAMENTO ===================== */
+let fFin={q:'',ver:'Todos'};
+function resumoFin(){const hoje=iso(new Date()),mes=hoje.slice(0,7),ano=hoje.slice(0,4);let rm=0,ar=0,ra=0;
+  DB.receb.forEach(r=>{const v=Number(r.valor)||0;if(r.pago){if((r.pagoEm||r.data).slice(0,7)===mes)rm+=v;if((r.pagoEm||r.data).slice(0,4)===ano)ra+=v}else ar+=v});return {rm,ar,ra}}
+function vFinanceiro(){
+  const q=norm(fFin.q.trim());const s=resumoFin();
+  const l=DB.receb.filter(r=>(fFin.ver==='Todos'||(fFin.ver==='Pagos'?r.pago:!r.pago))&&(!q||norm([r.desc,(caso(r.casoId)||{}).titulo,fmtBR(r.data),String(r.valor)].join(' ')).includes(q))).sort((a,b)=>b.data.localeCompare(a.data));
+  return `<button class="back" data-go="inicio">${IC.back}Início</button>
+  <h2 style="color:var(--navy);font-size:20px">Faturamento</h2><p class="note">Quanto você recebe pelas mediações. Só você vê.</p>
+  <div class="stats" style="margin-top:12px"><div class="stat"><small>Recebido no mês</small><b style="font-size:21px">${brl(s.rm)}</b></div><div class="stat"><small>A receber</small><b style="font-size:21px;color:var(--warn)">${brl(s.ar)}</b></div></div>
+  <div class="stat" style="margin:10px 0 14px"><small>Recebido no ano</small><b style="font-size:21px">${brl(s.ra)}</b></div>
+  <button class="btn gold full" data-act="novoReceb" style="margin-bottom:12px">${IC.plus}Novo recebimento</button>
+  <div class="search">${IC.search}<input id="qFin" placeholder="Buscar por caso, data ou valor" value="${esc(fFin.q)}"></div>
+  <div class="chips">${['Todos','A receber','Pagos'].map(t=>`<button class="chip ${t===fFin.ver?'on':''}" data-finver="${t}">${t}</button>`).join('')}</div>
+  <div class="list">${l.map(r=>`<div class="item"><div class="info"><b>${brl(r.valor)} · ${esc(r.desc||'Mediação')}</b><small>${esc((caso(r.casoId)||{}).titulo||'Sem caso')} · ${fmtBR(r.data)}${r.pago&&r.pagoEm?' · pago em '+fmtBR(r.pagoEm):''}</small></div>
+  <button class="tag ${r.pago?'ok':'warn'}" data-pago="${r.id}" style="cursor:pointer">${r.pago?'Pago':'A receber'}</button><button class="round" style="width:34px;height:34px;min-width:34px;color:var(--muted)" data-editreceb="${r.id}" aria-label="Editar">${IC.edit}</button></div>`).join('')||'<div class="card">Nenhum recebimento ainda.</div>'}</div>`;
+}
+function editarReceb(id,casoId){
+  const r=DB.receb.find(x=>x.id===id)||{id:'',casoId:casoId||'',desc:'Sessão de mediação',valor:'',data:iso(new Date()),pago:false};
+  const m=modal(`<h3>${r.id?'Editar recebimento':'Novo recebimento'}</h3>
+  <label>Caso</label><select id="rcC"><option value="">Sem caso</option>${DB.casos.map(c=>`<option value="${c.id}" ${c.id===r.casoId?'selected':''}>${esc(c.titulo)}</option>`).join('')}</select>
+  <label>Descrição</label><input id="rcD" value="${esc(r.desc)}" placeholder="Sessão de mediação, horas trabalhadas...">
+  <label>Valor (R$)</label><input id="rcV" inputmode="decimal" placeholder="150,00" value="${r.valor!==''?String(r.valor).replace('.',','):''}">
+  <label>Data (dd/mm/aaaa)</label><input id="rcDt" inputmode="numeric" value="${fmtBR(r.data)}">
+  <label style="display:flex;gap:8px;align-items:center;margin-top:14px;color:var(--text)"><input type="checkbox" id="rcP" style="width:auto" ${r.pago?'checked':''}> Já recebi</label>
+  <p class="note" id="rcMsg"></p>
+  <div class="row" style="margin-top:12px">${r.id?`<button class="btn line" id="rcDel" style="color:var(--bad)">Apagar</button>`:''}<button class="btn line" data-close>Cancelar</button><button class="btn navy" id="rcOk" style="flex:1">Salvar</button></div>`);
+  const dIn=m.querySelector('#rcDt');dIn.addEventListener('input',()=>{let v=dIn.value.replace(/\D/g,'').slice(0,8);if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);dIn.value=v});
+  m.querySelector('#rcOk').onclick=()=>{const msg=m.querySelector('#rcMsg');msg.style.color='var(--bad)';
+    const val=Number(m.querySelector('#rcV').value.replace(/\./g,'').replace(',','.'));if(!(val>0)){msg.textContent='Digite o valor, por exemplo 150,00.';return}
+    const dt=parseBR(dIn.value);if(!dt){msg.textContent='Digite a data no formato dd/mm/aaaa.';return}
+    const pago=m.querySelector('#rcP').checked;
+    const novo={id:r.id||'r'+Date.now(),casoId:m.querySelector('#rcC').value,desc:m.querySelector('#rcD').value.trim()||'Mediação',valor:Math.round(val*100)/100,data:dt,pago,pagoEm:pago?(r.pagoEm||iso(new Date())):''};
+    DB.receb=DB.receb.filter(x=>x.id!==novo.id);DB.receb.push(novo);save();closeModal();render()};
+  const del=m.querySelector('#rcDel');if(del)del.onclick=()=>{DB.receb=DB.receb.filter(x=>x.id!==r.id);save();closeModal();render()};
+}
+
 function vPerfil(){
   const p=DB.perfil;
   return `<button class="back" data-go="inicio">${IC.back}Início</button>
@@ -666,7 +829,7 @@ function vPerfil(){
 function render(){
   header();navBar();
   const v=document.getElementById('view');
-  v.innerHTML=({inicio:vInicio,casos:vCasos,caso:vCaso,agenda:vAgenda,leis:vLeis,assistente:vAssistente,perfil:vPerfil,biblioteca:vBiblioteca,doc:vDoc}[route]||vInicio)();
+  v.innerHTML=({inicio:vInicio,casos:vCasos,caso:vCaso,agenda:vAgenda,leis:vLeis,assistente:vAssistente,perfil:vPerfil,biblioteca:vBiblioteca,doc:vDoc,contatos:vContatos,escrever:vEscrever,financeiro:vFinanceiro}[route]||vInicio)();
   bindView();
   if(route==='assistente'&&!fChat.q){const c=document.getElementById('chat');if(c&&DB.chat.length)setTimeout(()=>window.scrollTo(0,document.body.scrollHeight),30)}
 }
@@ -750,6 +913,7 @@ function agendar(id){
     const conv=`Olá!\n\nVocê está convidado(a) para a sessão de mediação online do processo ${c0.numero} (${c0.titulo}).\n\nData: ${fmtBR(d)}\nHorário: ${h}\n${c0.link?'Link da sessão: '+c0.link+'\n':''}\nPor favor, entre alguns minutos antes, em um lugar tranquilo, com câmera e microfone funcionando. Tudo o que for conversado na mediação é sigiloso.\n\nAtenciosamente,\n${(p.titulo?p.titulo+' ':'')+p.nome}${p.oab?'\n'+p.oab:''}\nMediadora`;
     const mm=modal(`<h3>Sessão agendada</h3><p class="note">Convite pronto para mandar por e-mail às partes e aos advogados:</p><div class="ai-out" style="white-space:pre-wrap">${esc(conv)}</div><div class="row" style="margin-top:12px"><button class="btn line" data-close>Fechar</button><button class="btn navy" id="cvCopy" style="flex:1">Copiar convite</button></div>`);
     mm.querySelector('#cvCopy').onclick=e=>copyText(conv,e.target);
+    const bt=document.createElement('button');bt.className='btn gold full';bt.style.marginTop='10px';bt.innerHTML=IC.wa+'Enviar por WhatsApp ou e-mail';bt.onclick=()=>{const sid=DB.sessoes[DB.sessoes.length-1].id;enviarConvite(cid,sid)};mm.appendChild(bt);
   };
 }
 
@@ -928,8 +1092,10 @@ function openVoice(){
 function bindView(){
   const v=document.getElementById('view');
   const qc=v.querySelector('#qCasos');if(qc){qc.oninput=()=>{fCasos.q=qc.value;const pos=qc.selectionStart;render();const n=document.getElementById('qCasos');n.focus();n.setSelectionRange(pos,pos)}}
-  [['#qAg',fAg],['#qChat',fChat],['#qBib',fBib],['#qDoc',fDoc]].forEach(([sel,f])=>{const x=v.querySelector(sel);if(x)x.oninput=()=>{f.q=x.value;const pos=x.selectionStart;render();const n=document.querySelector(sel);n.focus();n.setSelectionRange(pos,pos)}});
+  [['#qAg',fAg],['#qChat',fChat],['#qBib',fBib],['#qDoc',fDoc],['#qCont',fCont],['#qFin',fFin]].forEach(([sel,f])=>{const x=v.querySelector(sel);if(x)x.oninput=()=>{f.q=x.value;const pos=x.selectionStart;render();const n=document.querySelector(sel);n.focus();n.setSelectionRange(pos,pos)}});
   const ds=v.querySelector('#docSend');if(ds){ds.onclick=perguntaDoc;const di=v.querySelector('#docIn');di.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();perguntaDoc()}};const dm=v.querySelector('#docMic');if(dm&&DICT)bindDictTo(dm,di)}
+  const ca=v.querySelector('#contArq');if(ca)ca.onchange=()=>{if(ca.files[0])lerArquivoContatos(ca.files[0])};
+  const eg=v.querySelector('#esGo');if(eg){eg.onclick=()=>{guardarEsc();gerarEsc()};['#esTipo','#esCont','#esCaso'].forEach(s=>{const x=v.querySelector(s);x.onchange=guardarEsc});const em=v.querySelector('#esMic');if(em&&DICT)bindDictTo(em,v.querySelector('#esPed'))}
   const fi=v.querySelector('#fileIn');if(fi)fi.onchange=()=>enviarArquivos(fi.files);
   const ql=v.querySelector('#qLeis');if(ql){ql.oninput=()=>{fLeis.q=ql.value;const pos=ql.selectionStart;render();const n=document.getElementById('qLeis');n.focus();n.setSelectionRange(pos,pos)}}
   const ci=v.querySelector('#chatIn');
@@ -971,6 +1137,16 @@ document.addEventListener('click',e=>{
   const cp=e.target.closest('[data-copy]');if(cp){const [lid,n]=cp.dataset.copy.split('|');const law=LEIS.find(x=>x.id===lid);const art=law.arts.find(x=>x.n===n);copyText(law.nome+', '+art.n+': '+art.t,cp);return}
   const od=e.target.closest('[data-doc]');if(od){fDoc={q:od.dataset.docq||''};docAns='';go('doc',od.dataset.doc);return}
   const lc=e.target.closest('[data-leicompleta]');if(lc){const l=LEIS.find(x=>x.id===lc.dataset.leicompleta);const d=docDaLei(l.id)||DB.docs.find(x=>l.chave.some(k=>norm(x.nome).includes(k)));if(d&&TXT[d.id]){fDoc={q:''};docAns='';go('doc',d.id)}else if(IA_URL){const mm=modal(`<h3>${esc(l.nome)}</h3><p style="font-size:14.5px;margin-top:6px"><span class="spin"></span> Trazendo o texto oficial completo para dentro do app. Só na primeira vez.</p>`);baixarLei(l.id).then(dd=>{closeModal();fDoc={q:''};docAns='';go('doc',dd.id)}).catch(err=>{mm.innerHTML=`<h3>${esc(l.nome)}</h3><p style="font-size:14.5px;margin-top:6px">Não consegui trazer a lei agora. Confira a internet e tente de novo.</p><button class="btn navy full" data-close style="margin-top:12px">Ok</button>`})}else{modal(`<h3>${esc(l.nome)} completa</h3><p style="font-size:14.5px;margin-top:6px">O texto completo desta lei ainda não está no app. Cole o texto ou envie o PDF uma vez e ela fica guardada aqui dentro, com busca e com a IA para explicar.</p><p class="note">Se tiver o texto da lei copiado, cole aqui. Fica guardado do jeito que está.</p><div class="list" style="margin-top:14px"><button class="btn gold full" data-act="colar" data-nome="${esc(l.num+' - '+l.nome)}" data-url="${esc(l.url)}">Colar o texto da lei</button><button class="btn line full" data-go="biblioteca" data-close>Enviar o PDF na biblioteca</button><button class="btn line full" data-close>Agora não</button></div>`)}return}
+  const cv=e.target.closest('[data-convite]');if(cv){enviarConvite(cv.dataset.convite);return}
+  const pc=e.target.closest('[data-partecont]');if(pc){const [cid,i]=pc.dataset.partecont.split('|');contatoDaParte(cid,+i);return}
+  const ec=e.target.closest('[data-editcont]');if(ec){editarContato(ec.dataset.editcont);return}
+  const es=e.target.closest('[data-escrever]');if(es){ESC.casoId=es.dataset.escrever;ESC.saida='';go('escrever');return}
+  const tm=e.target.closest('[data-tom]');if(tm){guardarEsc();ESC.tom=tm.dataset.tom;render();return}
+  const ea=e.target.closest('[data-esc]');if(ea){const k=ea.dataset.esc;if(k==='copiar')copyText(ESC.saida.replace(/^Assunto:.*\n+/im,''),ea);else if(k==='refazer')gerarEsc();else if(k==='nota'){caso(ESC.casoId).notas.push({data:iso(new Date()),texto:ESC.tipo+':\n'+ESC.saida});save();ea.textContent='Salvo'}return}
+  const fv=e.target.closest('[data-finver]');if(fv){fFin.ver=fv.dataset.finver;render();return}
+  const pg=e.target.closest('[data-pago]');if(pg){const r=DB.receb.find(x=>x.id===pg.dataset.pago);r.pago=!r.pago;r.pagoEm=r.pago?iso(new Date()):'';save();render();return}
+  const er=e.target.closest('[data-editreceb]');if(er){editarReceb(er.dataset.editreceb);return}
+  const nr=e.target.closest('[data-novoreceb]');if(nr){editarReceb('',nr.dataset.novoreceb);return}
   const dd=e.target.closest('[data-deldoc]');if(dd){const d=DB.docs.find(x=>x.id===dd.dataset.deldoc);const m=modal(`<h3>Apagar documento?</h3><p style="margin-top:6px">${esc(d.nome)}</p><div class="row" style="margin-top:14px"><button class="btn line" data-close>Cancelar</button><button class="btn navy" id="okDel" style="flex:1;background:var(--bad)">Apagar</button></div>`);m.querySelector('#okDel').onclick=()=>{DB.docs=DB.docs.filter(x=>x.id!==d.id);delete TXT[d.id];IDB.del(d.id).catch(()=>{});save();closeModal();render()};return}
   const dr=e.target.closest('[data-delregra]');if(dr){DB.regras=DB.regras.filter(r=>r.id!==dr.dataset.delregra);save();render();return}
   const co=e.target.closest('[data-corrigir]');if(co){corrigir(+co.dataset.corrigir);return}
@@ -988,6 +1164,10 @@ document.addEventListener('click',e=>{
   else if(k==='limparEx'){const m=modal(`<h3>Apagar os exemplos?</h3><p style="margin-top:6px;font-size:14.5px">Os casos, sessões e prazos de exemplo saem. Seus dados, documentos e regras ficam.</p><div class="row" style="margin-top:14px"><button class="btn line" data-close>Cancelar</button><button class="btn navy" id="okEx" style="flex:1">Apagar exemplos</button></div>`);m.querySelector('#okEx').onclick=()=>{DB.casos=DB.casos.filter(c=>!/^c[1-5]$/.test(c.id));DB.sessoes=DB.sessoes.filter(s=>!/^s[1-4]$/.test(s.id));DB.prazos=[];DB.exemplos=false;save();closeModal();render()}}
   else if(k==='relatorio')relatorio();
   else if(k==='assinatura'){abrirAssinatura()}
+  else if(k==='novoCont'){editarContato('')}
+  else if(k==='impCel'){importarCelular()}
+  else if(k==='impArq'){const f=document.getElementById('contArq');if(f)f.click()}
+  else if(k==='novoReceb'){editarReceb('')}
   else if(k==='colar'){colarTexto(act.dataset.nome||'',act.dataset.url||'')}
   else if(k==='upload'){const fi=document.getElementById('fileIn');if(fi)fi.click()}
   else if(k==='soDocs'){DB.soDocs=!DB.soDocs;save();render()}
@@ -1010,6 +1190,7 @@ function buscaGeral(){
     const ch=DB.chat.map((m,i)=>({m,i})).filter(x=>has(x.m.content));
     const dcs=DB.docs.filter(d=>has(d.nome)||(TXT[d.id]||[]).some(p=>has(p.t)));
     const rgs=DB.regras.filter(r=>has(r.texto));
+    const cts=DB.contatos.filter(c=>has([c.nome,c.tel,c.email,c.papel].join(' ')));
     let h='';
     if(cs.length)h+='<h4>Casos</h4><div class="list">'+cs.map(c=>`<button class="item" data-case="${c.id}" data-close><div class="info"><b>${esc(c.titulo)}</b><small>${esc(c.tipo)} · ${esc(c.numero)}</small></div>${statusTag(c.status)}</button>`).join('')+'</div>';
     if(ss.length)h+='<h4>Sessões</h4><div class="list">'+ss.map(s=>sessItem(s).replace('<button class="item"','<button class="item" data-close')).join('')+'</div>';
@@ -1018,6 +1199,7 @@ function buscaGeral(){
     if(ch.length)h+='<h4>Conversas com a IA</h4><div class="list">'+ch.map(x=>`<button class="item" data-go="assistente" data-close><div class="info"><b style="white-space:normal;font-weight:500">${esc(x.m.content.slice(0,140))}${x.m.content.length>140?'...':''}</b><small>${x.m.role==='user'?'Sua pergunta':'Resposta da IA'}</small></div></button>`).join('')+'</div>';
     if(dcs.length)h+='<h4>Minha biblioteca</h4><div class="list">'+dcs.map(d=>`<button class="item" data-doc="${d.id}" data-close><div class="info"><b>${esc(d.nome)}</b><small>${d.paginas} página(s)</small></div></button>`).join('')+'</div>';
     if(rgs.length)h+='<h4>Regras ensinadas</h4><div class="list">'+rgs.map(r=>`<button class="item" data-bibbusca="1" data-close><div class="info"><b style="white-space:normal;font-weight:500">${esc(r.texto)}</b></div></button>`).join('')+'</div>';
+    if(cts.length)h+='<h4>Contatos</h4><div class="list">'+cts.map(c=>`<button class="item" data-go="contatos" data-close><div class="info"><b>${esc(c.nome)}</b><small>${esc([c.papel,c.tel,c.email].filter(Boolean).join(' · '))}</small></div></button>`).join('')+'</div>';
     out.innerHTML=h||'<p class="note">Nada encontrado.</p>';
   };
   m.addEventListener('click',e=>{const bb=e.target.closest('[data-bibbusca]');if(bb){fBib={q:inp.value.trim()};go('biblioteca');return}const lb=e.target.closest('[data-leibusca]');if(lb){fLeis={q:inp.value.trim(),lei:lb.dataset.leibusca};go('leis')}});

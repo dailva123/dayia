@@ -113,13 +113,15 @@ mark{background:#F6E7B8;padding:0 2px;border-radius:3px}
 @keyframes rot{to{transform:rotate(360deg)}}
 /* voz */
 .fab-voz{position:fixed;right:max(16px,calc(50% - 364px));bottom:calc(84px + env(safe-area-inset-bottom));z-index:25;display:flex;align-items:center;gap:8px;border:0;background:none;padding:0;cursor:pointer}
-.fab-voz .mini{width:62px;height:62px;border-radius:50%;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 35%,#BFE3FF 0%,#7CC0FF 30%,#3D97F5 58%,#1E6FE0 82%,#1557C2 100%);box-shadow:0 8px 22px rgba(40,120,240,.40);animation:breathe 5s ease-in-out infinite}
+.fab-voz .mini{width:58px;height:58px;border-radius:50%;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 35%,#BFE3FF 0%,#7CC0FF 30%,#3D97F5 58%,#1E6FE0 82%,#1557C2 100%);box-shadow:0 8px 22px rgba(40,120,240,.40);animation:breathe 5s ease-in-out infinite}
 .fab-voz .mini i{position:absolute;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,.9) 0%,rgba(255,255,255,.4) 45%,rgba(255,255,255,0) 72%);filter:blur(4px)}
 .fab-voz .mini i:nth-child(1){width:52px;height:26px;left:-10px;top:8px;animation:drift1 12s ease-in-out infinite}
 .fab-voz .mini i:nth-child(2){width:46px;height:24px;right:-14px;top:30px;animation:drift2 14s ease-in-out infinite}
-.fab-voz .mini i:nth-child(3){width:62px;height:62px;left:0;top:0;background:radial-gradient(circle at 38% 28%,rgba(255,255,255,.5),transparent 45%);filter:blur(2px)}
-.fab-voz .lbl{background:#fff;color:var(--navy);font-size:12px;font-weight:600;padding:6px 10px;border-radius:14px;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+.fab-voz .mini i:nth-child(3){width:58px;height:58px;left:0;top:0;background:radial-gradient(circle at 38% 28%,rgba(255,255,255,.5),transparent 45%);filter:blur(2px)}
+.fab-voz .lbl{display:none;background:#fff;color:var(--navy);font-size:12px;font-weight:600;padding:6px 10px;border-radius:14px;box-shadow:0 3px 10px rgba(0,0,0,.12)}
 .app{padding-bottom:160px}
+body.r-inicio .fab-voz .lbl{display:block}
+body.r-assistente .fab-voz{display:none}
 .voice{position:fixed;inset:0;z-index:60;background:#FFFFFF;color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:26px 20px 34px}
 .voice .vtop{width:100%;display:flex;justify-content:space-between;align-items:center;max-width:560px}
 .voice .vtop b{font-family:"Playfair Display",serif;font-size:17px;color:var(--navy)}
@@ -409,8 +411,8 @@ let VOZ=null;
 function escolherVoz(){try{const vs=speechSynthesis.getVoices().filter(v=>/^pt(-|_)BR/i.test(v.lang));VOZ=vs.find(v=>/google/i.test(v.name))||vs.find(v=>/luciana|francisca|thalita|maria|natural/i.test(v.name))||vs[0]||null}catch(e){}}
 if(window.speechSynthesis){escolherVoz();try{speechSynthesis.onvoiceschanged=escolherVoz}catch(e){}}
 function base(extra){
-  const p=DB.perfil;
-  return 'Você é a assistente jurídica do app Mediação Fácil e ajuda a '+p.titulo+' '+p.nome+', advogada e mediadora judicial que faz mediações online de casos cíveis e de família enviados pelo fórum (inventário, divórcio, guarda, pensão, aluguel, consumidor, vizinhança). Nunca trabalha com casos criminais. Responda sempre em português do Brasil, com linguagem clara, acolhedora e objetiva. Quando citar lei, informe o artigo e a lei e lembre de conferir o texto da lei na biblioteca do app. Você sugere; a decisão é sempre da mediadora. Respeite o sigilo da mediação e nunca invente fatos do caso. Use parágrafos curtos e listas com "- " quando ajudar. Não use tabelas.'+(DB.regras.length?'\n\nREGRAS E CORREÇÕES ENSINADAS PELA MEDIADORA (siga sempre; elas valem mais que o seu conhecimento):\n'+DB.regras.slice(-40).map(r=>'- '+r.texto).join('\n'):'')+(extra?'\n\n'+extra:'');
+  const p=DB.perfil;const quem=((p.titulo?p.titulo+' ':'')+p.nome).trim();
+  return 'Você é a assistente do app Mediação Fácil. Quem conversa com você é '+quem+', advogada e mediadora judicial. Ela faz mediações online de casos cíveis e de família que chegam do fórum e não atua em casos criminais.\n\nCOMO RESPONDER:\n- Vá direto ao ponto já na primeira frase. Não cumprimente (nada de "Olá", "Oi", "tudo bem?"), não se apresente e não repita a pergunta.\n- Não comente quem ela é nem os tipos de caso que ela atende: ela já sabe. Use isso só para entender o contexto.\n- Quando for natural chamá-la, use "Dra." ou "a senhora", nunca só o primeiro nome.\n- Português do Brasil, claro, educado e objetivo, como uma colega experiente falando com outra.\n- Se a pergunta estiver vaga, responda o que der e faça uma pergunta curta para entender melhor.\n- Ao citar lei, diga o artigo e a lei. Só cite artigo quando tiver certeza; se não tiver, diga que vale conferir na aba Leis do app.\n- Você sugere; a decisão é sempre dela. Respeite o sigilo da mediação e nunca invente fatos, nomes, datas ou números.\n- Se receber trechos de leis ou documentos que não têm a ver com a pergunta, ignore-os e não fale deles.\n- Parágrafos curtos e listas com "- " quando ajudarem. Não use tabelas.'+(DB.regras.length?'\n\nREGRAS E CORREÇÕES ENSINADAS PELA MEDIADORA (siga sempre; elas valem mais que o seu conhecimento):\n'+DB.regras.slice(-40).map(r=>'- '+r.texto).join('\n'):'')+(extra?'\n\n'+extra:'');
 }
 function caseCtx(c){
   return 'DADOS DO CASO\nProcesso: '+c.numero+'\nTipo: '+c.tipo+'\nTítulo: '+c.titulo+'\nSituação: '+c.status+'\nPartes: '+c.partes.map(p=>p.nome+' ('+p.papel+')').join('; ')+'\nAdvogados: '+c.advogados+'\nResumo: '+c.resumo+'\nLinha do tempo: '+c.timeline.map(t=>fmtBR(t.data)+' - '+t.texto).join('; ')+'\nAnotações: '+(c.notas.map(n=>fmtBR(n.data)+' - '+n.texto).join('; ')||'nenhuma');
@@ -449,12 +451,16 @@ async function atualizarLeis(){
 }
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const STOP=new Set('para como qual quais quando onde sobre entre pela pelo pelas pelos esse essa isso este esta isto aquele aquela minha meus minhas seus suas dela dele tem tenho pode posso deve devo fazer feito sendo seria ser estar mais menos muito muita porque pois ainda tambem caso casos voce existe'.split(' '));
-function chunksOf(id){const pages=TXT[id]||[];const out=[];pages.forEach(pg=>{const t=pg.t;for(let i=0;i<t.length;i+=1100)out.push({p:pg.p,t:t.slice(Math.max(0,i-150),i+1100)})});return out}
-function buscaDocs(q,max=6){
-  const ws=norm(q).split(/[^a-z0-9]+/).filter(w=>w.length>3&&!STOP.has(w));
+const CHK={};
+function chunksOf(id){const pages=TXT[id]||[];if(CHK[id]&&CHK[id].src===pages)return CHK[id].l;const out=[];pages.forEach(pg=>{const t=pg.t;for(let i=0;i<t.length;i+=1100){const tt=t.slice(Math.max(0,i-150),i+1100);out.push({p:pg.p,t:tt,n:norm(tt)})}});CHK[id]={src:pages,l:out};return out}
+/* Leis de outras áreas só entram quando a pergunta fala delas, para não confundir a IA */
+const AREA_FORA={cp:/penal|crime|criminal|delito|pena\b/,cpp:/penal|crime|criminal|inquerito|delegad/,ctb:/transito|veiculo|carro|multa|acidente/,ctn:/tribut|imposto|itcmd|itbi|iptu|fiscal/,clt:/trabalh|clt|emprego|salario|patrao/,lgpd:/dados|lgpd|privacidade/};
+function buscaDocs(q,max=5){
+  const nq=norm(q);const ws=[...new Set(nq.split(/[^a-z0-9]+/).filter(w=>w.length>3&&!STOP.has(w)))];
   if(!ws.length)return [];
-  const hits=[];
-  DB.docs.forEach(d=>chunksOf(d.id).forEach(c=>{const n=norm(c.t);let s=0;ws.forEach(w=>{const k=n.split(w).length-1;if(k)s+=1+Math.min(k,4)*.3});if(s>0)hits.push({doc:d.nome,p:c.p,t:c.t,s})}));
+  const precisa=Math.min(2,ws.length);const hits=[];
+  DB.docs.forEach(d=>{if(d.lei&&AREA_FORA[d.lei]&&!AREA_FORA[d.lei].test(nq))return;
+    chunksOf(d.id).forEach(c=>{let s=0,dif=0;ws.forEach(w=>{const k=c.n.split(w).length-1;if(k){dif++;s+=1+Math.min(k,4)*.3}});if(dif>=precisa)hits.push({doc:d.nome,p:c.p,t:c.t,s:s+(d.lei?0:1.5)})})});
   return hits.sort((a,b)=>b.s-a.s).slice(0,max);
 }
 function docCtx(q){
@@ -895,6 +901,7 @@ function vPerfil(){
 }
 
 function render(){
+  try{document.body.className=document.body.className.replace(/\br-\S+/g,'').trim()+' r-'+route}catch(e){}
   header();navBar();
   const v=document.getElementById('view');
   v.innerHTML=({inicio:vInicio,casos:vCasos,caso:vCaso,agenda:vAgenda,leis:vLeis,assistente:vAssistente,perfil:vPerfil,biblioteca:vBiblioteca,doc:vDoc,contatos:vContatos,escrever:vEscrever,financeiro:vFinanceiro}[route]||vInicio)();
@@ -1161,7 +1168,7 @@ function openVoice(){
     V.hist.push({role:'user',content:q});
     const h=V.hist.slice(-14).map(m=>({...m}));
     if(h[0].role!=='user')h.shift();
-    const pre=base('Agora vocês estão numa conversa falada, como duas colegas conversando de igual para igual: natural, amigável e direta, como uma advogada experiente batendo papo com outra. Responda em até 4 frases curtas, em texto corrido, sem listas, sem símbolos e sem títulos, porque a resposta será lida em voz alta. Pode fazer uma pergunta de volta quando ajudar a entender melhor o caso. Não repita a pergunta dela.');
+    const pre=base('Agora é uma conversa falada. Responda em 2 a 4 frases curtas, em texto corrido, sem listas, símbolos, títulos ou asteriscos, porque a resposta será lida em voz alta. Tom natural de colega para colega, sem cumprimentos e sem frases de abertura: comece já respondendo. Pode fazer uma pergunta curta de volta quando ajudar a entender o caso.');
     const dc=docCtx(q);
     h[0]={role:'user',content:pre+'\n\n'+(h.length===1&&dc.txt?dc.txt+'\n\n':'')+'FALA DELA: '+h[0].content};
     if(h.length>1&&dc.txt)h[h.length-1]={role:'user',content:dc.txt+'\n\nFALA DELA: '+q};

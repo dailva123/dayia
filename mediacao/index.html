@@ -1084,6 +1084,11 @@ async function sendChat(text){
 /* ---------- voz ---------- */
 let speaking=false;
 let AUDIO=null,vozEleven=true;
+/* O celular só deixa tocar áudio depois de um toque. Liberamos um único player no primeiro toque
+   e usamos sempre ele, para a voz da Elena nunca cair na voz robótica do celular. */
+const SILENCIO='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+function liberarAudio(){try{if(!AUDIO)AUDIO=new Audio();if(AUDIO.dataset.ok)return;AUDIO.src=SILENCIO;const p=AUDIO.play();if(p)p.then(()=>{AUDIO.dataset.ok='1'}).catch(()=>{})}catch(e){}}
+document.addEventListener('pointerdown',liberarAudio,{capture:true});
 async function falarEleven(clean){
   if(!IA_URL||!vozEleven)return false;
   try{
@@ -1101,11 +1106,15 @@ function speak(text,onEnd){
     falarEleven(clean).then(src=>{
       if(speak.atual!==meu)return;
       if(!src){speak.atual=null;speaking=false;falarLocal(clean,onEnd);return}
-      try{AUDIO&&AUDIO.pause()}catch(e){}
-      AUDIO=new Audio(src);
+      if(!AUDIO)AUDIO=new Audio();
+      try{AUDIO.pause()}catch(e){}
       const fim=()=>{if(speak.atual!==meu)return;speak.atual=null;speaking=false;onEnd&&onEnd()};
       AUDIO.onended=fim;AUDIO.onerror=fim;AUDIO.onplaying=()=>{if(speak.atual===meu&&speak.onPlay){const f=speak.onPlay;speak.onPlay=null;f()}};
-      AUDIO.play().catch(()=>{if(speak.atual!==meu)return;speak.atual=null;speaking=false;falarLocal(clean,onEnd)});
+      AUDIO.src=src;
+      const tentar=n=>AUDIO.play().catch(()=>{if(speak.atual!==meu)return;
+        if(n<2){setTimeout(()=>tentar(n+1),400);return}
+        speak.atual=null;speaking=false;const st=document.getElementById('vStatus');if(st)st.textContent='O celular bloqueou o som. Toque na bola e pergunte de novo.'});
+      tentar(0);
     });
     return;
   }

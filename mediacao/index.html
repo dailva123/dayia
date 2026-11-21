@@ -774,8 +774,35 @@ async function sendChat(text){
 
 /* ---------- voz ---------- */
 let speaking=false;
+let AUDIO=null,vozEleven=true;
+async function falarEleven(clean){
+  if(!IA_URL||!vozEleven)return false;
+  try{
+    const r=await fetch(IA_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({tipo:'voz',texto:clean.slice(0,1500)})});
+    const d=await r.json();
+    if(d.codigo==='semvoz'){vozEleven=false;return false}
+    if(!d.audio)return false;
+    return 'data:audio/mpeg;base64,'+d.audio;
+  }catch(e){return false}
+}
 function speak(text,onEnd){
   const clean=text.replace(/\*\*/g,'').replace(/^[-•]\s*/gm,'').slice(0,1990);
+  if(IA_URL&&vozEleven){
+    speaking=true;const meu=Symbol();speak.atual=meu;
+    falarEleven(clean).then(src=>{
+      if(speak.atual!==meu)return;
+      if(!src){speak.atual=null;speaking=false;falarLocal(clean,onEnd);return}
+      try{AUDIO&&AUDIO.pause()}catch(e){}
+      AUDIO=new Audio(src);
+      const fim=()=>{if(speak.atual!==meu)return;speak.atual=null;speaking=false;onEnd&&onEnd()};
+      AUDIO.onended=fim;AUDIO.onerror=fim;
+      AUDIO.play().catch(()=>{speak.atual=null;speaking=false;falarLocal(clean,onEnd)});
+    });
+    return;
+  }
+  falarLocal(clean,onEnd);
+}
+function falarLocal(clean,onEnd){
   if(TTS){
     speaking=true;
     return TTS.speak(clean,{language:'pt-BR',voice:'airy'}).catch(()=>{}).finally(()=>{speaking=false;onEnd&&onEnd()});
@@ -785,7 +812,7 @@ function speak(text,onEnd){
   }
   onEnd&&onEnd();
 }
-function stopSpeak(){try{TTS&&TTS.stop()}catch(e){}try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}speaking=false}
+function stopSpeak(){speak.atual=null;try{AUDIO&&AUDIO.pause()}catch(e){}try{TTS&&TTS.stop()}catch(e){}try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}speaking=false}
 
 let V={hist:[],heard:'',partial:'',listening:false,starting:false,cb:null,open:false,auto:true,timer:null};
 function openVoice(){

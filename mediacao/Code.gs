@@ -20,11 +20,14 @@ var LIMITE_DIA = 400;                                   // pedidos por dia (prot
 // Haiku (bem barato) no dia a dia; Sonnet só no termo de acordo, roteiro, ideias de acordo e leis do caso
 var MODELOS_CLAUDE = { quick: "claude-haiku-5-5", default: "claude-sonnet-5-5", complex: "claude-sonnet-5-5" };
 var RESERVA_CLAUDE = "claude-haiku-5-5";
+// Voz do ElevenLabs: propriedades ELEVEN_KEY (chave) e ELEVEN_VOZ (id da voz escolhida)
+var ELEVEN_MODELO = "eleven_flash_v2_5";
 var MODELOS_GEMINI = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-flash-latest"];   // se um estiver lotado, tenta o próximo
 
 function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents || "{}");
+    if (d.tipo === "voz") return json_(voz_(String(d.texto || "").slice(0, 1500)));
     var msgs = (d.mensagens || []).filter(function (m) { return m && m.content; }).slice(-20);
     if (!msgs.length) return json_({ erro: "Pergunta vazia." });
     if (!dentroDoLimite_()) return json_({ erro: "Limite do dia atingido.", codigo: "limite" });
@@ -82,6 +85,21 @@ function gemini_(msgs, modelo) {
   if (r.getResponseCode() !== 200) throw new Error((d.error && d.error.message) || ("Gemini " + r.getResponseCode()));
   var partes = (((d.candidates || [])[0] || {}).content || {}).parts || [];
   return partes.filter(function (p) { return !p.thought; }).map(function (p) { return p.text || ""; }).join("");
+}
+
+function voz_(texto) {
+  var p = PropertiesService.getScriptProperties();
+  var chave = p.getProperty("ELEVEN_KEY"), vozId = p.getProperty("ELEVEN_VOZ");
+  if (!chave || !vozId) return { erro: "Voz não configurada.", codigo: "semvoz" };
+  if (!texto) return { erro: "Texto vazio." };
+  if (!dentroDoLimite_()) return { erro: "Limite do dia atingido.", codigo: "limite" };
+  var r = UrlFetchApp.fetch("https://api.elevenlabs.io/v1/text-to-speech/" + vozId + "?output_format=mp3_44100_64", {
+    method: "post", contentType: "application/json", muteHttpExceptions: true,
+    headers: { "xi-api-key": chave, "accept": "audio/mpeg" },
+    payload: JSON.stringify({ text: texto, model_id: ELEVEN_MODELO, language_code: "pt" })
+  });
+  if (r.getResponseCode() !== 200) return { erro: "ElevenLabs " + r.getResponseCode() + ": " + r.getContentText().slice(0, 200), codigo: "erro" };
+  return { audio: Utilities.base64Encode(r.getBlob().getBytes()) };
 }
 
 function dentroDoLimite_() {

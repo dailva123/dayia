@@ -309,6 +309,30 @@ const LEIS=[
 const OUTRAS=['Lei de Alimentos (Lei 5.478/1968)','Estatuto da Criança e do Adolescente','Estatuto da Pessoa Idosa','Lei do Inquilinato (Lei 8.245/1991)','Código de Defesa do Consumidor','CLT','Código Penal e Processo Penal','Código Tributário Nacional','Código de Trânsito','Estatuto da Pessoa com Deficiência','Resolução 125 do CNJ'];
 
 /* ---------- capacidades ---------- */
+/* ===== Assinatura: 60 dias grátis, depois R$ 19,90 por mês (valor fixo) ===== */
+const PAG_LINK='';   /* link de pagamento do Mercado Pago (R$ 19,90 por mês) */
+const PIX_DAYIA='';  /* chave Pix da DayIA */
+const ZAP_DAYIA='https://wa.me/5519999389118?text='+encodeURIComponent('Olá! Sou a Dra. Ana Verena, do Mediação Fácil. Fiz o pagamento da mensalidade.');
+const TESTE_DIAS=60;
+function diasDesde(isoD){return Math.floor((Date.now()-new Date(isoD+'T00:00:00').getTime())/86400000)}
+function statusTeste(){if(!DB.inicioTeste){DB.inicioTeste=iso(new Date());save()}const resta=TESTE_DIAS-diasDesde(DB.inicioTeste);return {resta,fim:addDaysFrom(DB.inicioTeste,TESTE_DIAS)}}
+function addDaysFrom(s,n){const d=new Date(s+'T12:00');d.setDate(d.getDate()+n);return iso(d)}
+function avisoAssinatura(){const s=statusTeste();
+  if(s.resta>0)return `<button class="card" data-act="assinatura" style="width:100%;text-align:left;margin-bottom:14px;display:flex;gap:12px;align-items:center"><div style="min-width:46px;height:46px;border-radius:12px;background:var(--goldl);color:var(--goldd);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:600;line-height:1"><span style="font-size:18px">${s.resta}</span><small style="font-size:10px">${s.resta===1?'dia':'dias'}</small></div><div><b style="color:var(--navy)">Teste grátis</b><div style="font-size:13px;color:var(--muted)">Depois, R$ 19,90 por mês, valor fixo. Toque para ver.</div></div></button>`;
+  if(DB.pagoAte&&DB.pagoAte>=iso(new Date()))return '';
+  return `<button class="card" data-act="assinatura" style="width:100%;text-align:left;margin-bottom:14px;background:var(--goldl);border-color:#EAD6A2"><b style="color:var(--navy)">Seu teste grátis terminou</b><div style="font-size:13px;color:var(--goldd)">Para continuar com a IA, a mensalidade é R$ 19,90. Toque para pagar.</div></button>`;
+}
+function abrirAssinatura(){const s=statusTeste();
+  const m=modal(`<h3>Minha assinatura</h3>
+  ${s.resta>0?`<p style="font-size:14.5px;margin-top:6px">Você está no <b>teste grátis</b>: faltam <b>${s.resta} ${s.resta===1?'dia':'dias'}</b> (até ${fmtBR(s.fim)}).</p>`:`<p style="font-size:14.5px;margin-top:6px">Seu teste grátis terminou em ${fmtBR(s.fim)}.</p>`}
+  <div class="card" style="margin-top:12px;border:2px solid var(--gold)"><b style="color:var(--navy)">Mediação Fácil</b><div class="serif" style="font-size:26px;color:var(--navy)">R$ 19,90 <small style="font-size:14px;font-family:Inter,sans-serif;color:var(--muted)">por mês</small></div><p class="note" style="margin:2px 0 0">Valor fixo, sem aumento. Inclui a IA, as atualizações e a manutenção.</p></div>
+  ${PAG_LINK?`<a class="btn gold full" href="${PAG_LINK}" target="_blank" rel="noopener" style="margin-top:12px">Pagar pelo Mercado Pago (Pix, boleto ou cartão)</a>`:''}
+  ${PIX_DAYIA?`<div class="card" style="margin-top:12px"><b style="color:var(--navy)">Ou pague por Pix</b><p style="font-size:14px;margin:4px 0">Chave Pix da DayIA: <b>${esc(PIX_DAYIA)}</b></p><button class="btn line full" id="cpPix">Copiar chave Pix</button></div>`:''}
+  <p class="note" style="margin-top:10px">Depois de pagar, mande o comprovante para a DayIA pelo WhatsApp: (19) 99938-9118.</p>
+  <a class="btn navy full" href="${ZAP_DAYIA}" target="_blank" rel="noopener" style="margin-top:8px">Mandar comprovante no WhatsApp</a>
+  <button class="btn line full" data-close style="margin-top:8px">Fechar</button>`);
+  const cp=m.querySelector('#cpPix');if(cp)cp.onclick=e=>copyText(PIX_DAYIA,e.target);
+}
 /* Endereço do serviço de IA (Google Apps Script da DayIA). Termina em /exec */
 const IA_URL='';
 let AI=null,DICT=null,TTS=null;
@@ -435,7 +459,7 @@ function vInicio(){
   const prox=DB.sessoes.filter(s=>s.data>t).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).slice(0,3);
   const ab=DB.casos.filter(c=>c.status==='Em andamento').length,ac=DB.casos.filter(c=>c.status==='Acordo').length,sa=DB.casos.filter(c=>c.status==='Sem acordo').length;
   const taxa=ac+sa?Math.round(ac/(ac+sa)*100):0;
-  return aviso+`<div class="stats">
+  return aviso+avisoAssinatura()+`<div class="stats">
   <div class="stat"><small>Sessões hoje</small><b>${hoje.length}</b></div>
   <div class="stat"><small>Casos em andamento</small><b>${ab}</b></div>
   <div class="stat"><small>Acordos fechados</small><b>${ac}</b></div>
@@ -601,6 +625,7 @@ function vPerfil(){
   <label>E-mail</label><input id="pEmail" type="email" placeholder="nome@email.com" value="${esc(p.email)}">
   <label>Telefone</label><input id="pTel" placeholder="(19) 90000-0000" value="${esc(p.tel)}">
   <button class="btn gold full" data-act="salvarPerfil" style="margin-top:16px">Salvar</button></div>
+  <button class="card" data-act="assinatura" style="width:100%;text-align:left;margin-top:12px"><b style="color:var(--navy)">Minha assinatura</b><div style="font-size:13px;color:var(--muted)">R$ 19,90 por mês, valor fixo. Teste grátis de 60 dias.</div></button>
   <button class="link" data-act="reset" style="margin-top:16px">Voltar aos dados de exemplo</button>`;
 }
 
@@ -894,6 +919,7 @@ document.addEventListener('click',e=>{
   else if(k==='reset'){DB=demoData();save();go('inicio')}
   else if(k==='limparEx'){const m=modal(`<h3>Apagar os exemplos?</h3><p style="margin-top:6px;font-size:14.5px">Os casos, sessões e prazos de exemplo saem. Seus dados, documentos e regras ficam.</p><div class="row" style="margin-top:14px"><button class="btn line" data-close>Cancelar</button><button class="btn navy" id="okEx" style="flex:1">Apagar exemplos</button></div>`);m.querySelector('#okEx').onclick=()=>{DB.casos=DB.casos.filter(c=>!/^c[1-5]$/.test(c.id));DB.sessoes=DB.sessoes.filter(s=>!/^s[1-4]$/.test(s.id));DB.prazos=[];DB.exemplos=false;save();closeModal();render()}}
   else if(k==='relatorio')relatorio();
+  else if(k==='assinatura'){abrirAssinatura()}
   else if(k==='colar'){colarTexto(act.dataset.nome||'',act.dataset.url||'')}
   else if(k==='upload'){const fi=document.getElementById('fileIn');if(fi)fi.click()}
   else if(k==='soDocs'){DB.soDocs=!DB.soDocs;save();render()}

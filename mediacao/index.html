@@ -690,6 +690,7 @@ const so=s=>String(s||'').replace(/\D/g,'');
 const brl=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 function waLink(tel,txt){let n=so(tel);if(n.length>=10&&n.length<=11)n='55'+n;return 'https://wa.me/'+n+'?text='+encodeURIComponent(txt||'')}
 function mailLink(to,assunto,txt){return 'mailto:'+(to||'')+'?subject='+encodeURIComponent(assunto||'')+'&body='+encodeURIComponent(txt||'')}
+function gmailLink(to,assunto,txt){return 'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(to||'')+'&su='+encodeURIComponent(assunto||'')+'&body='+encodeURIComponent(txt||'')}
 function contatoDe(nome){const n=norm(nome);return DB.contatos.find(c=>norm(c.nome)===n)}
 function telDe(p){return p.tel||(contatoDe(p.nome)||{}).tel||''}
 function emailDe(p){return p.email||(contatoDe(p.nome)||{}).email||''}
@@ -705,8 +706,8 @@ function vContatos(){
   <input type="file" id="contArq" accept=".vcf,.csv,text/vcard,text/csv" class="hide">
   <p class="note" id="contMsg" style="margin:-4px 0 10px"></p>
   <div class="list">${l.map(c=>`<div class="item"><div class="info"><b>${esc(c.nome)}</b><small>${esc([c.papel,c.tel,c.email].filter(Boolean).join(' · '))}</small></div>
-  ${c.tel?`<a class="round" style="width:38px;height:38px;min-width:38px;background:#E7F6EC;color:#1E8E4E" href="${waLink(c.tel,'Olá, '+c.nome.split(' ')[0]+'!')}" target="_blank" rel="noopener" aria-label="WhatsApp">${IC.wa}</a>`:''}
-  ${c.email?`<a class="round" style="width:38px;height:38px;min-width:38px;background:var(--bluel);color:var(--navy)" href="${mailLink(c.email,'','')}" aria-label="E-mail">${IC.mail}</a>`:''}
+  ${c.tel?`<button class="round" style="width:38px;height:38px;min-width:38px;background:#E7F6EC;color:#1E8E4E" data-msg="${c.id}|wa" aria-label="Mensagem no WhatsApp">${IC.wa}</button>`:''}
+  ${c.email?`<button class="round" style="width:38px;height:38px;min-width:38px;background:var(--bluel);color:var(--navy)" data-msg="${c.id}|mail" aria-label="E-mail">${IC.mail}</button>`:''}
   <button class="round" style="width:38px;height:38px;min-width:38px;color:var(--muted)" data-editcont="${c.id}" aria-label="Editar">${IC.edit}</button></div>`).join('')||'<div class="card">Nenhum contato ainda. Importe do celular, de um arquivo, ou adicione um novo.</div>'}</div>`;
 }
 function editarContato(id){
@@ -738,6 +739,42 @@ function lerArquivoContatos(f){
     const n=juntarContatos(lista);render();const m2=document.getElementById('contMsg');if(m2)m2.textContent=n+' contato(s) importado(s).';
   }).catch(()=>{const m2=document.getElementById('contMsg');if(m2)m2.textContent='Não consegui ler esse arquivo.'})
 }
+/* Escrever para um contato: ela diz o que quer, a IA escreve, e o WhatsApp/e-mail abre com tudo pronto */
+function escreverPara(cid,canal){
+  const k=DB.contatos.find(x=>x.id===cid);if(!k)return;let tom='Cordial';
+  const m=modal(`<h3>${canal==='wa'?'WhatsApp':'E-mail'} para ${esc(k.nome)}</h3><p class="note">${esc([k.papel,canal==='wa'?k.tel:k.email].filter(Boolean).join(' · '))}</p>
+  <label>O que você quer dizer</label><textarea id="emPed" placeholder="Ex.: avisar que a sessão de quinta foi remarcada para dia 28 às 14h" style="min-height:80px"></textarea>
+  <label>Tom</label><div class="chips" id="emTom">${['Formal','Cordial','Acolhedor','Firme'].map(t=>`<button class="chip ${t===tom?'on':''}" data-t="${t}">${t}</button>`).join('')}</div>
+  <div class="row">${DICT?`<button class="btn line" id="emMic">${IC.mic}Falar</button>`:''}<button class="btn gold" id="emIA" style="flex:1">${IC.spark}Escrever com IA</button></div><p class="note" id="emMsg"></p>
+  ${canal==='mail'?`<label>Assunto</label><input id="emAss" placeholder="Assunto do e-mail">`:''}
+  <label>Mensagem</label><textarea id="emTxt" style="min-height:170px" placeholder="A IA escreve aqui, ou escreva você mesma.">Olá, ${esc(k.nome.split(' ')[0])}!
+
+</textarea>
+  <div class="row" style="margin-top:12px;flex-wrap:wrap">
+  ${canal==='wa'?`<button class="btn" id="emWa" style="flex:1;background:#E7F6EC;color:#1E8E4E">${IC.wa}Abrir no WhatsApp</button>`:`<button class="btn navy" id="emMail" style="flex:1">${IC.mail}Abrir no e-mail</button><button class="btn line" id="emGm">Gmail</button>`}
+  <button class="btn line" id="emCp">Copiar</button></div>
+  <p class="note">A mensagem abre pronta no ${canal==='wa'?'WhatsApp':'e-mail'}. É só conferir e apertar enviar.</p>`);
+  const g=s=>m.querySelector(s);
+  m.querySelectorAll('#emTom .chip').forEach(b=>b.onclick=()=>{tom=b.dataset.t;m.querySelectorAll('#emTom .chip').forEach(x=>x.classList.toggle('on',x===b))});
+  if(DICT&&g('#emMic'))bindDictTo(g('#emMic'),g('#emPed'));
+  g('#emIA').onclick=async()=>{
+    const ped=g('#emPed').value.trim(),msg=g('#emMsg');
+    if(!ped){msg.style.color='var(--bad)';msg.textContent='Escreva ou fale o que você quer dizer.';g('#emPed').focus();return}
+    if(!AI){msg.textContent=aiErr({code:'off'});return}
+    msg.style.color='';msg.innerHTML='<span class="spin"></span> Escrevendo...';const p=DB.perfil;
+    const ass=(p.titulo?p.titulo+' ':'')+p.nome+(p.oab?', '+p.oab:'')+', mediadora';
+    const pedido='Escreva '+(canal==='wa'?'uma mensagem de WhatsApp':'um e-mail')+' para '+k.nome+(k.papel?' ('+k.papel+')':'')+', em tom '+tom.toLowerCase()+'. O que a mediadora quer dizer: '+ped+'\n\nRegras: português correto, claro e educado. Se for juiz, fórum ou cartório, use linguagem jurídica formal e o tratamento adequado (Excelentíssimo(a)). Se for parte, linguagem simples. '+(canal==='wa'?'WhatsApp: curto e direto, sem assunto. ':'E-mail: a PRIMEIRA linha deve ser "Assunto: ..." e depois o texto. ')+'Assine como: '+ass+'. Respeite o sigilo da mediação. Não invente fatos, datas nem números; onde faltar informação, deixe [preencher]. Entregue só o texto final, sem comentários e sem asteriscos.';
+    try{let t=(await ask(base()+'\n\n'+pedido,x=>{},{modelTier:'default'})).trim().replace(/\*\*/g,'');
+      const a=t.match(/^Assunto:\s*(.+)$/im);if(a){t=t.replace(/^Assunto:.*\n+/im,'');if(g('#emAss'))g('#emAss').value=a[1].trim()}
+      g('#emTxt').value=t;msg.textContent='Pronto! Confira e ajuste se quiser.'}catch(e){msg.textContent=aiErr(e)}
+  };
+  const txt=()=>g('#emTxt').value.trim(),ass=()=>(g('#emAss')&&g('#emAss').value.trim())||'';
+  const abrir=u=>window.open(u,'_blank','noopener');
+  if(g('#emWa'))g('#emWa').onclick=()=>abrir(waLink(k.tel,txt()));
+  if(g('#emMail'))g('#emMail').onclick=()=>{location.href=mailLink(k.email,ass(),txt())};
+  if(g('#emGm'))g('#emGm').onclick=()=>abrir(gmailLink(k.email,ass(),txt()));
+  g('#emCp').onclick=e=>copyText(txt(),e.target);
+}
 /* Enviar convite da sessão: cada pessoa recebe pelo WhatsApp ou e-mail, ela mesma aperta enviar */
 function textoConvite(c,s){const p=DB.perfil;
   return `Olá!\n\nVocê está convidado(a) para a sessão de mediação online do processo ${c.numero} (${c.titulo}).\n\n${s?'Data: '+fmtBR(s.data)+'\nHorário: '+s.hora+'\n':''}${c.link?'Link da sessão: '+c.link+'\n':''}\nPor favor, entre alguns minutos antes, em um lugar tranquilo, com câmera e microfone funcionando. Tudo o que for conversado na mediação é sigiloso.\n\nAtenciosamente,\n${(p.titulo?p.titulo+' ':'')+p.nome}${p.oab?'\n'+p.oab:''}\nMediadora`}
@@ -751,7 +788,7 @@ function enviarConvite(cid,sid){
   ${p.tel?`<a class="btn" style="background:#E7F6EC;color:#1E8E4E;padding:9px 12px" href="${waLink(p.tel,txt)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a>`:''}
   ${p.email?`<a class="btn line" style="padding:9px 12px" href="${mailLink(p.email,assunto,txt)}">${IC.mail}E-mail</a>`:''}
   ${!p.tel&&!p.email?`<button class="btn line" style="padding:9px 12px" data-partecont="${cid}|${i}">Adicionar</button>`:''}</div>`).join('')}</div>
-  ${emails.length>1?`<a class="btn navy full" style="margin-top:12px" href="${mailLink(emails.join(','),assunto,txt)}">${IC.mail}Um e-mail para todos</a>`:''}
+  ${emails.length>1?`<div class="row" style="margin-top:12px"><a class="btn navy" style="flex:1" href="${mailLink(emails.join(','),assunto,txt)}">${IC.mail}Um e-mail para todos</a><a class="btn line" href="${gmailLink(emails.join(','),assunto,txt)}" target="_blank" rel="noopener">Gmail</a></div>`:''}
   <details style="margin-top:12px"><summary class="link">Ver a mensagem</summary><div class="ai-out" style="white-space:pre-wrap">${esc(txt)}</div></details>
   <div class="row" style="margin-top:12px"><button class="btn line" data-close>Fechar</button><button class="btn line" id="cvCp" style="flex:1">Copiar mensagem</button></div>`);
   m.querySelector('#cvCp').onclick=e=>copyText(txt,e.target);
@@ -789,7 +826,7 @@ function saidaEsc(){
   return `<div class="ai-out">${md(txt)}</div><div class="row" style="margin-top:10px">
   <button class="btn line" data-esc="copiar">Copiar</button>
   ${k&&k.tel?`<a class="btn" style="background:#E7F6EC;color:#1E8E4E" href="${waLink(k.tel,corpo)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a>`:`<a class="btn" style="background:#E7F6EC;color:#1E8E4E" href="https://wa.me/?text=${encodeURIComponent(corpo)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a>`}
-  <a class="btn line" href="${mailLink(k&&k.email||'',assunto,corpo)}">${IC.mail}E-mail</a>
+  <a class="btn line" href="${mailLink(k&&k.email||'',assunto,corpo)}">${IC.mail}E-mail</a><a class="btn line" href="${gmailLink(k&&k.email||'',assunto,corpo)}" target="_blank" rel="noopener">Gmail</a>
   <button class="btn line" data-esc="refazer">Refazer</button>${ESC.casoId?`<button class="btn line" data-esc="nota">Salvar no caso</button>`:''}</div>`;
 }
 async function gerarEsc(){
@@ -1204,6 +1241,7 @@ document.addEventListener('click',e=>{
   const cp=e.target.closest('[data-copy]');if(cp){const [lid,n]=cp.dataset.copy.split('|');const law=LEIS.find(x=>x.id===lid);const art=law.arts.find(x=>x.n===n);copyText(law.nome+', '+art.n+': '+art.t,cp);return}
   const od=e.target.closest('[data-doc]');if(od){fDoc={q:od.dataset.docq||''};docAns='';go('doc',od.dataset.doc);return}
   const lc=e.target.closest('[data-leicompleta]');if(lc){const l=LEIS.find(x=>x.id===lc.dataset.leicompleta);const d=docDaLei(l.id)||DB.docs.find(x=>l.chave.some(k=>norm(x.nome).includes(k)));if(d&&TXT[d.id]){fDoc={q:''};docAns='';go('doc',d.id)}else if(IA_URL){const mm=modal(`<h3>${esc(l.nome)}</h3><p style="font-size:14.5px;margin-top:6px"><span class="spin"></span> Trazendo o texto oficial completo para dentro do app. Só na primeira vez.</p>`);baixarLei(l.id).then(dd=>{closeModal();fDoc={q:''};docAns='';go('doc',dd.id)}).catch(err=>{mm.innerHTML=`<h3>${esc(l.nome)}</h3><p style="font-size:14.5px;margin-top:6px">Não consegui trazer a lei agora. Confira a internet e tente de novo.</p><button class="btn navy full" data-close style="margin-top:12px">Ok</button>`})}else{modal(`<h3>${esc(l.nome)} completa</h3><p style="font-size:14.5px;margin-top:6px">O texto completo desta lei ainda não está no app. Cole o texto ou envie o PDF uma vez e ela fica guardada aqui dentro, com busca e com a IA para explicar.</p><p class="note">Se tiver o texto da lei copiado, cole aqui. Fica guardado do jeito que está.</p><div class="list" style="margin-top:14px"><button class="btn gold full" data-act="colar" data-nome="${esc(l.num+' - '+l.nome)}" data-url="${esc(l.url)}">Colar o texto da lei</button><button class="btn line full" data-go="biblioteca" data-close>Enviar o PDF na biblioteca</button><button class="btn line full" data-close>Agora não</button></div>`)}return}
+  const em=e.target.closest('[data-msg]');if(em){const [a,b]=em.dataset.msg.split('|');escreverPara(a,b);return}
   const cv=e.target.closest('[data-convite]');if(cv){enviarConvite(cv.dataset.convite);return}
   const pc=e.target.closest('[data-partecont]');if(pc){const [cid,i]=pc.dataset.partecont.split('|');contatoDaParte(cid,+i);return}
   const ec=e.target.closest('[data-editcont]');if(ec){editarContato(ec.dataset.editcont);return}

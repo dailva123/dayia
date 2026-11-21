@@ -152,6 +152,17 @@ body.r-assistente .fab-voz{display:none}
 .vstatus{font-size:15px;color:var(--muted);min-height:22px;text-align:center}
 .vtext{max-width:520px;text-align:center;font-size:15.5px;color:var(--navy);min-height:44px;max-height:28vh;overflow:auto;line-height:1.55}
 .vbtns{display:flex;gap:14px;align-items:center}
+.voice.com-caso{justify-content:flex-start;gap:10px;padding-top:18px}
+.voice.com-caso .orb-wrap{gap:8px}
+.voice.com-caso .orb{zoom:.42}
+.voice.com-caso .vtext{max-height:13vh;min-height:0;font-size:14.5px}
+.vcaso-bar{width:100%;max-width:560px;display:flex;gap:8px;align-items:center;justify-content:center}
+.vcaso{width:100%;max-width:560px;flex:1;min-height:0;overflow:auto;background:#F6F8FB;border-radius:18px;padding:14px 16px;text-align:left;font-size:14.5px;line-height:1.5;color:var(--ink)}
+.vcaso h4{font-family:"Playfair Display",serif;color:var(--navy);font-size:17px;margin:0 0 2px}
+.vcaso .vs{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--goldd);margin:12px 0 4px}
+.vcaso ul{margin:0;padding-left:18px}.vcaso li{margin:2px 0}
+.vcaso .it{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14.5px;color:var(--navy)}
+.vcaso .it small{display:block;color:var(--muted);font-size:12px}
 .vbig{width:74px;height:74px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(27,42,74,.25)}
 .vbig.rec{background:#E74C3C;color:#fff}
 .vsmall{width:52px;height:52px;border-radius:50%;background:#F1F4F8;display:flex;align-items:center;justify-content:center;color:var(--navy)}
@@ -1164,8 +1175,11 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 function openVoice(){
   const r=document.getElementById('voiceRoot');V.open=true;manterTelaAcesa();guardarVoz();
   try{if(IA_URL)fetch(IA_URL,{mode:'no-cors'}).catch(()=>{})}catch(e){}
-  r.innerHTML=`<div class="voice"><div class="vtop"><b>Conversa por voz</b><button class="x" id="vClose" aria-label="Fechar">${IC.x}</button></div>
+  if(route==='caso'&&caso(param))V.caso=param;else if(!V.caso||!caso(V.caso))V.caso=null;
+  r.innerHTML=`<div class="voice" id="vBox"><div class="vtop"><b>Conversa por voz</b><button class="x" id="vClose" aria-label="Fechar">${IC.x}</button></div>
+  <div class="vcaso-bar" id="vCasoBar"></div>
   <div class="orb-wrap"><div class="orb" id="orb" role="button" aria-label="Falar"><div class="sw"></div><div class="cl c1"></div><div class="cl c2"></div><div class="cl c3"></div><div class="cl c4"></div><div class="cl c6"></div><div class="cl c5"></div></div><div class="vstatus" id="vStatus">${DICT?'Toque na bola e comece a falar':'Escreva sua pergunta abaixo'}</div><div class="vtext" id="vText"></div></div>
+  <div class="vcaso hide" id="vCaso"></div>
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%">
   ${DICT?`<button class="chip ${V.auto?'on':''}" id="vAuto">${V.auto?'✓ ':''}Conversa contínua</button>
   <div class="vbtns"><button class="vsmall" id="vKb" aria-label="Digitar">${IC.send}</button><button class="vbig" id="vMic" aria-label="Falar">${IC.mic}</button><button class="vsmall" id="vStop" aria-label="Parar">${IC.stop}</button></div>`:''}
@@ -1173,6 +1187,36 @@ function openVoice(){
   ${!DICT?'<p style="font-size:12px;color:var(--muted);text-align:center;max-width:320px">Este navegador não tem microfone para o app. Abra no Chrome para conversar falando.</p>':''}</div></div>`;
   const orb=r.querySelector('#orb'),st=r.querySelector('#vStatus'),vt=r.querySelector('#vText');
   const setOrb=s=>{orb.className='orb '+s};
+  /* Caso aberto na conversa: resumo para ela rolar e lembrar, e a IA já sabe de qual caso se trata */
+  const box=r.querySelector('#vBox'),pan=r.querySelector('#vCaso'),bar=r.querySelector('#vCasoBar');
+  function mostrarCaso(){
+    const c=V.caso&&caso(V.caso);
+    if(!c){box.classList.remove('com-caso');pan.classList.add('hide');
+      bar.innerHTML=DB.casos.length?`<button class="chip" id="vEsc">Ver um caso enquanto conversa</button>`:'';
+      const b=bar.querySelector('#vEsc');if(b)b.onclick=escolherCaso;return}
+    box.classList.add('com-caso');pan.classList.remove('hide');
+    bar.innerHTML=`<button class="chip on" id="vEsc">Trocar caso</button><button class="chip" id="vSem">Fechar caso</button>`;
+    bar.querySelector('#vEsc').onclick=escolherCaso;bar.querySelector('#vSem').onclick=()=>{V.caso=null;mostrarCaso()};
+    const hoje=iso(new Date());const nx=DB.sessoes.filter(s=>s.casoId===c.id&&s.data>=hoje).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora))[0];
+    pan.innerHTML=`<h4>${esc(c.titulo)}</h4><div style="color:var(--muted);font-size:12.5px">${esc(c.tipo)} · Processo ${esc(c.numero)} · ${esc(c.status)}</div>
+    <div class="vs">Próxima sessão</div><div>${nx?dayLabel(nx.data)+' às '+esc(nx.hora):'Não agendada'}</div>
+    <div class="vs">Resumo</div><div>${esc(c.resumo)}</div>
+    <div class="vs">Partes</div><ul>${c.partes.map(p=>`<li><b>${esc(p.nome)}</b> <span style="color:var(--muted)">(${esc(p.papel)})</span></li>`).join('')}</ul>
+    <div class="vs">Advogados</div><div>${esc(c.advogados)}</div>
+    ${c.notas&&c.notas.length?`<div class="vs">Suas anotações</div><ul>${c.notas.slice().reverse().map(n=>`<li><small style="color:var(--muted)">${fmtBR(n.data)}</small> ${esc(n.texto)}</li>`).join('')}</ul>`:''}
+    <div class="vs">O que já aconteceu</div><ul>${c.timeline.slice().reverse().map(t=>`<li><small style="color:var(--muted)">${fmtBR(t.data)}</small> ${esc(t.texto)}</li>`).join('')}</ul>`;
+    pan.scrollTop=0;
+  }
+  function escolherCaso(){
+    box.classList.add('com-caso');pan.classList.remove('hide');
+    bar.innerHTML=`<button class="chip" id="vVolta">Voltar</button>`;bar.querySelector('#vVolta').onclick=mostrarCaso;
+    pan.innerHTML=`<input id="vBusca" placeholder="🔍 Procurar caso ou nome da parte" style="margin:0 0 6px"><div id="vLista"></div>`;
+    const lista=pan.querySelector('#vLista'),bu=pan.querySelector('#vBusca');
+    const desenhar=()=>{const q=norm(bu.value);lista.innerHTML=DB.casos.filter(c=>!q||norm(c.titulo+' '+c.numero+' '+c.tipo+' '+c.partes.map(p=>p.nome).join(' ')).includes(q)).map(c=>`<button class="it" data-vc="${c.id}">${esc(c.titulo)}<small>${esc(c.tipo)} · ${esc(c.status)}</small></button>`).join('')||'<p class="note">Nenhum caso encontrado.</p>';
+      lista.querySelectorAll('[data-vc]').forEach(b=>b.onclick=()=>{V.caso=b.dataset.vc;mostrarCaso()})};
+    bu.oninput=desenhar;desenhar();
+  }
+  mostrarCaso();
   const mic=r.querySelector('#vMic');
   const idleMsg=()=>{setOrb('');st.textContent=DICT?'Toque na bola para falar':'Escreva outra pergunta'};
   function listen(){
@@ -1227,8 +1271,10 @@ function openVoice(){
     const h=V.hist.slice(-14).map(m=>({...m}));
     if(h[0].role!=='user')h.shift();
     const pre=base('Agora é uma conversa falada. Responda em 2 a 4 frases curtas, em texto corrido, sem listas, símbolos, títulos ou asteriscos, porque a resposta será lida em voz alta. Tom natural de colega para colega, sem cumprimentos e sem frases de abertura: comece já respondendo. Ao citar lei, fale só o artigo e o nome da lei, sem número de página. Pode fazer uma pergunta curta de volta quando ajudar a entender o caso.');
+    const cv=V.caso&&caso(V.caso);
     const dc=docCtx(q);
-    h[0]={role:'user',content:pre+'\n\n'+(h.length===1&&dc.txt?dc.txt+'\n\n':'')+'FALA DELA: '+h[0].content};
+    const preC=cv?pre+'\n\nA CONVERSA É SOBRE ESTE CASO, que está aberto na tela dela. Use estes dados para responder e para ajudá-la a lembrar do caso; não invente nada além deles:\n'+caseCtx(cv):pre;
+    h[0]={role:'user',content:preC+'\n\n'+(h.length===1&&dc.txt?dc.txt+'\n\n':'')+'FALA DELA: '+h[0].content};
     if(h.length>1&&dc.txt)h[h.length-1]={role:'user',content:dc.txt+'\n\nFALA DELA: '+q};
     try{
       const t=await ask(h,x=>{vt.textContent=x});

@@ -1175,7 +1175,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 function openVoice(){
   const r=document.getElementById('voiceRoot');V.open=true;manterTelaAcesa();guardarVoz();
   try{if(IA_URL)fetch(IA_URL,{mode:'no-cors'}).catch(()=>{})}catch(e){}
-  if(route==='caso'&&caso(param))V.caso=param;else if(!V.caso||!caso(V.caso))V.caso=null;
+  if(route==='caso'&&caso(param)){V.caso=param;V.lei=null}else if(route==='doc'&&param&&String(param).startsWith('lei-')){V.lei=String(param).slice(4);V.caso=null}else{if(!V.caso||!caso(V.caso))V.caso=null;if(V.lei&&!LEIS.find(l=>l.id===V.lei))V.lei=null}
   r.innerHTML=`<div class="voice" id="vBox"><div class="vtop"><b>Conversa por voz</b><button class="x" id="vClose" aria-label="Fechar">${IC.x}</button></div>
   <div class="vcaso-bar" id="vCasoBar"></div>
   <div class="orb-wrap"><div class="orb" id="orb" role="button" aria-label="Falar"><div class="sw"></div><div class="cl c1"></div><div class="cl c2"></div><div class="cl c3"></div><div class="cl c4"></div><div class="cl c6"></div><div class="cl c5"></div></div><div class="vstatus" id="vStatus">${DICT?'Toque na bola e comece a falar':'Escreva sua pergunta abaixo'}</div><div class="vtext" id="vText"></div></div>
@@ -1191,9 +1191,10 @@ function openVoice(){
   const box=r.querySelector('#vBox'),pan=r.querySelector('#vCaso'),bar=r.querySelector('#vCasoBar');
   function mostrarCaso(){
     const c=V.caso&&caso(V.caso);
+    if(!c&&V.lei){mostrarLei();return}
     if(!c){box.classList.remove('com-caso');pan.classList.add('hide');
-      bar.innerHTML=DB.casos.length?`<button class="chip" id="vEsc">Ver um caso enquanto conversa</button>`:'';
-      const b=bar.querySelector('#vEsc');if(b)b.onclick=escolherCaso;return}
+      bar.innerHTML=(DB.casos.length?`<button class="chip" id="vEsc">Ver um caso</button>`:'')+`<button class="chip" id="vLeis">Ver uma lei</button>`;
+      const b=bar.querySelector('#vEsc');if(b)b.onclick=escolherCaso;bar.querySelector('#vLeis').onclick=escolherLei;return}
     box.classList.add('com-caso');pan.classList.remove('hide');
     bar.innerHTML=`<button class="chip on" id="vEsc">Trocar caso</button><button class="chip" id="vSem">Fechar caso</button>`;
     bar.querySelector('#vEsc').onclick=escolherCaso;bar.querySelector('#vSem').onclick=()=>{V.caso=null;mostrarCaso()};
@@ -1213,8 +1214,44 @@ function openVoice(){
     pan.innerHTML=`<input id="vBusca" placeholder="🔍 Procurar caso ou nome da parte" style="margin:0 0 6px"><div id="vLista"></div>`;
     const lista=pan.querySelector('#vLista'),bu=pan.querySelector('#vBusca');
     const desenhar=()=>{const q=norm(bu.value);lista.innerHTML=DB.casos.filter(c=>!q||norm(c.titulo+' '+c.numero+' '+c.tipo+' '+c.partes.map(p=>p.nome).join(' ')).includes(q)).map(c=>`<button class="it" data-vc="${c.id}">${esc(c.titulo)}<small>${esc(c.tipo)} · ${esc(c.status)}</small></button>`).join('')||'<p class="note">Nenhum caso encontrado.</p>';
-      lista.querySelectorAll('[data-vc]').forEach(b=>b.onclick=()=>{V.caso=b.dataset.vc;mostrarCaso()})};
+      lista.querySelectorAll('[data-vc]').forEach(b=>b.onclick=()=>{V.caso=b.dataset.vc;V.lei=null;mostrarCaso()})};
     bu.oninput=desenhar;desenhar();
+  }
+  /* Lei aberta na conversa: ela passeia pelo texto, procura artigo ou palavra, e a IA explica o que ela está vendo */
+  function escolherLei(){
+    box.classList.add('com-caso');pan.classList.remove('hide');
+    bar.innerHTML=`<button class="chip" id="vVolta">Voltar</button>`;bar.querySelector('#vVolta').onclick=mostrarCaso;
+    pan.innerHTML=`<input id="vBusca" placeholder="🔍 Procurar lei (nome ou número)" style="margin:0 0 6px"><div id="vLista"></div>`;
+    const lista=pan.querySelector('#vLista'),bu=pan.querySelector('#vBusca');
+    const desenhar=()=>{const q=norm(bu.value);lista.innerHTML=LEIS.filter(l=>!q||norm(l.nome+' '+l.num+' '+l.area+' '+(l.chave||[]).join(' ')).includes(q)).map(l=>`<button class="it" data-vl="${l.id}">${esc(l.nome)}<small>${esc(l.num)} · ${esc(l.area)}</small></button>`).join('')||'<p class="note">Nenhuma lei encontrada.</p>';
+      lista.querySelectorAll('[data-vl]').forEach(b=>b.onclick=()=>{V.lei=b.dataset.vl;V.caso=null;V.leiPg=0;V.leiQ='';mostrarLei()})};
+    bu.oninput=desenhar;desenhar();
+  }
+  const fmtLei=t=>esc(t).replace(/(Art\.\s?\d[\d.]*º?[A-Z-]*)/g,'<br><br><b>$1</b>').replace(/^(<br>)+/,'');
+  function mostrarLei(){
+    const l=LEIS.find(x=>x.id===V.lei);if(!l){V.lei=null;mostrarCaso();return}
+    box.classList.add('com-caso');pan.classList.remove('hide');
+    bar.innerHTML=`<button class="chip on" id="vEsc">Trocar lei</button><button class="chip" id="vSem">Fechar lei</button>`;
+    bar.querySelector('#vEsc').onclick=escolherLei;bar.querySelector('#vSem').onclick=()=>{V.lei=null;V.leiTrecho='';mostrarCaso()};
+    const pages=TXT['lei-'+l.id]||[];
+    pan.innerHTML=`<h4>${esc(l.nome)}</h4><div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">${esc(l.num)}</div>
+    <input id="vLq" placeholder="🔍 Artigo ou palavra (ex.: 1.784, guarda)" value="${esc(V.leiQ||'')}" style="margin:0 0 6px"><div id="vLt"></div>`;
+    const out=pan.querySelector('#vLt'),inp=pan.querySelector('#vLq');
+    if(!pages.length){out.innerHTML='<p class="note">Esta lei ainda está sendo baixada para o app. Tente de novo em instantes.</p>';try{baixarLei(l.id).then(()=>{if(V.lei===l.id)mostrarLei()})}catch(e){}return}
+    const pagina=n=>{V.leiPg=n;const pg=pages[n];V.leiTrecho=pg.t;
+      out.innerHTML=`<div>${fmtLei(pg.t)}</div><div class="row" style="margin-top:12px">${n>0?'<button class="btn line" id="vAnt">Anterior</button>':''}<span class="note" style="flex:1;text-align:center;margin:auto">Parte ${n+1} de ${pages.length}</span>${n<pages.length-1?'<button class="btn line" id="vProx">Próxima</button>':''}</div>`;
+      const a=out.querySelector('#vAnt'),p=out.querySelector('#vProx');if(a)a.onclick=()=>{pagina(n-1);pan.scrollTop=0};if(p)p.onclick=()=>{pagina(n+1);pan.scrollTop=0}};
+    const buscar=()=>{const q=inp.value.trim();V.leiQ=q;if(!q){pagina(V.leiPg||0);return}
+      const art=q.replace(/^art(igo)?\.?\s*/i,'').replace(/\./g,'');const ehArt=/^\d+[a-z-]*$/i.test(art);
+      const hits=[];
+      if(ehArt){const n2=art.replace(/\B(?=(\d{3})+(?!\d))/g,'.');const re=new RegExp('Art\\.\\s?('+art+'|'+n2.replace('.','\\.')+')º?(?!\\d|\\.\\d)');
+        pages.forEach((pg,i)=>{const m=pg.t.search(re);if(m>=0){let fim=pg.t.slice(m+6).search(/Art\.\s?\d/);let t=pg.t.slice(m,fim>=0?m+6+fim:m+2500);if(fim<0&&pages[i+1]){const f2=pages[i+1].t.search(/Art\.\s?\d/);t+=' '+pages[i+1].t.slice(0,f2>=0?f2:1500)}hits.push({i,t})}});}
+      if(!hits.length){const nq=norm(q);pages.forEach((pg,i)=>{const nt=norm(pg.t);let k=nt.indexOf(nq);let c=0;while(k>=0&&c<3&&hits.length<12){hits.push({i,t:'… '+pg.t.slice(Math.max(0,k-160),k+340)+' …'});k=nt.indexOf(nq,k+nq.length+300);c++}})}
+      V.leiTrecho=hits.slice(0,3).map(x=>x.t).join('\n\n');
+      out.innerHTML=hits.length?hits.slice(0,12).map(x=>`<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0">${fmtLei(x.t)}<div style="margin-top:6px"><button class="link" data-pg="${x.i}">Ler a partir daqui</button></div></div>`).join(''):'<p class="note">Não achei isso nesta lei.</p>';
+      out.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{inp.value='';V.leiQ='';pagina(+b.dataset.pg);pan.scrollTop=0})};
+    let tm;inp.oninput=()=>{clearTimeout(tm);tm=setTimeout(buscar,350)};
+    if(V.leiQ)buscar();else pagina(V.leiPg||0);
   }
   mostrarCaso();
   const mic=r.querySelector('#vMic');
@@ -1273,7 +1310,9 @@ function openVoice(){
     const pre=base('Agora é uma conversa falada. Responda em 2 a 4 frases curtas, em texto corrido, sem listas, símbolos, títulos ou asteriscos, porque a resposta será lida em voz alta. Tom natural de colega para colega, sem cumprimentos e sem frases de abertura: comece já respondendo. Ao citar lei, fale só o artigo e o nome da lei, sem número de página. Pode fazer uma pergunta curta de volta quando ajudar a entender o caso.');
     const cv=V.caso&&caso(V.caso);
     const dc=docCtx(q);
-    const preC=cv?pre+'\n\nA CONVERSA É SOBRE ESTE CASO, que está aberto na tela dela. Use estes dados para responder e para ajudá-la a lembrar do caso; não invente nada além deles:\n'+caseCtx(cv):pre;
+    const lv=!cv&&V.lei&&LEIS.find(l=>l.id===V.lei);
+    const preL=lv?pre+'\n\nA DRA. ESTÁ COM ESTA LEI ABERTA NA TELA: '+lv.nome+' ('+lv.num+'). Quando ela falar "esse artigo", "essa lei" ou "isso aqui", é sobre o que ela está vendo. Trecho na tela:\n'+String(V.leiTrecho||'').slice(0,3500):pre;
+    const preC=cv?pre+'\n\nA CONVERSA É SOBRE ESTE CASO, que está aberto na tela dela. Use estes dados para responder e para ajudá-la a lembrar do caso; não invente nada além deles:\n'+caseCtx(cv):preL;
     h[0]={role:'user',content:preC+'\n\n'+(h.length===1&&dc.txt?dc.txt+'\n\n':'')+'FALA DELA: '+h[0].content};
     if(h.length>1&&dc.txt)h[h.length-1]={role:'user',content:dc.txt+'\n\nFALA DELA: '+q};
     try{

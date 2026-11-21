@@ -459,7 +459,7 @@ function vInicio(){
   const prox=DB.sessoes.filter(s=>s.data>t).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).slice(0,3);
   const ab=DB.casos.filter(c=>c.status==='Em andamento').length,ac=DB.casos.filter(c=>c.status==='Acordo').length,sa=DB.casos.filter(c=>c.status==='Sem acordo').length;
   const taxa=ac+sa?Math.round(ac/(ac+sa)*100):0;
-  return aviso+avisoAssinatura()+`<div class="stats">
+  return aviso+`<div class="stats">
   <div class="stat"><small>Sessões hoje</small><b>${hoje.length}</b></div>
   <div class="stat"><small>Casos em andamento</small><b>${ab}</b></div>
   <div class="stat"><small>Acordos fechados</small><b>${ac}</b></div>
@@ -625,7 +625,6 @@ function vPerfil(){
   <label>E-mail</label><input id="pEmail" type="email" placeholder="nome@email.com" value="${esc(p.email)}">
   <label>Telefone</label><input id="pTel" placeholder="(19) 90000-0000" value="${esc(p.tel)}">
   <button class="btn gold full" data-act="salvarPerfil" style="margin-top:16px">Salvar</button></div>
-  <button class="card" data-act="assinatura" style="width:100%;text-align:left;margin-top:12px"><b style="color:var(--navy)">Minha assinatura</b><div style="font-size:13px;color:var(--muted)">R$ 19,90 por mês, valor fixo. Teste grátis de 60 dias.</div></button>
   <button class="link" data-act="reset" style="margin-top:16px">Voltar aos dados de exemplo</button>`;
 }
 

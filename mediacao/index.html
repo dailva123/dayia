@@ -1211,13 +1211,13 @@ function openVoice(){
       const t=await ask(h,x=>{vt.textContent=x});
       if(!V.open)return;
       V.hist.push({role:'assistant',content:t});guardarVoz();vt.textContent=t;
-      setOrb('speaking');st.textContent=DICT?(V.auto?'Falando... pode me interromper falando ou tocando na bola':'Falando... toque na bola para interromper'):'Falando...';
+      setOrb('speaking');st.textContent=DICT?(V.auto?'Falando... toque na bola para interromper':'Falando... toque na bola para interromper'):'Falando...';
       clearInterval(V.iv);V.iv=setInterval(()=>{orb.style.transform='scale('+(1+Math.random()*.08)+')'},140);
       V.falaAtual=t;
       speak(t,()=>{clearInterval(V.iv);orb.style.transform='';if(!V.open)return;
         if(V.vadFim)V.vadFim();
         if(DICT&&V.auto){st.textContent='Pode falar...';setTimeout(listen,350)}else idleMsg()});
-      speak.onPlay=(DICT&&V.auto)?()=>setTimeout(escutarInterrupcao,250):null;
+      speak.onPlay=null; /* interrupção por voz desligada: no Android o microfone aberto corta a voz da IA */
     }catch(e){setOrb('');st.textContent=aiErr(e)}
   };
   const send=r.querySelector('#vSend'),inp=r.querySelector('#vIn');

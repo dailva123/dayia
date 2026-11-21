@@ -1016,7 +1016,7 @@ function speak(text,onEnd){
       try{AUDIO&&AUDIO.pause()}catch(e){}
       AUDIO=new Audio(src);
       const fim=()=>{if(speak.atual!==meu)return;speak.atual=null;speaking=false;onEnd&&onEnd()};
-      AUDIO.onended=fim;AUDIO.onerror=fim;
+      AUDIO.onended=fim;AUDIO.onerror=fim;AUDIO.onplaying=()=>{if(speak.atual===meu&&speak.onPlay)speak.onPlay()};
       AUDIO.play().catch(()=>{speak.atual=null;speaking=false;falarLocal(clean,onEnd)});
     });
     return;
@@ -1069,18 +1069,32 @@ function openVoice(){
     stopSpeak();orb.style.transform='';V.heard='';V.partial='';vt.textContent='';V.starting=true;
     DICT.start().then(()=>{V.starting=false}).catch(e=>{V.starting=false;idleMsg();if(e&&e.code==='not_granted'){st.textContent='Microfone não autorizado. Use o teclado.';r.querySelector('#vType').classList.remove('hide')}});
   }
-  function escutarInterrupcao(){
-    if(!DICT||!V.open||!speaking||V.listening||V.starting)return;
-    V.barge=true;V.heard='';V.partial='';V.starting=true;
-    DICT.start().then(()=>{V.starting=false}).catch(()=>{V.starting=false;V.barge=false});
+  /* Enquanto ela fala: mede o volume do microfone (com cancelamento de eco do celular).
+     Se a Dra. falar por cima, a IA para e o app passa a ouvir. */
+  async function escutarInterrupcao(){
+    if(!V.open||!speaking||V.listening||V.starting||V.vad)return;
+    let stream,ctx;
+    try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false}});}catch(e){return}
+    if(!speaking||!V.open){stream.getTracks().forEach(t=>t.stop());return}
+    ctx=new (window.AudioContext||window.webkitAudioContext)();const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();an.fftSize=1024;src.connect(an);
+    const buf=new Float32Array(an.fftSize);let base=0,n=0,alto=0;const t0=Date.now();
+    const fim=()=>{clearInterval(V.vad);V.vad=null;try{stream.getTracks().forEach(t=>t.stop())}catch(e){}try{ctx.close()}catch(e){}};
+    V.vadFim=fim;
+    V.vad=setInterval(()=>{
+      if(!speaking||!V.open){fim();return}
+      an.getFloatTimeDomainData(buf);let s=0;for(const x of buf)s+=x*x;const rms=Math.sqrt(s/buf.length);
+      if(Date.now()-t0<600){base+=rms;n++;return}
+      const lim=Math.max(.025,(base/Math.max(n,1))*2.8);
+      alto=rms>lim?alto+1:Math.max(0,alto-1);
+      if(alto>=4){fim();interrompeu('')}
+    },60);
   }
-  function interrompeu(txt){
-    V.barge=false;stopSpeak();clearInterval(V.iv);orb.style.transform='';
-    mic.classList.add('rec');mic.innerHTML=IC.stop;setOrb('listening');st.textContent='Ouvindo...';
-    V.heard=txt;V.partial='';vt.textContent=txt;armSilence();
+  function interrompeu(){
+    V.barge=false;if(V.vadFim)V.vadFim();stopSpeak();clearInterval(V.iv);orb.style.transform='';
+    setTimeout(listen,150);
   }
   function armSilence(){clearTimeout(V.timer);V.timer=setTimeout(()=>{if(V.listening&&(V.heard+V.partial).trim())DICT.stop().catch(()=>{})},1700)}
-  const close=()=>{V.open=false;liberarTela();try{sessionStorage.removeItem('mf-voz')}catch(e){}clearTimeout(V.timer);try{DICT&&V.listening&&DICT.stop().catch(()=>{})}catch(e){}V.listening=false;V.cb=null;stopSpeak();r.innerHTML=''};
+  const close=()=>{V.open=false;if(V.vadFim)V.vadFim();liberarTela();try{sessionStorage.removeItem('mf-voz')}catch(e){}clearTimeout(V.timer);try{DICT&&V.listening&&DICT.stop().catch(()=>{})}catch(e){}V.listening=false;V.cb=null;stopSpeak();r.innerHTML=''};
   r.querySelector('#vClose').onclick=close;
   const ans=async q=>{
     q=(q||'').trim();
@@ -1103,10 +1117,9 @@ function openVoice(){
       clearInterval(V.iv);V.iv=setInterval(()=>{orb.style.transform='scale('+(1+Math.random()*.08)+')'},140);
       V.falaAtual=t;
       speak(t,()=>{clearInterval(V.iv);orb.style.transform='';if(!V.open)return;
-        if(V.barge&&V.listening){V.barge=false;V.heard='';V.partial='';vt.textContent=t;mic.classList.add('rec');mic.innerHTML=IC.stop;setOrb('listening');st.textContent='Ouvindo...';return}
-        V.barge=false;
+        if(V.vadFim)V.vadFim();
         if(DICT&&V.auto){st.textContent='Pode falar...';setTimeout(listen,350)}else idleMsg()});
-      if(DICT&&V.auto)setTimeout(escutarInterrupcao,900);
+      speak.onPlay=(DICT&&V.auto)?()=>setTimeout(escutarInterrupcao,250):null;
     }catch(e){setOrb('');st.textContent=aiErr(e)}
   };
   const send=r.querySelector('#vSend'),inp=r.querySelector('#vIn');
@@ -1115,22 +1128,20 @@ function openVoice(){
   if(DICT){
     hookDictGlobal();
     V.cb={
-      partial:({text})=>{if(V.listening&&V.barge){if(falaDela(text))interrompeu(text);return}if(V.listening){V.partial=text;vt.textContent=(V.heard+' '+text).trim();armSilence()}},
-      final:({text})=>{if(V.listening&&V.barge){if(falaDela(text))interrompeu(text);return}if(V.listening){V.heard=(V.heard+' '+text).trim();V.partial='';vt.textContent=V.heard;armSilence()}},
+      partial:({text})=>{if(V.listening){V.partial=text;vt.textContent=(V.heard+' '+text).trim();armSilence()}},
+      final:({text})=>{if(V.listening){V.heard=(V.heard+' '+text).trim();V.partial='';vt.textContent=V.heard;armSilence()}},
       state:({state})=>{
         if(!V.open)return;
-        if(state==='listening'&&V.barge){V.listening=true;return}
-        if(state==='idle'&&V.barge){V.listening=false;V.barge=false;V.heard='';V.partial='';if(speaking)setTimeout(escutarInterrupcao,300);return}
         if(state==='listening'){V.listening=true;mic.classList.add('rec');mic.innerHTML=IC.stop;setOrb('listening');st.textContent='Ouvindo...'}
         else if(state==='idle'&&V.listening){V.listening=false;clearTimeout(V.timer);mic.classList.remove('rec');mic.innerHTML=IC.mic;const q=(V.heard+' '+V.partial).trim();V.heard='';V.partial='';
           if(q)ans(q);else if(V.auto&&V.open&&!speaking){st.textContent='Pode falar...';setTimeout(listen,300)}else idleMsg()}
       }
     };
     mic.onclick=()=>tocar();
-    const tocar=()=>{if(V.barge){interrompeu('');return}if(V.listening){DICT.stop().catch(()=>{});return}listen()};
+    const tocar=()=>{if(speaking){interrompeu();return}if(V.listening){DICT.stop().catch(()=>{});return}listen()};
     orb.onclick=tocar;
     r.querySelector('#vKb').onclick=()=>{r.querySelector('#vType').classList.toggle('hide')};
-    r.querySelector('#vStop').onclick=()=>{clearTimeout(V.timer);V.barge=false;clearInterval(V.iv);if(V.listening){V.heard='';V.partial='';V.listening=false;mic.classList.remove('rec');mic.innerHTML=IC.mic;DICT.stop().catch(()=>{})}stopSpeak();orb.style.transform='';idleMsg()};
+    r.querySelector('#vStop').onclick=()=>{clearTimeout(V.timer);if(V.vadFim)V.vadFim();clearInterval(V.iv);if(V.listening){V.heard='';V.partial='';V.listening=false;mic.classList.remove('rec');mic.innerHTML=IC.mic;DICT.stop().catch(()=>{})}stopSpeak();orb.style.transform='';idleMsg()};
     const au=r.querySelector('#vAuto');au.onclick=()=>{V.auto=!V.auto;au.classList.toggle('on',V.auto);au.textContent=(V.auto?'✓ ':'')+'Conversa contínua'};
     listen();
   }

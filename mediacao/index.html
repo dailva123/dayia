@@ -815,8 +815,15 @@ function falarLocal(clean,onEnd){
 function stopSpeak(){speak.atual=null;try{AUDIO&&AUDIO.pause()}catch(e){}try{TTS&&TTS.stop()}catch(e){}try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}speaking=false}
 
 let V={hist:[],heard:'',partial:'',listening:false,starting:false,cb:null,open:false,auto:true,timer:null};
+try{const vh=JSON.parse(sessionStorage.getItem('mf-voz')||'null');if(vh&&Array.isArray(vh.hist))V.hist=vh.hist}catch(e){}
+function guardarVoz(){try{sessionStorage.setItem('mf-voz',JSON.stringify({hist:V.hist.slice(-20),aberta:V.open}))}catch(e){}}
+/* Tela sempre acesa durante a conversa por voz */
+let TRAVA=null;
+async function manterTelaAcesa(){try{if('wakeLock' in navigator&&!TRAVA){TRAVA=await navigator.wakeLock.request('screen');TRAVA.addEventListener('release',()=>{TRAVA=null})}}catch(e){}}
+function liberarTela(){try{TRAVA&&TRAVA.release()}catch(e){}TRAVA=null}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&V.open)manterTelaAcesa()});
 function openVoice(){
-  const r=document.getElementById('voiceRoot');V.open=true;
+  const r=document.getElementById('voiceRoot');V.open=true;manterTelaAcesa();guardarVoz();
   r.innerHTML=`<div class="voice"><div class="vtop"><b>Conversa por voz</b><button class="x" id="vClose" aria-label="Fechar">${IC.x}</button></div>
   <div class="orb-wrap"><div class="orb" id="orb" role="button" aria-label="Falar"><div class="sw"></div><div class="cl c1"></div><div class="cl c2"></div><div class="cl c3"></div><div class="cl c4"></div><div class="cl c6"></div><div class="cl c5"></div></div><div class="vstatus" id="vStatus">${DICT?'Toque na bola e comece a falar':'Escreva sua pergunta abaixo'}</div><div class="vtext" id="vText"></div></div>
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%">
@@ -834,7 +841,7 @@ function openVoice(){
     DICT.start().then(()=>{V.starting=false}).catch(e=>{V.starting=false;idleMsg();if(e&&e.code==='not_granted'){st.textContent='Microfone não autorizado. Use o teclado.';r.querySelector('#vType').classList.remove('hide')}});
   }
   function armSilence(){clearTimeout(V.timer);V.timer=setTimeout(()=>{if(V.listening&&(V.heard+V.partial).trim())DICT.stop().catch(()=>{})},1700)}
-  const close=()=>{V.open=false;clearTimeout(V.timer);try{DICT&&V.listening&&DICT.stop().catch(()=>{})}catch(e){}V.listening=false;V.cb=null;stopSpeak();r.innerHTML=''};
+  const close=()=>{V.open=false;liberarTela();try{sessionStorage.removeItem('mf-voz')}catch(e){}clearTimeout(V.timer);try{DICT&&V.listening&&DICT.stop().catch(()=>{})}catch(e){}V.listening=false;V.cb=null;stopSpeak();r.innerHTML=''};
   r.querySelector('#vClose').onclick=close;
   const ans=async q=>{
     q=(q||'').trim();
@@ -852,7 +859,7 @@ function openVoice(){
     try{
       const t=await ask(h,x=>{vt.textContent=x});
       if(!V.open)return;
-      V.hist.push({role:'assistant',content:t});vt.textContent=t;
+      V.hist.push({role:'assistant',content:t});guardarVoz();vt.textContent=t;
       setOrb('speaking');st.textContent=DICT?'Falando... toque na bola para interromper':'Falando...';
       const iv=setInterval(()=>{orb.style.transform='scale('+(1+Math.random()*.08)+')'},140);
       speak(t,()=>{clearInterval(iv);orb.style.transform='';if(!V.open)return;
@@ -871,7 +878,7 @@ function openVoice(){
         if(!V.open)return;
         if(state==='listening'){V.listening=true;mic.classList.add('rec');mic.innerHTML=IC.stop;setOrb('listening');st.textContent='Ouvindo...'}
         else if(state==='idle'&&V.listening){V.listening=false;clearTimeout(V.timer);mic.classList.remove('rec');mic.innerHTML=IC.mic;const q=(V.heard+' '+V.partial).trim();V.heard='';V.partial='';
-          if(q)ans(q);else idleMsg()}
+          if(q)ans(q);else if(V.auto&&V.open&&!speaking){st.textContent='Pode falar...';setTimeout(listen,300)}else idleMsg()}
       }
     };
     mic.onclick=()=>{if(V.listening){DICT.stop().catch(()=>{});return}listen()};
@@ -1040,6 +1047,7 @@ function relatorio(){
 
 /* ---------- início ---------- */
 fromHash();render();
+try{const vh=JSON.parse(sessionStorage.getItem('mf-voz')||'null');if(vh&&vh.aberta)setTimeout(()=>{openVoice();const t=document.getElementById('vText');if(t&&V.hist.length)t.textContent=V.hist[V.hist.length-1].content;const s=document.getElementById('vStatus');if(s)s.textContent=DICT?'Toque na bola para continuar a conversa':'Escreva sua pergunta abaixo'},400)}catch(e){}
 const _iv=setInterval(()=>{if(DICT){hookDictGlobal();clearInterval(_iv)}},300);
 setTimeout(()=>clearInterval(_iv),12000);
 (function(){var i=document.getElementById('intro');

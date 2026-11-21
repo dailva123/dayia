@@ -334,7 +334,7 @@ function abrirAssinatura(){const s=statusTeste();
   const cp=m.querySelector('#cpPix');if(cp)cp.onclick=e=>copyText(PIX_DAYIA,e.target);
 }
 /* Endereço do serviço de IA (Google Apps Script da DayIA). Termina em /exec */
-const IA_URL='';
+const IA_URL='https://script.google.com/macros/s/AKfycbw28pazWgOH-IAipDfrx0EB68NDETT7ArRiAC2jbneZ4MLoDzxz4d63PiKk3Vvu-6TWzg/exec';
 let AI=null,DICT=null,TTS=null;
 if(IA_URL){
   AI=async function(input,o={}){

@@ -20,7 +20,7 @@ var LIMITE_DIA = 400;                                   // pedidos por dia (prot
 // Haiku (bem barato) no dia a dia; Sonnet só no termo de acordo, roteiro, ideias de acordo e leis do caso
 var MODELOS_CLAUDE = { quick: "claude-haiku-5-5", default: "claude-sonnet-5-5", complex: "claude-sonnet-5-5" };
 var RESERVA_CLAUDE = "claude-haiku-5-5";
-var MODELO_GEMINI = "gemini-flash-latest";
+var MODELOS_GEMINI = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-flash-latest"];   // se um estiver lotado, tenta o próximo
 
 function doPost(e) {
   try {
@@ -37,7 +37,9 @@ function doPost(e) {
       }
     }
     if (!texto && p.getProperty("GEMINI_KEY")) {
-      try { texto = gemini_(msgs); } catch (err) { ultimo = err; }
+      for (var j = 0; j < MODELOS_GEMINI.length && !texto; j++) {
+        try { texto = gemini_(msgs, MODELOS_GEMINI[j]); } catch (err) { ultimo = err; if (j < MODELOS_GEMINI.length - 1) Utilities.sleep(800); }
+      }
     }
     if (!texto) return json_({ erro: ultimo ? String(ultimo.message || ultimo) : "IA sem chave configurada.", codigo: "erro" });
     return json_({ texto: texto });
@@ -67,9 +69,9 @@ function claude_(msgs, modelo) {
   return (d.content || []).map(function (c) { return c.text || ""; }).join("");
 }
 
-function gemini_(msgs) {
+function gemini_(msgs, modelo) {
   var chave = PropertiesService.getScriptProperties().getProperty("GEMINI_KEY");
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/" + MODELO_GEMINI + ":generateContent";
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelo + ":generateContent";
   var contents = msgs.map(function (m) { return { role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content) }] }; });
   var r = UrlFetchApp.fetch(url, {
     method: "post", contentType: "application/json", muteHttpExceptions: true,

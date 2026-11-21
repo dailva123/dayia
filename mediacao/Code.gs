@@ -126,6 +126,7 @@ function lei_(id) {
   return { id: id, texto: htmlParaTexto_(bruto), atualizado: Utilities.formatDate(new Date(), "America/Sao_Paulo", "yyyy-MM-dd") };
 }
 function htmlParaTexto_(h) {
+  h = h.replace(/[\r\n]+/g, " ");   // quebras do arquivo dentro do parágrafo viram espaço
   h = h.replace(/<(script|style|strike|s|del)\b[\s\S]*?<\/\1>/gi, "");
   h = h.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|tr|h\d|li|table)>/gi, "\n");
   h = h.replace(/<[^>]+>/g, "");

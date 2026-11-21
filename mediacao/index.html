@@ -1178,7 +1178,17 @@ function openVoice(){
   function listen(){
     if(!DICT||V.listening||V.starting||!V.open)return;
     stopSpeak();orb.style.transform='';V.heard='';V.partial='';vt.textContent='';V.starting=true;
-    DICT.start().then(()=>{V.starting=false}).catch(e=>{V.starting=false;idleMsg();if(e&&e.code==='not_granted'){st.textContent='Microfone não autorizado. Use o teclado.';r.querySelector('#vType').classList.remove('hide')}});
+    const iniciar=()=>DICT.start().then(()=>{V.starting=false;try{localStorage.setItem('mf-mic','ok')}catch(e){}}).catch(e=>{V.starting=false;idleMsg();if(e&&e.code==='not_granted')micBloqueado()});
+    let primeira=true;try{primeira=!localStorage.getItem('mf-mic')}catch(e){}
+    if(!primeira){iniciar();return}
+    const avisar=()=>{st.textContent='Só desta primeira vez';vt.innerHTML='O aparelho vai perguntar se o app pode usar o microfone.<br><b>Toque em Permitir.</b>';setTimeout(iniciar,1800)};
+    try{navigator.permissions.query({name:'microphone'}).then(p=>{if(p.state==='granted')iniciar();else if(p.state==='denied'){V.starting=false;micBloqueado()}else avisar()}).catch(avisar)}catch(e){avisar()}
+  }
+  function micBloqueado(){
+    const app=matchMedia('(display-mode: standalone)').matches;
+    st.textContent='O microfone está bloqueado';
+    vt.innerHTML=app?'Para liberar (só uma vez): toque e segure o ícone do <b>Mediação Fácil</b> na tela do celular → <b>Informações do app</b> → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir</b>.<br><br>Enquanto isso, escreva sua pergunta abaixo.':'Para liberar (só uma vez): toque no <b>cadeado</b> ao lado do endereço do site, lá em cima → <b>Microfone</b> → <b>Permitir</b>. Depois toque na bola de novo.<br><br>Enquanto isso, escreva sua pergunta abaixo.';
+    r.querySelector('#vType').classList.remove('hide');
   }
   /* Enquanto ela fala: mede o volume do microfone (com cancelamento de eco do celular).
      Se a Dra. falar por cima, a IA para e o app passa a ouvir. */

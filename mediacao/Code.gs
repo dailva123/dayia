@@ -21,7 +21,7 @@ var LIMITE_DIA = 400;                                   // pedidos por dia (prot
 var MODELOS_CLAUDE = { quick: "claude-haiku-5-5", default: "claude-sonnet-5-5", complex: "claude-sonnet-5-5" };
 var RESERVA_CLAUDE = "claude-haiku-5-5";
 // Voz do ElevenLabs: propriedades ELEVEN_KEY (chave) e ELEVEN_VOZ (id da voz escolhida)
-var ELEVEN_MODELO = "eleven_flash_v2_5";
+var ELEVEN_MODELO = "eleven_multilingual_v2";   // mesma qualidade do site do ElevenLabs (respeita pontuação e pausas)
 var MODELOS_GEMINI = ["gemini-flash-lite-latest", "gemini-flash-lite-latest"];   // o "lite" responde em menos de 1 segundo; tenta 2 vezes se falhar
 
 function doPost(e) {
@@ -96,7 +96,7 @@ function voz_(texto) {
   var r = UrlFetchApp.fetch("https://api.elevenlabs.io/v1/text-to-speech/" + vozId + "?output_format=mp3_44100_64", {
     method: "post", contentType: "application/json", muteHttpExceptions: true,
     headers: { "xi-api-key": chave, "accept": "audio/mpeg" },
-    payload: JSON.stringify({ text: texto, model_id: ELEVEN_MODELO, language_code: "pt" })
+    payload: JSON.stringify({ text: texto, model_id: ELEVEN_MODELO, voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 0.95 } })
   });
   if (r.getResponseCode() !== 200) return { erro: "ElevenLabs " + r.getResponseCode() + ": " + r.getContentText().slice(0, 200), codigo: "erro" };
   return { audio: Utilities.base64Encode(r.getBlob().getBytes()) };

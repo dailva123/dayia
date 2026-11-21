@@ -257,14 +257,14 @@ casos:[
 partes:[{nome:'Maria Helena Mendes',papel:'Viúva'},{nome:'Ricardo Mendes',papel:'Filho'},{nome:'Patrícia Mendes Lima',papel:'Filha'}],
 advogados:'Dr. Paulo Ramos (Maria Helena) · Dra. Cláudia Torres (Ricardo e Patrícia)',
 resumo:'Três herdeiros discutem a partilha de uma casa em Campinas, um carro e uma conta poupança. Ricardo quer vender a casa; Maria Helena quer continuar morando nela.',
-link:'https://meet.google.com/abc-defg-hij',
+link:'',
 timeline:[{data:addDays(-28),texto:'Caso recebido do fórum'},{data:addDays(-14),texto:'1ª sessão: partes concordaram em avaliar o imóvel'},{data:addDays(-3),texto:'Laudo de avaliação enviado pelos advogados'}],
 notas:[{data:addDays(-14),texto:'Maria Helena muito emocionada. Ricardo precisa de dinheiro rápido por causa de dívidas. Patrícia neutra, quer acordo.'}]},
 {id:'c2',numero:'1012233-08.2026.8.26.0114',tipo:'Divórcio e guarda',titulo:'Fernanda Souza e Marcelo Souza',status:'Em andamento',
 partes:[{nome:'Fernanda Souza',papel:'Requerente'},{nome:'Marcelo Souza',papel:'Requerido'}],
 advogados:'Dra. Lívia Prado (Fernanda) · Dr. Henrique Alves (Marcelo)',
 resumo:'Divórcio com dois filhos (7 e 11 anos). Discordância sobre guarda compartilhada, dias de convivência e valor da pensão.',
-link:'https://meet.google.com/klm-nopq-rst',
+link:'',
 timeline:[{data:addDays(-10),texto:'Caso recebido do fórum'},{data:addDays(-4),texto:'Convites enviados às partes'}],notas:[]},
 {id:'c3',numero:'1009876-45.2026.8.26.0114',tipo:'Aluguel',titulo:'Antônio Pereira e Juliana Costa',status:'Em andamento',
 partes:[{nome:'Antônio Pereira',papel:'Locador'},{nome:'Juliana Costa',papel:'Locatária'}],
@@ -299,6 +299,7 @@ chat:[],docs:[],regras:[],soDocs:false
 let DB;
 try{DB=JSON.parse(localStorage.getItem('mf-demo-v1'))}catch(e){}
 if(!DB||!DB.casos)DB=demoData();
+(DB.casos||[]).forEach(c=>{if(/abc-defg-hij|klm-nopq-rst/.test(c.link||''))c.link=''});
 DB.docs=DB.docs||[];DB.regras=DB.regras||[];DB.soDocs=!!DB.soDocs;DB.contatos=DB.contatos||[];DB.receb=DB.receb||[];
 function save(){try{localStorage.setItem('mf-demo-v1',JSON.stringify(DB))}catch(e){}}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
@@ -569,8 +570,8 @@ function vCaso(){
   <div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><h2 style="font-size:20px;color:var(--navy)">${esc(c.titulo)}</h2>${statusTag(c.status)}</div>
   <p style="color:var(--muted);font-size:13px;margin:4px 0 12px">${esc(c.tipo)} · Processo ${esc(c.numero)}</p>
   <p style="font-size:14.5px">${esc(c.resumo)}</p>
-  <div class="kv" style="margin-top:12px"><span>Partes</span><div>${c.partes.map((p,i)=>esc(p.nome)+' <small style="color:var(--muted)">('+esc(p.papel)+')</small> '+(telDe(p)?`<a href="${waLink(telDe(p),'Olá, '+p.nome.split(' ')[0]+'!')}" target="_blank" rel="noopener" style="color:#1E8E4E;vertical-align:-3px" aria-label="WhatsApp">${IC.wa}</a> `:'')+(emailDe(p)?`<a href="${mailLink(emailDe(p),'','')}" style="color:var(--navy);vertical-align:-3px" aria-label="E-mail">${IC.mail}</a> `:'')+`<button class="link" style="font-size:12px" data-partecont="${c.id}|${i}">${telDe(p)||emailDe(p)?'editar':'+ contato'}</button>`).join('<br>')}</div><span>Advogados</span><div>${esc(c.advogados)}</div><span>Próxima sessão</span><div>${next?dayLabel(next.data)+' às '+esc(next.hora):'Não agendada'}</div></div>
-  <div class="row" style="margin-top:14px">${c.link?`<a class="btn navy" href="${esc(c.link)}" target="_blank" rel="noopener">${IC.video}Entrar na sessão</a>`:''}<button class="btn line" data-act="agendar" data-id="${c.id}">${IC.cal}Agendar</button><button class="btn line" data-convite="${c.id}">${IC.wa}Enviar convite</button><button class="btn line" data-act="status" data-id="${c.id}">Mudar situação</button></div></div>
+  <div class="kv" style="margin-top:12px"><span>Partes</span><div>${c.partes.map((p,i)=>esc(p.nome)+' <small style="color:var(--muted)">('+esc(p.papel)+')</small> '+(telDe(p)?`<button data-msgparte="${c.id}|${i}|wa" style="color:#1E8E4E;vertical-align:-3px;background:none;border:0;padding:0" aria-label="WhatsApp">${IC.wa}</button> `:'')+(emailDe(p)?`<button data-msgparte="${c.id}|${i}|mail" style="color:var(--navy);vertical-align:-3px;background:none;border:0;padding:0" aria-label="E-mail">${IC.mail}</button> `:'')+`<button class="link" style="font-size:12px" data-partecont="${c.id}|${i}">${telDe(p)||emailDe(p)?'editar':'+ contato'}</button>`).join('<br>')}</div><span>Advogados</span><div>${esc(c.advogados)}</div><span>Próxima sessão</span><div>${next?dayLabel(next.data)+' às '+esc(next.hora):'Não agendada'}</div></div>
+  <div class="row" style="margin-top:14px">${c.link?`<a class="btn navy" href="${esc(c.link)}" target="_blank" rel="noopener">${IC.video}Entrar na sessão</a><button class="btn line" data-meet="${c.id}">Trocar link</button>`:`<button class="btn navy" data-meet="${c.id}">${IC.video}Criar reunião no Meet</button>`}<button class="btn line" data-act="agendar" data-id="${c.id}">${IC.cal}Agendar</button><button class="btn line" data-convite="${c.id}">${IC.wa}Enviar convite</button><button class="btn line" data-act="status" data-id="${c.id}">Mudar situação</button></div></div>
   <div class="sec-title"><h2>Ajuda da IA</h2></div>
   <div class="ai-actions"><button data-escrever="${c.id}" style="grid-column:1/-1">${IC.edit}Escrever e-mail, WhatsApp ou relatório</button><button data-ai="resumo">Resumo antes da sessão</button><button data-ai="roteiro">Roteiro da sessão</button><button data-ai="ideias">Ideias de acordo</button><button data-ai="termo">Escrever termo de acordo</button><button data-ai="destravar">Frases para acalmar</button><button data-ai="leis">Leis que se aplicam</button></div>
   <div id="aiOut"></div>
@@ -794,7 +795,7 @@ function enviarConvite(cid,sid){
   const txt=textoConvite(c,s);const assunto='Sessão de mediação – processo '+c.numero;
   const pessoas=c.partes.map(p=>({nome:p.nome,papel:p.papel,tel:telDe(p),email:emailDe(p)}));
   const emails=pessoas.map(p=>p.email).filter(Boolean);
-  const m=modal(`<h3>Enviar convite</h3><p class="note">Toque em cada pessoa. O WhatsApp ou o e-mail abre com a mensagem pronta e você só aperta enviar.</p>
+  const m=modal(`<h3>Enviar convite</h3>${!c.link?`<div class="card" style="background:#FFF6E5;margin:8px 0">Este caso ainda não tem link da reunião, então o convite vai sem link. <button class="link" data-meet="${c.id}">Criar reunião no Meet</button></div>`:''}<p class="note">Toque em cada pessoa. O WhatsApp ou o e-mail abre com a mensagem pronta e você só aperta enviar.</p>
   <div class="list" style="margin-top:10px">${pessoas.map((p,i)=>`<div class="item"><div class="info"><b>${esc(p.nome)}</b><small>${esc(p.papel)}${!p.tel&&!p.email?' · sem contato':''}</small></div>
   ${p.tel?`<a class="btn" style="background:#E7F6EC;color:#1E8E4E;padding:9px 12px" href="${waLink(p.tel,txt)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a>`:''}
   ${p.email?`<a class="btn line" style="padding:9px 12px" href="${mailLink(p.email,assunto,txt)}">${IC.mail}E-mail</a>`:''}
@@ -968,14 +969,39 @@ function novoCaso(){
   };
 }
 
+/* Link da reunião: o Google Meet cria a sala na conta Google dela; ela cola o link aqui */
+function linkReuniao(cid,depois){
+  const c=caso(cid);if(!c)return;
+  const m=modal(`<h3>Reunião no Google Meet</h3>
+  <p class="note"><b>1.</b> Toque em <b>Criar reunião</b>. O Google Meet abre e cria uma sala nova na sua conta Google.<br><b>2.</b> Copie o link da sala (começa com meet.google.com).<br><b>3.</b> Volte aqui e toque em <b>Colar</b>.</p>
+  <a class="btn gold full" href="https://meet.google.com/new" target="_blank" rel="noopener" style="margin-top:10px;text-decoration:none">${IC.video}Criar reunião</a>
+  <label>Link da reunião</label><div class="row" style="margin-top:0"><input id="mtL" placeholder="https://meet.google.com/xxx-xxxx-xxx" value="${esc(c.link||'')}" style="flex:1"><button class="btn line" id="mtCol">Colar</button></div>
+  <p class="note" id="mtMsg"></p>
+  <div class="row" style="margin-top:12px">${c.link?`<a class="btn line" href="${esc(c.link)}" target="_blank" rel="noopener">Testar link</a>`:''}<button class="btn line" data-close>Cancelar</button><button class="btn navy" id="mtOk" style="flex:1">Salvar link</button></div>`);
+  const inp=m.querySelector('#mtL'),msg=m.querySelector('#mtMsg');
+  m.querySelector('#mtCol').onclick=async()=>{try{const t=await navigator.clipboard.readText();const u=(t.match(/https?:\/\/\S+/)||[t.trim()])[0];inp.value=u;msg.textContent=''}catch(e){msg.style.color='';msg.textContent='Toque e segure no campo acima e escolha Colar.';inp.focus()}};
+  m.querySelector('#mtOk').onclick=()=>{let v=inp.value.trim();if(v&&!/^https?:\/\//.test(v))v='https://'+v;
+    if(v&&!/^https:\/\/[\w.-]+\.[a-z]{2,}\//i.test(v+'/')){msg.style.color='var(--bad)';msg.textContent='Isso não parece um link. Ele começa com https://meet.google.com/';return}
+    c.link=v;if(v)c.timeline.push({data:iso(new Date()),texto:'Link da reunião salvo'});save();closeModal();render();depois&&depois()};
+}
+function agendaGoogle(c,s){
+  const [a,mo,d]=s.data.split('-');const [hh,mm]=s.hora.split(':');const ini=a+mo+d+'T'+hh+mm+'00';const f=new Date(+a,+mo-1,+d,+hh+1,+mm);
+  const fim=f.getFullYear()+String(f.getMonth()+1).padStart(2,'0')+String(f.getDate()).padStart(2,'0')+'T'+String(f.getHours()).padStart(2,'0')+String(f.getMinutes()).padStart(2,'0')+'00';
+  const emails=c.partes.map(p=>emailDe(p)).filter(Boolean).join(',');
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('Mediação – '+c.titulo)+'&dates='+ini+'/'+fim+'&ctz=America/Sao_Paulo&details='+encodeURIComponent('Sessão de mediação online. Processo '+c.numero+(c.link?'\nLink: '+c.link:''))+(c.link?'&location='+encodeURIComponent(c.link):'')+(emails?'&add='+encodeURIComponent(emails):'');
+}
 function agendar(id){
   const m=modal(`<h3>Agendar sessão</h3>
   <label>Caso</label><select id="agCaso">${DB.casos.filter(c=>c.status==='Em andamento').map(c=>`<option value="${c.id}" ${c.id===id?'selected':''}>${esc(c.titulo)}</option>`).join('')}</select>
   <label>Data (dd/mm/aaaa)</label><input id="agData" inputmode="numeric" placeholder="25/11/2026">
   <label>Horário</label><input id="agHora" inputmode="numeric" placeholder="14:00">
   <label>Descrição</label><input id="agTit" value="Sessão de mediação">
+  <p class="note" id="agLinkInfo" style="margin-top:10px"></p>
   <p class="note" id="agMsg"></p>
   <div class="row" style="margin-top:14px"><button class="btn line" data-close>Cancelar</button><button class="btn navy" id="agOk" style="flex:1">Agendar e enviar convites</button></div>`);
+  const info=()=>{const c=caso(m.querySelector('#agCaso').value);const el=m.querySelector('#agLinkInfo');if(!c){el.textContent='';return}
+    el.innerHTML=c.link?'Link da reunião: '+esc(c.link):'<span style="color:var(--warn)">Este caso ainda não tem link da reunião.</span> Depois de agendar, toque em <b>Criar reunião no Meet</b>.'};
+  m.querySelector('#agCaso').onchange=info;info();
   const dIn=m.querySelector('#agData');
   dIn.addEventListener('input',()=>{let v=dIn.value.replace(/\D/g,'').slice(0,8);if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);dIn.value=v});
   const hIn=m.querySelector('#agHora');
@@ -993,7 +1019,10 @@ function agendar(id){
     const conv=`Olá!\n\nVocê está convidado(a) para a sessão de mediação online do processo ${c0.numero} (${c0.titulo}).\n\nData: ${fmtBR(d)}\nHorário: ${h}\n${c0.link?'Link da sessão: '+c0.link+'\n':''}\nPor favor, entre alguns minutos antes, em um lugar tranquilo, com câmera e microfone funcionando. Tudo o que for conversado na mediação é sigiloso.\n\nAtenciosamente,\n${(p.titulo?p.titulo+' ':'')+p.nome}${p.oab?'\n'+p.oab:''}\nMediadora`;
     const mm=modal(`<h3>Sessão agendada</h3><p class="note">Convite pronto para mandar por e-mail às partes e aos advogados:</p><div class="ai-out" style="white-space:pre-wrap">${esc(conv)}</div><div class="row" style="margin-top:12px"><button class="btn line" data-close>Fechar</button><button class="btn navy" id="cvCopy" style="flex:1">Copiar convite</button></div>`);
     mm.querySelector('#cvCopy').onclick=e=>copyText(conv,e.target);
-    const bt=document.createElement('button');bt.className='btn gold full';bt.style.marginTop='10px';bt.innerHTML=IC.wa+'Enviar por WhatsApp ou e-mail';bt.onclick=()=>{const sid=DB.sessoes[DB.sessoes.length-1].id;enviarConvite(cid,sid)};mm.appendChild(bt);
+    const sid=DB.sessoes[DB.sessoes.length-1].id;
+    if(!c0.link){const bm=document.createElement('button');bm.className='btn navy full';bm.style.marginTop='10px';bm.innerHTML=IC.video+'Criar reunião no Meet primeiro';bm.onclick=()=>linkReuniao(cid,()=>enviarConvite(cid,sid));mm.appendChild(bm)}
+    const bt=document.createElement('button');bt.className='btn gold full';bt.style.marginTop='10px';bt.innerHTML=IC.wa+'Enviar por WhatsApp ou e-mail';bt.onclick=()=>enviarConvite(cid,sid);mm.appendChild(bt);
+    const bg=document.createElement('a');bg.className='btn line full';bg.style.marginTop='10px';bg.target='_blank';bg.rel='noopener';bg.href=agendaGoogle(c0,DB.sessoes[DB.sessoes.length-1]);bg.innerHTML=IC.cal+'Salvar na Agenda do Google';mm.appendChild(bg);
   };
 }
 
@@ -1264,6 +1293,9 @@ document.addEventListener('click',e=>{
   const cp=e.target.closest('[data-copy]');if(cp){const [lid,n]=cp.dataset.copy.split('|');const law=LEIS.find(x=>x.id===lid);const art=law.arts.find(x=>x.n===n);copyText(law.nome+', '+art.n+': '+art.t,cp);return}
   const od=e.target.closest('[data-doc]');if(od){fDoc={q:od.dataset.docq||''};docAns='';go('doc',od.dataset.doc);return}
   const lc=e.target.closest('[data-leicompleta]');if(lc){const l=LEIS.find(x=>x.id===lc.dataset.leicompleta);const d=docDaLei(l.id)||DB.docs.find(x=>l.chave.some(k=>norm(x.nome).includes(k)));if(d&&TXT[d.id]){fDoc={q:''};docAns='';go('doc',d.id)}else if(IA_URL){const mm=modal(`<h3>${esc(l.nome)}</h3><p style="font-size:14.5px;margin-top:6px"><span class="spin"></span> Trazendo o texto oficial completo para dentro do app. Só na primeira vez.</p>`);baixarLei(l.id).then(dd=>{closeModal();fDoc={q:''};docAns='';go('doc',dd.id)}).catch(err=>{mm.innerHTML=`<h3>${esc(l.nome)}</h3><p style="font-size:14.5px;margin-top:6px">Não consegui trazer a lei agora. Confira a internet e tente de novo.</p><button class="btn navy full" data-close style="margin-top:12px">Ok</button>`})}else{modal(`<h3>${esc(l.nome)} completa</h3><p style="font-size:14.5px;margin-top:6px">O texto completo desta lei ainda não está no app. Cole o texto ou envie o PDF uma vez e ela fica guardada aqui dentro, com busca e com a IA para explicar.</p><p class="note">Se tiver o texto da lei copiado, cole aqui. Fica guardado do jeito que está.</p><div class="list" style="margin-top:14px"><button class="btn gold full" data-act="colar" data-nome="${esc(l.num+' - '+l.nome)}" data-url="${esc(l.url)}">Colar o texto da lei</button><button class="btn line full" data-go="biblioteca" data-close>Enviar o PDF na biblioteca</button><button class="btn line full" data-close>Agora não</button></div>`)}return}
+  const mt=e.target.closest('[data-meet]');if(mt){linkReuniao(mt.dataset.meet,()=>{});return}
+  const mp=e.target.closest('[data-msgparte]');if(mp){const [ci,ii,cn]=mp.dataset.msgparte.split('|');const p=caso(ci).partes[+ii];let k=contatoDe(p.nome);
+    if(!k){k={id:'k'+Date.now(),nome:p.nome,tel:telDe(p),email:emailDe(p),papel:p.papel};DB.contatos.push(k);save()}escreverPara(k.id,cn);return}
   const em=e.target.closest('[data-msg]');if(em){const [a,b]=em.dataset.msg.split('|');escreverPara(a,b);return}
   const cv=e.target.closest('[data-convite]');if(cv){enviarConvite(cv.dataset.convite);return}
   const pc=e.target.closest('[data-partecont]');if(pc){const [cid,i]=pc.dataset.partecont.split('|');contatoDaParte(cid,+i);return}

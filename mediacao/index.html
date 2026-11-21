@@ -1127,8 +1127,32 @@ async function falarEleven(clean){
     return 'data:audio/mpeg;base64,'+d.audio;
   }catch(e){return false}
 }
+/* Prepara o texto para a voz ler direito: sem citações de página, com abreviações por extenso */
+function paraVoz(t){
+  const ord={'1':'primeiro','2':'segundo','3':'terceiro','4':'quarto','5':'quinto','6':'sexto','7':'sétimo','8':'oitavo','9':'nono'};
+  return String(t)
+    .replace(/\*\*|__|`|#+\s*/g,'')
+    .replace(/\[[^\]]*\]/g,'')
+    .replace(/[,;–-]?\s*\bp(?:ág)?s?\.\s*\d+(?:\s*[-–a]\s*\d+)?/gi,'')
+    .replace(/\bp[áa]gina\s+\d+/gi,'')
+    .replace(/^\s*[-•*]\s*/gm,'')
+    .replace(/§§/g,'parágrafos ').replace(/§\s*/g,'parágrafo ')
+    .replace(/\barts?\.\s*/gi,m=>/s/i.test(m.trim()[3])?'artigos ':'artigo ')
+    .replace(/\b(Lei|Decreto-Lei|Resolução)\s+(?:n\.?\s*[º°]?\s*)?([\d.]+)\/(\d{4})/gi,'$1 $2, de $3')
+    .replace(/\b(\d)\s*[º°](?!\d)/g,(m,d)=>ord[d])
+    .replace(/\b(\d+)\s*[ºª°]/g,'$1')
+    .replace(/\bn\.?\s*[ºo°]\s*/gi,'número ')
+    .replace(/\binc\.\s*/gi,'inciso ').replace(/\bal\.\s*/gi,'alínea ')
+    .replace(/\bDra\.\s*/g,'doutora ').replace(/\bDr\.\s*/g,'doutor ').replace(/\bSra\.\s*/g,'senhora ').replace(/\bSr\.\s*/g,'senhor ')
+    .replace(/\bEx\.ª|\bExa\.\s*/g,'Excelência ')
+    .replace(/\bex\.:?\s*/gi,'por exemplo, ').replace(/\betc\.?/gi,'e assim por diante')
+    .replace(/\bCPC\b/g,'Código de Processo Civil').replace(/\bCC\b/g,'Código Civil').replace(/\bCDC\b/g,'Código de Defesa do Consumidor').replace(/\bCF\b/g,'Constituição').replace(/\bCNJ\b/g,'cê ene jota')
+    .replace(/(\D)\s*\/\s*(\D)/g,'$1 $2')
+    .replace(/\(\s*\)/g,'').replace(/[ \t]{2,}/g,' ').replace(/\s+([.,;:!?])/g,'$1').replace(/([.,;:])\1+/g,'$1')
+    .trim();
+}
 function speak(text,onEnd){
-  const clean=text.replace(/\*\*/g,'').replace(/^[-•]\s*/gm,'').slice(0,1990);
+  const clean=paraVoz(text).slice(0,1990);
   if(IA_URL&&vozEleven){
     speaking=true;const meu=Symbol();speak.atual=meu;
     falarEleven(clean).then(src=>{

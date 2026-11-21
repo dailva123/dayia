@@ -16,7 +16,7 @@
    5. Copie o endereço que termina em /exec e mande para a DayIA colocar no app.
    ===================================================================== */
 
-var LIMITE_DIA = 100;                                   // pedidos por dia (protege contra gasto alto)
+var LIMITE_DIA = 400;                                   // pedidos por dia (protege contra gasto alto)
 // Haiku (bem barato) no dia a dia; Sonnet só no termo de acordo, roteiro, ideias de acordo e leis do caso
 var MODELOS_CLAUDE = { quick: "claude-haiku-5-5", default: "claude-sonnet-5-5", complex: "claude-sonnet-5-5" };
 var RESERVA_CLAUDE = "claude-haiku-5-5";

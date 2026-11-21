@@ -22,7 +22,7 @@ var MODELOS_CLAUDE = { quick: "claude-haiku-5-5", default: "claude-sonnet-5-5", 
 var RESERVA_CLAUDE = "claude-haiku-5-5";
 // Voz do ElevenLabs: propriedades ELEVEN_KEY (chave) e ELEVEN_VOZ (id da voz escolhida)
 var ELEVEN_MODELO = "eleven_flash_v2_5";
-var MODELOS_GEMINI = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-flash-latest"];   // se um estiver lotado, tenta o próximo
+var MODELOS_GEMINI = ["gemini-flash-lite-latest", "gemini-flash-lite-latest"];   // o "lite" responde em menos de 1 segundo; tenta 2 vezes se falhar
 
 function doPost(e) {
   try {

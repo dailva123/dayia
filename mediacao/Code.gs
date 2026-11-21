@@ -27,6 +27,7 @@ var MODELOS_GEMINI = ["gemini-flash-lite-latest", "gemini-flash-lite-latest"];  
 function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents || "{}");
+    if (d.tipo === "lei") return json_(lei_(String(d.id || "")));
     if (d.tipo === "voz") return json_(voz_(String(d.texto || "").slice(0, 1500)));
     var msgs = (d.mensagens || []).filter(function (m) { return m && m.content; }).slice(-20);
     if (!msgs.length) return json_({ erro: "Pergunta vazia." });
@@ -100,6 +101,42 @@ function voz_(texto) {
   });
   if (r.getResponseCode() !== 200) return { erro: "ElevenLabs " + r.getResponseCode() + ": " + r.getContentText().slice(0, 200), codigo: "erro" };
   return { audio: Utilities.base64Encode(r.getBlob().getBytes()) };
+}
+
+/* Leis completas, sempre do site oficial do Planalto (texto em vigor, sem os trechos riscados) */
+var LEIS = {
+  med: "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13140.htm",
+  cpc: "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13105.htm",
+  cc: "https://www.planalto.gov.br/ccivil_03/leis/2002/l10406compilada.htm",
+  cf: "https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm",
+  alim: "https://www.planalto.gov.br/ccivil_03/leis/l5478.htm",
+  eca: "https://www.planalto.gov.br/ccivil_03/leis/l8069.htm",
+  idoso: "https://www.planalto.gov.br/ccivil_03/leis/2003/l10.741.htm",
+  inq: "https://www.planalto.gov.br/ccivil_03/leis/l8245.htm",
+  cdc: "https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm"
+};
+function lei_(id) {
+  var url = LEIS[id];
+  if (!url) return { erro: "Lei não encontrada." };
+  var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+  if (r.getResponseCode() !== 200) return { erro: "Planalto " + r.getResponseCode(), codigo: "erro" };
+  var bruto = r.getContentText("ISO-8859-1");
+  var m = bruto.match(/<meta[^>]+charset=["']?([\w-]+)/i);
+  if (m && /utf-?8/i.test(m[1])) bruto = r.getContentText("UTF-8");
+  return { id: id, texto: htmlParaTexto_(bruto), atualizado: Utilities.formatDate(new Date(), "America/Sao_Paulo", "yyyy-MM-dd") };
+}
+function htmlParaTexto_(h) {
+  h = h.replace(/<(script|style|strike|s|del)\b[\s\S]*?<\/\1>/gi, "");
+  h = h.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|tr|h\d|li|table)>/gi, "\n");
+  h = h.replace(/<[^>]+>/g, "");
+  var ent = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: "\"", ordm: "º", ordf: "ª", sect: "§", deg: "°", ccedil: "ç", Ccedil: "Ç",
+    aacute: "á", eacute: "é", iacute: "í", oacute: "ó", uacute: "ú", Aacute: "Á", Eacute: "É", Iacute: "Í", Oacute: "Ó", Uacute: "Ú",
+    atilde: "ã", otilde: "õ", Atilde: "Ã", Otilde: "Õ", acirc: "â", ecirc: "ê", ocirc: "ô", Acirc: "Â", Ecirc: "Ê", Ocirc: "Ô",
+    agrave: "à", Agrave: "À", uuml: "ü", ndash: "–", mdash: "—", ldquo: "“", rdquo: "”", lsquo: "‘", rsquo: "’", hellip: "…" };
+  h = h.replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(Number(n)); })
+       .replace(/&#x([0-9a-f]+);/gi, function (_, n) { return String.fromCharCode(parseInt(n, 16)); })
+       .replace(/&([a-z]+);/gi, function (a, n) { return ent.hasOwnProperty(n) ? ent[n] : a; });
+  return h.replace(/\u00a0/g, " ").replace(/[ \t\r]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{2,}/g, "\n").trim();
 }
 
 function dentroDoLimite_() {

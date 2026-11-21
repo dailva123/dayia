@@ -304,9 +304,14 @@ const LEIS=[
 {n:'Art. 1.784',t:'Aberta a sucessão, a herança transmite-se, desde logo, aos herdeiros legítimos e testamentários.'},
 {n:'Art. 1.829',t:'A sucessão legítima defere-se na ordem seguinte: I - aos descendentes, em concorrência com o cônjuge sobrevivente, salvo se casado este com o falecido no regime da comunhão universal, ou no da separação obrigatória de bens (art. 1.640, parágrafo único); ou se, no regime da comunhão parcial, o autor da herança não houver deixado bens particulares; II - aos ascendentes, em concorrência com o cônjuge; III - ao cônjuge sobrevivente; IV - aos colaterais.'}]},
 {id:'cf',chave:['constituicao'],nome:'Constituição Federal',num:'1988',area:'Constituição',url:'https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm',arts:[
-{n:'Art. 5º, caput',t:'Todos são iguais perante a lei, sem distinção de qualquer natureza, garantindo-se aos brasileiros e aos estrangeiros residentes no País a inviolabilidade do direito à vida, à liberdade, à igualdade, à segurança e à propriedade, nos termos seguintes:'}]}
+{n:'Art. 5º, caput',t:'Todos são iguais perante a lei, sem distinção de qualquer natureza, garantindo-se aos brasileiros e aos estrangeiros residentes no País a inviolabilidade do direito à vida, à liberdade, à igualdade, à segurança e à propriedade, nos termos seguintes:'}]},
+{id:'alim',chave:['5.478','5478'],nome:'Lei de Alimentos',num:'Lei 5.478/1968',area:'Família',url:'https://www.planalto.gov.br/ccivil_03/leis/l5478.htm',arts:[]},
+{id:'eca',chave:['8.069','8069'],nome:'Estatuto da Criança e do Adolescente',num:'Lei 8.069/1990',area:'Família',url:'https://www.planalto.gov.br/ccivil_03/leis/l8069.htm',arts:[]},
+{id:'idoso',chave:['10.741','10741'],nome:'Estatuto da Pessoa Idosa',num:'Lei 10.741/2003',area:'Família',url:'https://www.planalto.gov.br/ccivil_03/leis/2003/l10.741.htm',arts:[]},
+{id:'inq',chave:['8.245','8245'],nome:'Lei do Inquilinato',num:'Lei 8.245/1991',area:'Aluguel',url:'https://www.planalto.gov.br/ccivil_03/leis/l8245.htm',arts:[]},
+{id:'cdc',chave:['8.078','8078'],nome:'Código de Defesa do Consumidor',num:'Lei 8.078/1990',area:'Consumidor',url:'https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm',arts:[]}
 ];
-const OUTRAS=['Lei de Alimentos (Lei 5.478/1968)','Estatuto da Criança e do Adolescente','Estatuto da Pessoa Idosa','Lei do Inquilinato (Lei 8.245/1991)','Código de Defesa do Consumidor','CLT','Código Penal e Processo Penal','Código Tributário Nacional','Código de Trânsito','Estatuto da Pessoa com Deficiência','Resolução 125 do CNJ'];
+const OUTRAS=['CLT','Código Penal e Processo Penal','Código Tributário Nacional','Código de Trânsito','Estatuto da Pessoa com Deficiência','Resolução 125 do CNJ'];
 
 /* ---------- capacidades ---------- */
 /* ===== Assinatura: 60 dias grátis, depois R$ 19,90 por mês (valor fixo) ===== */
@@ -381,7 +386,32 @@ const IDB={db:null,
   open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('mf-demo',1);r.onupgradeneeded=()=>r.result.createObjectStore('docs');r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
   tx(mode,fn){return new Promise((res,rej)=>{if(!this.db)return rej('nodb');const t=this.db.transaction('docs',mode);const st=t.objectStore('docs');const r=fn(st);t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error)})},
   put(k,v){return this.tx('readwrite',s=>s.put(v,k))},get(k){return this.tx('readonly',s=>s.get(k))},del(k){return this.tx('readwrite',s=>s.delete(k))}};
-IDB.open().then(async()=>{for(const d of DB.docs){try{const v=await IDB.get(d.id);if(v)TXT[d.id]=v}catch(e){}}}).catch(()=>{});
+IDB.open().then(async()=>{for(const d of DB.docs){try{const v=await IDB.get(d.id);if(v)TXT[d.id]=v}catch(e){}}}).catch(()=>{}).finally(()=>setTimeout(atualizarLeis,1500));
+/* Leis completas: o serviço da DayIA busca o texto oficial no site do Planalto e o app guarda aqui dentro */
+function juntarLinhas(t){return t.split('\n').reduce((a,l)=>{if(a.length&&!/[.:;!?)\]]$/.test(a[a.length-1])&&/^[a-zà-ú(0-9,]/.test(l)&&!/^(Art\.|§|[IVXLC]+ ?[-–]|[a-z]\))/.test(l))a[a.length-1]+=' '+l;else a.push(l);return a},[]).join('\n')}
+function docDaLei(id){return DB.docs.find(x=>x.lei===id)}
+const baixando={};
+async function baixarLei(id){
+  if(baixando[id])return baixando[id];
+  const l=LEIS.find(x=>x.id===id);if(!l||!IA_URL)return null;
+  baixando[id]=(async()=>{
+    const r=await fetch(IA_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({tipo:'lei',id})});
+    const d=await r.json();if(!d.texto)throw new Error(d.erro||'Não consegui baixar a lei.');
+    const t=juntarLinhas(d.texto);const pages=[];for(let i=0;i<t.length;i+=3000)pages.push({p:Math.floor(i/3000)+1,t:t.slice(i,i+3000)});
+    const velho=docDaLei(id);const docId=velho?velho.id:'lei-'+id;
+    TXT[docId]=pages;try{await IDB.put(docId,pages)}catch(e){}
+    if(velho){velho.paginas=pages.length;velho.data=iso(new Date());velho.atualizado=iso(new Date())}
+    else DB.docs.unshift({id:docId,nome:l.num+' - '+l.nome,paginas:pages.length,data:iso(new Date()),lei:id,oficial:true,atualizado:iso(new Date())});
+    save();return docDaLei(id);
+  })().finally(()=>{delete baixando[id]});
+  return baixando[id];
+}
+async function atualizarLeis(){
+  if(!IA_URL||!navigator.onLine)return;
+  for(const l of LEIS){const d=docDaLei(l.id);
+    const precisa=!d||!TXT[d.id]||diasDesde(d.atualizado||'2000-01-01')>30;
+    if(precisa){try{await baixarLei(l.id);if(route==='leis'||route==='biblioteca')render()}catch(e){}}}
+}
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const STOP=new Set('para como qual quais quando onde sobre entre pela pelo pelas pelos esse essa isso este esta isto aquele aquela minha meus minhas seus suas dela dele tem tenho pode posso deve devo fazer feito sendo seria ser estar mais menos muito muita porque pois ainda tambem caso casos voce existe'.split(' '));
 function chunksOf(id){const pages=TXT[id]||[];const out=[];pages.forEach(pg=>{const t=pg.t;for(let i=0;i<t.length;i+=1100)out.push({p:pg.p,t:t.slice(Math.max(0,i-150),i+1100)})});return out}
@@ -528,12 +558,17 @@ function vLeis(){
   const mark=t=>{let s=esc(t);if(q){const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');s=s.replace(re,'<mark>$1</mark>')}return s};
   ls.forEach(l=>{
     const arts=l.arts.filter(a=>!q||(a.t+' '+a.n+' '+l.nome).toLowerCase().includes(q));
-    if(!arts.length)return;count+=arts.length;
+    const dl=docDaLei(l.id);let achados=[];
+    if(q&&dl&&TXT[dl.id]){const nq=norm(q);TXT[dl.id].forEach(p=>{const n=norm(p.t);let i=n.indexOf(nq);while(i>=0&&achados.length<5){achados.push({p:p.p,t:p.t.slice(Math.max(0,i-120),i+q.length+220)});i=n.indexOf(nq,i+q.length+200)}})}
+    if(q&&!arts.length&&!achados.length)return;
+    if(!q&&!arts.length){count++;html+=`<div class="sec-title"><h2>${esc(l.nome)}</h2><span class="row" style="gap:12px"><button class="link" data-leicompleta="${l.id}">Lei completa</button><a class="link" href="${l.url}" target="_blank" rel="noopener">Site oficial</a></span></div><p class="note" style="margin:-6px 0 4px">${esc(l.num)} · ${esc(l.area)} · ${dl?'texto completo no app':'baixando o texto completo...'}</p>`;return}
+    count+=arts.length+achados.length;
+    if(achados.length&&!arts.length){html+=`<div class="sec-title"><h2>${esc(l.nome)}</h2><button class="link" data-leicompleta="${l.id}">Lei completa</button></div><div class="list">`+achados.map(x=>`<button class="law" data-doc="${dl.id}" data-docq="${esc(q)}" style="text-align:left;width:100%"><b>Página ${x.p}</b><p>...${mark(x.t)}...</p></button>`).join('')+'</div>';return}
     html+=`<div class="sec-title"><h2>${esc(l.nome)}</h2><span class="row" style="gap:12px"><button class="link" data-leicompleta="${l.id}">Lei completa</button><a class="link" href="${l.url}" target="_blank" rel="noopener">Site oficial</a></span></div><p class="note" style="margin:-6px 0 10px">${esc(l.num)} · ${esc(l.area)}</p><div class="list">`+
-    arts.map(a=>`<div class="law"><b>${esc(a.n)}</b><p>${mark(a.t)}</p><div class="row"><button class="link" data-explica="${l.id}|${esc(a.n)}">Me explica esse artigo</button><button class="link" data-copy="${l.id}|${esc(a.n)}">Copiar</button></div><div class="exp"></div></div>`).join('')+'</div>';
+    arts.map(a=>`<div class="law"><b>${esc(a.n)}</b><p>${mark(a.t)}</p><div class="row"><button class="link" data-explica="${l.id}|${esc(a.n)}">Me explica esse artigo</button><button class="link" data-copy="${l.id}|${esc(a.n)}">Copiar</button></div><div class="exp"></div></div>`).join('')+achados.map(x=>`<button class="law" data-doc="${dl.id}" data-docq="${esc(q)}" style="text-align:left;width:100%"><b>Lei completa · página ${x.p}</b><p>...${mark(x.t)}...</p></button>`).join('')+'</div>';
   });
   if(!count)html+='<div class="card">Nada encontrado nessa busca. Pergunte para a Assistente.</div>';
-  html+=`<div class="sec-title"><h2>Também no Vade Mecum</h2></div><div class="card"><div class="chips" style="flex-wrap:wrap">${OUTRAS.map(o=>`<span class="chip">${esc(o)}</span>`).join('')}</div><p class="note">Aqui aparecem os artigos principais. As leis completas ficam na Minha biblioteca, dentro do app.</p></div>`;
+  html+=`<div class="sec-title"><h2>Também no Vade Mecum</h2></div><div class="card"><div class="chips" style="flex-wrap:wrap">${OUTRAS.map(o=>`<span class="chip">${esc(o)}</span>`).join('')}</div><p class="note">As leis acima ficam completas dentro do app, com o texto oficial do Planalto, e se atualizam sozinhas todo mês. Estas outras podem ser acrescentadas depois.</p></div>`;
   return html;
 }
 
@@ -934,8 +969,8 @@ document.addEventListener('click',e=>{
   const cm=e.target.closest('[data-copymsg]');if(cm){const m=DB.chat[+cm.dataset.copymsg];if(m)copyText(m.content,cm);return}
   const ex=e.target.closest('[data-explica]');if(ex){explica(ex);return}
   const cp=e.target.closest('[data-copy]');if(cp){const [lid,n]=cp.dataset.copy.split('|');const law=LEIS.find(x=>x.id===lid);const art=law.arts.find(x=>x.n===n);copyText(law.nome+', '+art.n+': '+art.t,cp);return}
-  const od=e.target.closest('[data-doc]');if(od){fDoc={q:'',};docAns='';go('doc',od.dataset.doc);return}
-  const lc=e.target.closest('[data-leicompleta]');if(lc){const l=LEIS.find(x=>x.id===lc.dataset.leicompleta);const d=DB.docs.find(x=>l.chave.some(k=>norm(x.nome).includes(k)));if(d){fDoc={q:''};docAns='';go('doc',d.id)}else{modal(`<h3>${esc(l.nome)} completa</h3><p style="font-size:14.5px;margin-top:6px">O texto completo desta lei ainda não está no app. Cole o texto ou envie o PDF uma vez e ela fica guardada aqui dentro, com busca e com a IA para explicar.</p><p class="note">Se tiver o texto da lei copiado, cole aqui. Fica guardado do jeito que está.</p><div class="list" style="margin-top:14px"><button class="btn gold full" data-act="colar" data-nome="${esc(l.num+' - '+l.nome)}" data-url="${esc(l.url)}">Colar o texto da lei</button><button class="btn line full" data-go="biblioteca" data-close>Enviar o PDF na biblioteca</button><button class="btn line full" data-close>Agora não</button></div>`)}return}
+  const od=e.target.closest('[data-doc]');if(od){fDoc={q:od.dataset.docq||''};docAns='';go('doc',od.dataset.doc);return}
+  const lc=e.target.closest('[data-leicompleta]');if(lc){const l=LEIS.find(x=>x.id===lc.dataset.leicompleta);const d=docDaLei(l.id)||DB.docs.find(x=>l.chave.some(k=>norm(x.nome).includes(k)));if(d&&TXT[d.id]){fDoc={q:''};docAns='';go('doc',d.id)}else if(IA_URL){const mm=modal(`<h3>${esc(l.nome)}</h3><p style="font-size:14.5px;margin-top:6px"><span class="spin"></span> Trazendo o texto oficial completo para dentro do app. Só na primeira vez.</p>`);baixarLei(l.id).then(dd=>{closeModal();fDoc={q:''};docAns='';go('doc',dd.id)}).catch(err=>{mm.innerHTML=`<h3>${esc(l.nome)}</h3><p style="font-size:14.5px;margin-top:6px">Não consegui trazer a lei agora. Confira a internet e tente de novo.</p><button class="btn navy full" data-close style="margin-top:12px">Ok</button>`})}else{modal(`<h3>${esc(l.nome)} completa</h3><p style="font-size:14.5px;margin-top:6px">O texto completo desta lei ainda não está no app. Cole o texto ou envie o PDF uma vez e ela fica guardada aqui dentro, com busca e com a IA para explicar.</p><p class="note">Se tiver o texto da lei copiado, cole aqui. Fica guardado do jeito que está.</p><div class="list" style="margin-top:14px"><button class="btn gold full" data-act="colar" data-nome="${esc(l.num+' - '+l.nome)}" data-url="${esc(l.url)}">Colar o texto da lei</button><button class="btn line full" data-go="biblioteca" data-close>Enviar o PDF na biblioteca</button><button class="btn line full" data-close>Agora não</button></div>`)}return}
   const dd=e.target.closest('[data-deldoc]');if(dd){const d=DB.docs.find(x=>x.id===dd.dataset.deldoc);const m=modal(`<h3>Apagar documento?</h3><p style="margin-top:6px">${esc(d.nome)}</p><div class="row" style="margin-top:14px"><button class="btn line" data-close>Cancelar</button><button class="btn navy" id="okDel" style="flex:1;background:var(--bad)">Apagar</button></div>`);m.querySelector('#okDel').onclick=()=>{DB.docs=DB.docs.filter(x=>x.id!==d.id);delete TXT[d.id];IDB.del(d.id).catch(()=>{});save();closeModal();render()};return}
   const dr=e.target.closest('[data-delregra]');if(dr){DB.regras=DB.regras.filter(r=>r.id!==dr.dataset.delregra);save();render();return}
   const co=e.target.closest('[data-corrigir]');if(co){corrigir(+co.dataset.corrigir);return}

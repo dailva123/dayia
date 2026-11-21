@@ -27,7 +27,7 @@ var MODELOS_GEMINI = ["gemini-flash-lite-latest", "gemini-flash-lite-latest"];  
 function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents || "{}");
-    if (d.tipo === "lei") return json_(lei_(String(d.id || "")));
+    if (d.tipo === "lei") return json_(lei_(String(d.id || ""), String(d.url || "")));
     if (d.tipo === "voz") return json_(voz_(String(d.texto || "").slice(0, 1500)));
     var msgs = (d.mensagens || []).filter(function (m) { return m && m.content; }).slice(-20);
     if (!msgs.length) return json_({ erro: "Pergunta vazia." });
@@ -113,19 +113,48 @@ var LEIS = {
   eca: "https://www.planalto.gov.br/ccivil_03/leis/l8069.htm",
   idoso: "https://www.planalto.gov.br/ccivil_03/leis/2003/l10.741.htm",
   inq: "https://www.planalto.gov.br/ccivil_03/leis/l8245.htm",
-  cdc: "https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm"
+  cdc: "https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm",
+  arb: "https://www.planalto.gov.br/ccivil_03/leis/l9307.htm",
+  jec: "https://www.planalto.gov.br/ccivil_03/leis/l9099.htm",
+  div: "https://www.planalto.gov.br/ccivil_03/leis/l6515.htm",
+  inv: "https://www.planalto.gov.br/ccivil_03/_ato2007-2010/2007/lei/l11441.htm",
+  ue: "https://www.planalto.gov.br/ccivil_03/leis/l9278.htm",
+  ap: "https://www.planalto.gov.br/ccivil_03/_ato2007-2010/2010/lei/l12318.htm",
+  pat: "https://www.planalto.gov.br/ccivil_03/leis/l8560.htm",
+  bf: "https://www.planalto.gov.br/ccivil_03/leis/l8009.htm",
+  mp: "https://www.planalto.gov.br/ccivil_03/_ato2004-2006/2006/lei/l11340.htm",
+  pcd: "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13146.htm",
+  reg: "https://www.planalto.gov.br/ccivil_03/leis/l6015compilada.htm",
+  cond: "https://www.planalto.gov.br/ccivil_03/leis/l4591.htm",
+  lindb: "https://www.planalto.gov.br/ccivil_03/decreto-lei/del4657compilado.htm",
+  lgpd: "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm",
+  clt: "https://www.planalto.gov.br/ccivil_03/decreto-lei/del5452.htm",
+  cp: "https://www.planalto.gov.br/ccivil_03/decreto-lei/del2848compilado.htm",
+  cpp: "https://www.planalto.gov.br/ccivil_03/decreto-lei/del3689.htm",
+  ctn: "https://www.planalto.gov.br/ccivil_03/leis/l5172compilado.htm",
+  ctb: "https://www.planalto.gov.br/ccivil_03/leis/l9503compilado.htm",
+  cnj125: "https://atos.cnj.jus.br/atos/detalhar/156"
 };
-function lei_(id) {
+function lei_(id, urlPedida) {
   var url = LEIS[id];
+  // Outras leis: só do site oficial do Planalto ou do CNJ
+  if (!url && urlPedida && /^https:\/\/(www\.)?(planalto\.gov\.br|atos\.cnj\.jus\.br)\//i.test(urlPedida)) url = urlPedida;
   if (!url) return { erro: "Lei não encontrada." };
   var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
   if (r.getResponseCode() !== 200) return { erro: "Planalto " + r.getResponseCode(), codigo: "erro" };
-  var bruto = r.getContentText("ISO-8859-1");
-  var m = bruto.match(/<meta[^>]+charset=["']?([\w-]+)/i);
-  if (m && /utf-?8/i.test(m[1])) bruto = r.getContentText("UTF-8");
+  var b = r.getContent(), bruto;
+  if (b[0] === -1 && b[1] === -2) bruto = r.getContentText("UTF-16LE");
+  else if (b[0] === -2 && b[1] === -1) bruto = r.getContentText("UTF-16BE");
+  else {
+    bruto = r.getContentText("ISO-8859-1");
+    var m = bruto.match(/<meta[^>]+charset=["']?([\w-]+)/i), cab = String((r.getHeaders() || {})["Content-Type"] || "");
+    if ((m && /utf-?8/i.test(m[1])) || /utf-?8/i.test(cab) || /\u00c3[\u00a1-\u00bf]/.test(bruto)) bruto = r.getContentText("UTF-8");
+  }
+  bruto = bruto.replace(/^\uFEFF/, "");
   return { id: id, texto: htmlParaTexto_(bruto), atualizado: Utilities.formatDate(new Date(), "America/Sao_Paulo", "yyyy-MM-dd") };
 }
 function htmlParaTexto_(h) {
+  h = h.replace(/<head\b[\s\S]*?<\/head>/i, "");
   h = h.replace(/[\r\n]+/g, " ");   // quebras do arquivo dentro do parágrafo viram espaço
   h = h.replace(/<(script|style|strike|s|del)\b[\s\S]*?<\/\1>/gi, "");
   h = h.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|tr|h\d|li|table)>/gi, "\n");

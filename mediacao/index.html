@@ -153,6 +153,21 @@ body.r-assistente .fab-voz{display:none}
 .vtext{max-width:520px;text-align:center;font-size:15.5px;color:var(--navy);min-height:44px;max-height:28vh;overflow:auto;line-height:1.55}
 .vbtns{display:flex;gap:14px;align-items:center}
 .voice.com-caso{justify-content:flex-start;gap:10px;padding-top:18px}
+.vmin-only{display:none!important}
+.voice.mini{inset:auto 10px calc(76px + env(safe-area-inset-bottom)) 10px;max-width:620px;margin:0 auto;height:auto;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;padding:10px 10px 10px 12px;border-radius:24px;box-shadow:0 10px 34px rgba(27,42,74,.22);border:1px solid var(--line)}
+.voice.mini .vtop,.voice.mini #vCasoBar,.voice.mini #vCaso,.voice.mini #vAuto,.voice.mini #vKb,.voice.mini #vMic,.voice.mini .vfull-only{display:none!important}
+.voice.mini .vmin-only{display:flex!important}
+.voice.mini .orb-wrap{flex-direction:row;gap:10px;flex:1;min-width:0;align-items:center}
+.voice.mini .orb{zoom:.19;flex:none}
+.voice.mini .orb-txt{display:flex;flex-direction:column;min-width:0;flex:1}
+.voice.mini .vstatus{font-size:12px;text-align:left;min-height:0}
+.voice.mini .vtext{font-size:13.5px;text-align:left;min-height:0;max-height:3.1em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.voice.mini > div:last-child{width:auto!important;flex-direction:row!important;gap:6px!important}
+.voice.mini .vbtns{gap:6px}
+.voice.mini .vsmall{width:40px;height:40px}
+.voice.mini .vtype{position:absolute;left:0;right:0;bottom:calc(100% + 8px)}
+body.voz-on .fab-voz{display:none}
+.voice.mini .vtype input{box-shadow:0 6px 20px rgba(0,0,0,.12)}
 .voice.com-caso .orb-wrap{gap:8px}
 .voice.com-caso .orb{zoom:.42}
 .voice.com-caso .vtext{max-height:13vh;min-height:0;font-size:14.5px}
@@ -202,7 +217,7 @@ body.r-assistente .fab-voz{display:none}
 </div>
 <nav><div class="in" id="nav"></div></nav>
 <div id="modalRoot"></div>
-<button class="fab-voz" data-act="voz" aria-label="Conversar com a IA por voz"><span class="lbl">Falar com a IA</span><span class="mini"><i></i><i></i><i></i></span></button>
+<button class="fab-voz" data-act="vozmini" aria-label="Conversar com a IA por voz"><span class="lbl">Falar com a IA</span><span class="mini"><i></i><i></i><i></i></span></button>
 <div id="voiceRoot"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1166,29 +1181,32 @@ function falaDela(txt){
   return w.length>=2&&fora>=2&&fora/w.length>=.5;
 }
 try{const vh=JSON.parse(sessionStorage.getItem('mf-voz')||'null');if(vh&&Array.isArray(vh.hist))V.hist=vh.hist}catch(e){}
-function guardarVoz(){try{sessionStorage.setItem('mf-voz',JSON.stringify({hist:V.hist.slice(-20),aberta:V.open}))}catch(e){}}
+function guardarVoz(){try{sessionStorage.setItem('mf-voz',JSON.stringify({hist:V.hist.slice(-20),aberta:V.open,mini:!!V.mini}))}catch(e){}}
 /* Tela sempre acesa durante a conversa por voz */
 let TRAVA=null;
 async function manterTelaAcesa(){try{if('wakeLock' in navigator&&!TRAVA){TRAVA=await navigator.wakeLock.request('screen');TRAVA.addEventListener('release',()=>{TRAVA=null})}}catch(e){}}
 function liberarTela(){try{TRAVA&&TRAVA.release()}catch(e){}TRAVA=null}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&V.open)manterTelaAcesa()});
-function openVoice(){
-  const r=document.getElementById('voiceRoot');V.open=true;manterTelaAcesa();guardarVoz();
+function openVoice(modo){
+  const r=document.getElementById('voiceRoot');V.open=true;V.mini=modo==='mini'&&!!DICT;document.body.classList.add('voz-on');manterTelaAcesa();guardarVoz();
   try{if(IA_URL)fetch(IA_URL,{mode:'no-cors'}).catch(()=>{})}catch(e){}
   if(route==='caso'&&caso(param)){V.caso=param;V.lei=null}else if(route==='doc'&&param&&String(param).startsWith('lei-')){V.lei=String(param).slice(4);V.caso=null}else{if(!V.caso||!caso(V.caso))V.caso=null;if(V.lei&&!LEIS.find(l=>l.id===V.lei))V.lei=null}
-  r.innerHTML=`<div class="voice" id="vBox"><div class="vtop"><b>Conversa por voz</b><button class="x" id="vClose" aria-label="Fechar">${IC.x}</button></div>
+  r.innerHTML=`<div class="voice" id="vBox"><div class="vtop"><b>Conversa por voz</b><div style="display:flex;gap:8px"><button class="x" id="vMin" aria-label="Diminuir" title="Diminuir e continuar usando o app"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg></button><button class="x" id="vClose" aria-label="Fechar">${IC.x}</button></div></div>
   <div class="vcaso-bar" id="vCasoBar"></div>
-  <div class="orb-wrap"><div class="orb" id="orb" role="button" aria-label="Falar"><div class="sw"></div><div class="cl c1"></div><div class="cl c2"></div><div class="cl c3"></div><div class="cl c4"></div><div class="cl c6"></div><div class="cl c5"></div></div><div class="vstatus" id="vStatus">${DICT?'Toque na bola e comece a falar':'Escreva sua pergunta abaixo'}</div><div class="vtext" id="vText"></div></div>
+  <div class="orb-wrap"><div class="orb" id="orb" role="button" aria-label="Falar"><div class="sw"></div><div class="cl c1"></div><div class="cl c2"></div><div class="cl c3"></div><div class="cl c4"></div><div class="cl c6"></div><div class="cl c5"></div></div><div class="orb-txt"><div class="vstatus" id="vStatus">${DICT?'Toque na bola e comece a falar':'Escreva sua pergunta abaixo'}</div><div class="vtext" id="vText"></div></div></div>
   <div class="vcaso hide" id="vCaso"></div>
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%">
   ${DICT?`<button class="chip ${V.auto?'on':''}" id="vAuto">${V.auto?'✓ ':''}Conversa contínua</button>
-  <div class="vbtns"><button class="vsmall" id="vKb" aria-label="Digitar">${IC.send}</button><button class="vbig" id="vMic" aria-label="Falar">${IC.mic}</button><button class="vsmall" id="vStop" aria-label="Parar">${IC.stop}</button></div>`:''}
+  <div class="vbtns"><button class="vsmall" id="vKb" aria-label="Digitar">${IC.send}</button><button class="vbig" id="vMic" aria-label="Falar">${IC.mic}</button><button class="vsmall" id="vStop" aria-label="Parar">${IC.stop}</button><button class="vsmall vmin-only" id="vExp" aria-label="Abrir tela cheia"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button><button class="vsmall vmin-only" id="vX2" aria-label="Fechar">${IC.x}</button></div>`:''}
   <div class="vtype ${DICT?'hide':''}" id="vType"><input id="vIn" placeholder="Sua dúvida..."><button class="round gold" id="vSend" aria-label="Enviar">${IC.send}</button></div>
   ${!DICT?'<p style="font-size:12px;color:var(--muted);text-align:center;max-width:320px">Este navegador não tem microfone para o app. Abra no Chrome para conversar falando.</p>':''}</div></div>`;
   const orb=r.querySelector('#orb'),st=r.querySelector('#vStatus'),vt=r.querySelector('#vText');
   const setOrb=s=>{orb.className='orb '+s};
   /* Caso aberto na conversa: resumo para ela rolar e lembrar, e a IA já sabe de qual caso se trata */
   const box=r.querySelector('#vBox'),pan=r.querySelector('#vCaso'),bar=r.querySelector('#vCasoBar');
+  const modoMini=on=>{V.mini=on;box.classList.toggle('mini',on);if(!on){if(route==='caso'&&caso(param)){V.caso=param;V.lei=null}else if(route==='doc'&&param&&String(param).startsWith('lei-')){V.lei=String(param).slice(4);V.caso=null}else{V.caso=null;V.lei=null}mostrarCaso()}guardarVoz()};
+  r.querySelector('#vMin').onclick=()=>modoMini(true);
+  {const e=r.querySelector('#vExp');if(e)e.onclick=()=>modoMini(false)}
   function mostrarCaso(){
     const c=V.caso&&caso(V.caso);
     if(!c&&V.lei){mostrarLei();return}
@@ -1253,7 +1271,7 @@ function openVoice(){
     let tm;inp.oninput=()=>{clearTimeout(tm);tm=setTimeout(buscar,350)};
     if(V.leiQ)buscar();else pagina(V.leiPg||0);
   }
-  mostrarCaso();
+  mostrarCaso();if(V.mini)box.classList.add('mini');
   const mic=r.querySelector('#vMic');
   const idleMsg=()=>{setOrb('');st.textContent=DICT?'Toque na bola para falar':'Escreva outra pergunta'};
   function listen(){
@@ -1296,8 +1314,8 @@ function openVoice(){
     setTimeout(listen,150);
   }
   function armSilence(){clearTimeout(V.timer);V.timer=setTimeout(()=>{if(V.listening&&(V.heard+V.partial).trim())DICT.stop().catch(()=>{})},1400)}
-  const close=()=>{V.open=false;if(V.vadFim)V.vadFim();liberarTela();try{sessionStorage.removeItem('mf-voz')}catch(e){}clearTimeout(V.timer);try{DICT&&V.listening&&DICT.stop().catch(()=>{})}catch(e){}V.listening=false;V.cb=null;stopSpeak();r.innerHTML=''};
-  r.querySelector('#vClose').onclick=close;
+  const close=()=>{V.open=false;V.mini=false;document.body.classList.remove('voz-on');if(V.vadFim)V.vadFim();liberarTela();try{sessionStorage.removeItem('mf-voz')}catch(e){}clearTimeout(V.timer);try{DICT&&V.listening&&DICT.stop().catch(()=>{})}catch(e){}V.listening=false;V.cb=null;stopSpeak();r.innerHTML=''};
+  r.querySelector('#vClose').onclick=close;{const x2=r.querySelector('#vX2');if(x2)x2.onclick=close}
   const ans=async q=>{
     q=(q||'').trim();
     if(!q){idleMsg();return}
@@ -1308,6 +1326,8 @@ function openVoice(){
     const h=V.hist.slice(-14).map(m=>({...m}));
     if(h[0].role!=='user')h.shift();
     const pre=base('Agora é uma conversa falada. Responda em 2 a 4 frases curtas, em texto corrido, sem listas, símbolos, títulos ou asteriscos, porque a resposta será lida em voz alta. Tom natural de colega para colega, sem cumprimentos e sem frases de abertura: comece já respondendo. Ao citar lei, fale só o artigo e o nome da lei, sem número de página. Pode fazer uma pergunta curta de volta quando ajudar a entender o caso.');
+    if(V.mini){V.caso=route==='caso'&&caso(param)?param:null;V.lei=route==='doc'&&param&&String(param).startsWith('lei-')?String(param).slice(4):null;
+      if(V.lei){const ws=norm(q).split(/[^a-z0-9]+/).filter(w=>w.length>3&&!STOP.has(w));V.leiTrecho=chunksOf('lei-'+V.lei).map(c=>({t:c.t,s:ws.filter(w=>c.n.includes(w)).length})).sort((a,b)=>b.s-a.s).slice(0,3).map(c=>c.t).join('\n\n')}}
     const cv=V.caso&&caso(V.caso);
     const dc=docCtx(q);
     const lv=!cv&&V.lei&&LEIS.find(l=>l.id===V.lei);
@@ -1422,6 +1442,7 @@ document.addEventListener('click',e=>{
   const k=act.dataset.act;
   if(k==='novo')novoCaso();
   else if(k==='voz')openVoice();
+  else if(k==='vozmini')openVoice('mini');
   else if(k==='agendar')agendar(act.dataset.id);
   else if(k==='status')mudarStatus(act.dataset.id);
   else if(k==='nota'){const ta=document.getElementById('nota');const txt=ta.value.trim();if(!txt){ta.style.borderColor='var(--bad)';ta.placeholder='Escreva a anotação primeiro';ta.focus();return}caso(act.dataset.id).notas.push({data:iso(new Date()),texto:txt});save();render()}
@@ -1556,7 +1577,7 @@ function relatorio(){
 
 /* ---------- início ---------- */
 fromHash();render();
-try{const vh=JSON.parse(sessionStorage.getItem('mf-voz')||'null');if(vh&&vh.aberta)setTimeout(()=>{openVoice();const t=document.getElementById('vText');if(t&&V.hist.length)t.textContent=V.hist[V.hist.length-1].content;const s=document.getElementById('vStatus');if(s)s.textContent=DICT?'Toque na bola para continuar a conversa':'Escreva sua pergunta abaixo'},400)}catch(e){}
+try{const vh=JSON.parse(sessionStorage.getItem('mf-voz')||'null');if(vh&&vh.aberta)setTimeout(()=>{openVoice(vh.mini?'mini':'');const t=document.getElementById('vText');if(t&&V.hist.length)t.textContent=V.hist[V.hist.length-1].content;const s=document.getElementById('vStatus');if(s)s.textContent=DICT?'Toque na bola para continuar a conversa':'Escreva sua pergunta abaixo'},400)}catch(e){}
 const _iv=setInterval(()=>{if(DICT){hookDictGlobal();clearInterval(_iv)}},300);
 setTimeout(()=>clearInterval(_iv),12000);
 (function(){var i=document.getElementById('intro');

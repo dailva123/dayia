@@ -1056,15 +1056,24 @@ function speak(text,onEnd){
   const clean=text.replace(/\*\*/g,'').replace(/^[-•]\s*/gm,'').slice(0,1990);
   if(IA_URL&&vozEleven){
     speaking=true;const meu=Symbol();speak.atual=meu;
-    falarEleven(clean).then(src=>{
+    /* Fala em partes: a primeira frase sai logo, o resto é preparado enquanto ela fala */
+    const frases=clean.match(/[^.!?…]+[.!?…]+["”)]?\s*|[^.!?…]+$/g)||[clean];
+    let p1='',i=0;while(i<frases.length&&(p1.length<40||i===0)){p1+=frases[i];i++}
+    const partes=[p1.trim(),frases.slice(i).join('').trim()].filter(Boolean);
+    const audios=partes.map(t=>falarEleven(t));
+    let tocou=false;
+    const tocar=async n=>{
       if(speak.atual!==meu)return;
-      if(!src){speak.atual=null;speaking=false;falarLocal(clean,onEnd);return}
+      if(n>=partes.length){speak.atual=null;speaking=false;onEnd&&onEnd();return}
+      const src=await audios[n];if(speak.atual!==meu)return;
+      if(!src){if(!tocou){speak.atual=null;speaking=false;falarLocal(clean,onEnd)}else{speak.atual=null;speaking=false;falarLocal(partes.slice(n).join(' '),onEnd)}return}
       try{AUDIO&&AUDIO.pause()}catch(e){}
       AUDIO=new Audio(src);
-      const fim=()=>{if(speak.atual!==meu)return;speak.atual=null;speaking=false;onEnd&&onEnd()};
-      AUDIO.onended=fim;AUDIO.onerror=fim;AUDIO.onplaying=()=>{if(speak.atual===meu&&speak.onPlay)speak.onPlay()};
-      AUDIO.play().catch(()=>{speak.atual=null;speaking=false;falarLocal(clean,onEnd)});
-    });
+      AUDIO.onended=()=>tocar(n+1);AUDIO.onerror=()=>tocar(n+1);
+      AUDIO.onplaying=()=>{if(speak.atual===meu&&!tocou&&speak.onPlay){tocou=true;speak.onPlay()}tocou=true};
+      AUDIO.play().catch(()=>{if(speak.atual!==meu)return;speak.atual=null;speaking=false;falarLocal(partes.slice(n).join(' '),onEnd)});
+    };
+    tocar(0);
     return;
   }
   falarLocal(clean,onEnd);
@@ -1099,6 +1108,7 @@ function liberarTela(){try{TRAVA&&TRAVA.release()}catch(e){}TRAVA=null}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&V.open)manterTelaAcesa()});
 function openVoice(){
   const r=document.getElementById('voiceRoot');V.open=true;manterTelaAcesa();guardarVoz();
+  try{if(IA_URL)fetch(IA_URL,{mode:'no-cors'}).catch(()=>{})}catch(e){}
   r.innerHTML=`<div class="voice"><div class="vtop"><b>Conversa por voz</b><button class="x" id="vClose" aria-label="Fechar">${IC.x}</button></div>
   <div class="orb-wrap"><div class="orb" id="orb" role="button" aria-label="Falar"><div class="sw"></div><div class="cl c1"></div><div class="cl c2"></div><div class="cl c3"></div><div class="cl c4"></div><div class="cl c6"></div><div class="cl c5"></div></div><div class="vstatus" id="vStatus">${DICT?'Toque na bola e comece a falar':'Escreva sua pergunta abaixo'}</div><div class="vtext" id="vText"></div></div>
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%">
@@ -1139,7 +1149,7 @@ function openVoice(){
     V.barge=false;if(V.vadFim)V.vadFim();stopSpeak();clearInterval(V.iv);orb.style.transform='';
     setTimeout(listen,150);
   }
-  function armSilence(){clearTimeout(V.timer);V.timer=setTimeout(()=>{if(V.listening&&(V.heard+V.partial).trim())DICT.stop().catch(()=>{})},1700)}
+  function armSilence(){clearTimeout(V.timer);V.timer=setTimeout(()=>{if(V.listening&&(V.heard+V.partial).trim())DICT.stop().catch(()=>{})},1100)}
   const close=()=>{V.open=false;if(V.vadFim)V.vadFim();liberarTela();try{sessionStorage.removeItem('mf-voz')}catch(e){}clearTimeout(V.timer);try{DICT&&V.listening&&DICT.stop().catch(()=>{})}catch(e){}V.listening=false;V.cb=null;stopSpeak();r.innerHTML=''};
   r.querySelector('#vClose').onclick=close;
   const ans=async q=>{

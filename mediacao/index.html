@@ -316,7 +316,7 @@ if(IA_URL){
   AI=async function(input,o={}){
     const msgs=typeof input==='string'?[{role:'user',content:input}]:input;
     let r;
-    try{r=await fetch(IA_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({app:'mediacao',nivel:o.modelTier||'default',mensagens:msgs})})}
+    try{r=await fetch(IA_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({app:'mediacao',nivel:o.modelTier||'quick',mensagens:msgs})})}
     catch(e){throw {code:'rede'}}
     let d={};try{d=await r.json()}catch(e){throw {code:'erro'}}
     if(d.erro)throw {code:d.codigo||'erro',message:d.erro};
@@ -717,7 +717,7 @@ async function runCaseAI(k){
   out.innerHTML='<div class="ai-out"><span class="spin"></span> Pensando...</div>';
   const box=out.firstChild;
   try{
-    const txt=await ask(base()+'\n\n'+caseCtx(c)+'\n\nPEDIDO: '+AIP[k].replace('MEDIADORA_AQUI',med),t=>{box.innerHTML=md(t)},{modelTier:k==='termo'?'complex':'default'});
+    const txt=await ask(base()+'\n\n'+caseCtx(c)+'\n\nPEDIDO: '+AIP[k].replace('MEDIADORA_AQUI',med),t=>{box.innerHTML=md(t)},{modelTier:['termo','roteiro','ideias','leis'].includes(k)?'default':'quick'});
     box.innerHTML=md(txt)+`<div class="row" style="margin-top:8px"><button class="link" id="aiCopy">Copiar</button><button class="link" id="aiNote">Salvar nas anotações</button>${(TTS||window.speechSynthesis)?'<button class="link" id="aiSay">Ouvir</button>':''}</div>`;
     box.querySelector('#aiCopy').onclick=e=>copyText(txt,e.target);
     box.querySelector('#aiNote').onclick=e=>{c.notas.push({data:iso(new Date()),texto:txt});save();e.target.textContent='Salvo'};

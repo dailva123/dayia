@@ -1446,7 +1446,10 @@ function openVoice(modo){
     const dc=docCtx(q);
     const lv=!cv&&V.lei&&LEIS.find(l=>l.id===V.lei);
     const preL=lv?pre+'\n\nA DRA. ESTÁ COM ESTA LEI ABERTA NA TELA: '+lv.nome+' ('+lv.num+'). Quando ela falar "esse artigo", "essa lei" ou "isso aqui", é sobre o que ela está vendo. Trecho na tela:\n'+String(V.leiTrecho||'').slice(0,3500):pre;
-    const preC=cv?pre+'\n\nA CONVERSA É SOBRE ESTE CASO, que está aberto na tela dela. Use estes dados para responder e para ajudá-la a lembrar do caso; não invente nada além deles:\n'+caseCtx(cv):preL;
+    let preC=cv?pre+'\n\nA CONVERSA É SOBRE ESTE CASO, que está aberto na tela dela. Use estes dados para responder e para ajudá-la a lembrar do caso; não invente nada além deles:\n'+caseCtx(cv):preL;
+    /* Bolinha minimizada: a IA também "vê" o que está na tela (lei, artigo explicado, agenda, lista de casos...) */
+    if(V.mini){try{const tela=(document.getElementById('view').innerText||'').replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim().slice(0,3500);
+      if(tela)preC+='\n\nO QUE ESTÁ NA TELA DELA AGORA (aba '+({inicio:'Início',casos:'Casos',caso:'Caso',agenda:'Agenda',leis:'Leis',doc:'Documento',assistente:'Assistente',biblioteca:'Biblioteca',contatos:'Contatos',escrever:'Escrever com IA',financeiro:'Faturamento',perfil:'Meus dados'}[route]||route)+'). Quando ela disser "isso aqui", "esse artigo", "essa lei", "esse caso" ou "o que está na tela", é sobre isto. Use este conteúdo para responder:\n'+tela}catch(e){}}
     h[0]={role:'user',content:preC+'\n\n'+(h.length===1&&dc.txt?dc.txt+'\n\n':'')+'FALA DELA: '+h[0].content};
     if(h.length>1&&dc.txt)h[h.length-1]={role:'user',content:dc.txt+'\n\nFALA DELA: '+q};
     try{

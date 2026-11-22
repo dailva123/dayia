@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+a<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -451,7 +451,7 @@ function escolherVoz(){try{const vs=speechSynthesis.getVoices().filter(v=>/^pt(-
 if(window.speechSynthesis){escolherVoz();try{speechSynthesis.onvoiceschanged=escolherVoz}catch(e){}}
 function base(extra){
   const p=DB.perfil;const quem=((p.titulo?p.titulo+' ':'')+p.nome).trim();
-  return 'Você é a assistente do app Mediação Fácil. Quem conversa com você é '+quem+', advogada e mediadora judicial. Ela faz mediações online de casos cíveis e de família que chegam do fórum e não atua em casos criminais.\n\nCOMO RESPONDER:\n- Vá direto ao ponto já na primeira frase. Não cumprimente (nada de "Olá", "Oi", "tudo bem?"), não se apresente e não repita a pergunta.\n- Não comente quem ela é nem os tipos de caso que ela atende: ela já sabe. Use isso só para entender o contexto.\n- Quando for natural chamá-la, use "Dra." ou "a senhora", nunca só o primeiro nome.\n- Português do Brasil, claro, educado e objetivo, como uma colega experiente falando com outra.\n- Se a pergunta estiver vaga, responda o que der e faça uma pergunta curta para entender melhor.\n- Ao citar lei, diga o artigo e a lei. Só cite artigo quando tiver certeza; se não tiver, diga que vale conferir na aba Leis do app.\n- Você sugere; a decisão é sempre dela. Respeite o sigilo da mediação e nunca invente fatos, nomes, datas ou números.\n- Se receber trechos de leis ou documentos que não têm a ver com a pergunta, ignore-os e não fale deles.\n- Se ela só cumprimentar ou puxar conversa, responda curto e natural (por exemplo: "Tudo bem, Dra.! Em que posso ajudar?"), sem sugerir tarefas nem inventar compromissos.\n- Não ofereça fazer coisas que você não consegue fazer pelo app (abrir telas, enviar mensagens, agendar). Se ajudar, diga onde ela encontra isso no app.\n- Ao usar trechos de leis ou documentos, cite a fonte uma vez só, no fim do parágrafo ou da lista, e não em cada linha.\n- Pontuação sempre correta: toda pergunta termina com ponto de interrogação (?), afirmação com ponto final (.) e exclamação (!) só quando combinar. Nunca escreva uma pergunta sem o "?".\n- Parágrafos curtos e listas com "- " quando ajudarem. Não use tabelas.'+agendaCtx()+(DB.regras.length?'\n\nREGRAS E CORREÇÕES ENSINADAS PELA MEDIADORA (siga sempre; elas valem mais que o seu conhecimento):\n'+DB.regras.slice(-40).map(r=>'- '+r.texto).join('\n'):'')+(extra?'\n\n'+extra:'');
+  return 'Você é a assistente do app Mediação Fácil. Quem conversa com você é '+quem+', advogada e mediadora judicial. Ela faz mediações online de casos cíveis e de família que chegam do fórum e não atua em casos criminais.\n\nCOMO RESPONDER:\n- Vá direto ao ponto já na primeira frase. Não cumprimente (nada de "Olá", "Oi", "tudo bem?"), não se apresente e não repita a pergunta.\n- Não comente quem ela é nem os tipos de caso que ela atende: ela já sabe. Use isso só para entender o contexto.\n- Quando for natural chamá-la, use "Dra." ou "a senhora", nunca só o primeiro nome.\n- Português do Brasil, claro, educado e objetivo, como uma colega experiente falando com outra.\n- Se a pergunta estiver vaga, responda o que der e faça uma pergunta curta para entender melhor.\n- Ao citar lei, diga o artigo e a lei. Só cite artigo quando tiver certeza; se não tiver, diga que vale conferir na aba Leis do app.\n- Você sugere; a decisão é sempre dela. Respeite o sigilo da mediação e nunca invente fatos, nomes, datas ou números.\n- Se receber trechos de leis ou documentos que não têm a ver com a pergunta, ignore-os e não fale deles.\n- Se ela só cumprimentar ou puxar conversa, responda curto e natural (por exemplo: "Tudo bem, Dra.! Em que posso ajudar?"), sem sugerir tarefas nem inventar compromissos.\n- Não ofereça fazer coisas que você não consegue fazer pelo app (abrir telas, enviar mensagens, agendar). Se ajudar, diga onde ela encontra isso no app.\n- Ao usar trechos de leis ou documentos, cite a fonte uma vez só, no fim do parágrafo ou da lista, e não em cada linha.\n- Português do Brasil impecável: revise acentos, crase, concordância, regência e grafia antes de responder. Escreva os termos jurídicos do jeito certo (por exemplo: informalidade, isonomia, autocomposição, cônjuge, espólio, herdeiro).\n- Precisão jurídica: só cite número de artigo ou de lei se tiver certeza. Se não tiver, explique o assunto sem o número e diga para conferir na aba Leis. Nunca troque o nome de um princípio ou de um instituto.\n- Pontuação sempre correta: toda pergunta termina com ponto de interrogação (?), afirmação com ponto final (.) e exclamação (!) só quando combinar. Nunca escreva uma pergunta sem o "?".\n- Parágrafos curtos e listas com "- " quando ajudarem. Não use tabelas.'+agendaCtx()+(DB.regras.length?'\n\nREGRAS E CORREÇÕES ENSINADAS PELA MEDIADORA (siga sempre; elas valem mais que o seu conhecimento):\n'+DB.regras.slice(-40).map(r=>'- '+r.texto).join('\n'):'')+(extra?'\n\n'+extra:'');
 }
 function agendaCtx(){
   try{const hoje=iso(new Date());const prox=DB.sessoes.filter(s=>s.data>=hoje).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).slice(0,5);
@@ -778,7 +778,7 @@ async function perguntaDoc(){
   const ws=norm(q).split(/[^a-z0-9]+/).filter(w=>w.length>3&&!STOP.has(w));
   const ch=chunksOf(d.id).map(c=>{const n=norm(c.t);let s=0;ws.forEach(w=>{const k=n.split(w).length-1;if(k)s+=1+Math.min(k,4)*.3});return {...c,s}}).filter(c=>c.s>0).sort((a,b)=>b.s-a.s).slice(0,8);
   out.innerHTML='<div class="ai-out" style="color:var(--text)"><span class="spin"></span> Lendo o documento...</div>';const b=out.firstChild;
-  try{const t=await ask(base('Responda com base nos trechos abaixo do documento "'+d.nome+'". Explique em palavras simples e cite a página assim: (p. X). Se não estiver nos trechos, diga que não encontrou neste documento.\n\nTRECHOS:\n'+(ch.map(c=>'[p. '+c.p+'] '+c.t.replace(/\s+/g,' ')).join('\n\n')||'(nenhum trecho encontrado)'))+'\n\nPERGUNTA: '+q,x=>{b.innerHTML=md(x)});
+  try{const t=await ask(base('Responda com base nos trechos abaixo do documento "'+d.nome+'". Explique em palavras simples e cite a página assim: (p. X). Se não estiver nos trechos, diga que não encontrou neste documento.\n\nTRECHOS:\n'+(ch.map(c=>'[p. '+c.p+'] '+c.t.replace(/\s+/g,' ')).join('\n\n')||'(nenhum trecho encontrado)'))+'\n\nPERGUNTA: '+q,x=>{b.innerHTML=md(x)},{modelTier:'default'});
     docAns='<div class="ai-out" style="color:var(--text)"><p class="note" style="margin:0 0 6px">'+esc(q)+'</p>'+md(t)+'</div>';out.innerHTML=docAns}
   catch(e){b.textContent=aiErr(e)}
 }
@@ -1160,7 +1160,7 @@ async function sendChat(text){
     hist[0]={role:hist[0].role,content:(hist[0].role==='user'?base()+'\n\nPERGUNTA: ':'')+hist[0].content};
     if(hist[0].role!=='user')hist.unshift({role:'user',content:base()});
     if(dc.txt)hist[hist.length-1]={role:'user',content:dc.txt+'\n\nPERGUNTA: '+text};
-    const txt=await ask(hist,t=>{div.innerHTML=md(t)});
+    const txt=await ask(hist,t=>{div.innerHTML=md(t)},{modelTier:'default'});
     DB.chat.push({role:'assistant',content:txt,fontes:dc.fontes});save();
   }catch(e){div.textContent=aiErr(e)}
   busy=false;render();
@@ -1187,6 +1187,21 @@ async function falarEleven(clean){
   }catch(e){return false}
 }
 /* Prepara o texto para a voz ler direito: sem citações de página, com abreviações por extenso */
+/* Dicionário de pronúncia: como a voz deve ler siglas, valores, horas e datas */
+const PRON=[[/\bIA\b/g,'i-á'],[/\bOAB\b/g,'ó-a-bê'],[/\bCEJUSC\b/g,'cejúsqui'],[/\bCPF\b/g,'cê-pê-éfe'],[/\bCNPJ\b/g,'cê-ene-pê-jóta'],[/\bSTJ\b/g,'ésse-tê-jóta'],[/\bSTF\b/g,'ésse-tê-éfe'],[/\bTJSP\b/g,'tê-jóta de São Paulo'],[/\bTJ\b/g,'tê-jóta'],[/\bECA\b/g,'Estatuto da Criança e do Adolescente'],[/\bLGPD\b/g,'éle-gê-pê-dê'],[/\bCLT\b/g,'cê-éle-tê'],[/\bINSS\b/g,'i-ene-ésse-ésse'],[/\bITCMD\b/g,'i-tê-cê-ême-dê'],[/\bIPTU\b/g,'i-pê-tê-u'],[/\bMP\b/g,'Ministério Público'],[/\bDP\b/g,'Defensoria Pública'],[/\bSP\b/g,'São Paulo'],[/\bLINDB\b/g,'Lei de Introdução às Normas'],[/\bWhatsApp\b/gi,'uótsap'],[/\be-mail\b/gi,'i-meil']];
+const ROM={I:'um',II:'dois',III:'três',IV:'quatro',V:'cinco',VI:'seis',VII:'sete',VIII:'oito',IX:'nove',X:'dez',XI:'onze',XII:'doze',XIII:'treze',XIV:'quatorze',XV:'quinze',XVI:'dezesseis',XVII:'dezessete',XVIII:'dezoito',XIX:'dezenove',XX:'vinte'};
+const MESX=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function pronuncia(t){
+  t=String(t)
+   .replace(/R\$\s*([\d.]+),(\d{2})/g,(m,r,c)=>r.replace(/\./g,'')+' reais'+(+c?' e '+(+c)+' centavos':''))
+   .replace(/R\$\s*([\d.]+)/g,(m,r)=>r.replace(/\./g,'')+' reais')
+   .replace(/\b(\d{1,2})h(\d{2})\b/g,(m,h,mi)=>(+h)+' e '+mi)
+   .replace(/\b(\d{1,2})h\b/g,(m,h)=>(+h)+(+h===1?' hora':' horas'))
+   .replace(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\b/g,(m,d,mo,a)=>+mo>=1&&+mo<=12&&+d>=1&&+d<=31?(+d===1?'primeiro':+d)+' de '+MESX[+mo-1]+(a?' de '+a:''):m)
+   .replace(/\b(inciso|incisos|inc\.?)\s+([IVX]{1,5})\b/gi,(m,w,r)=>'inciso '+(ROM[r.toUpperCase()]||r));
+  PRON.forEach(([re,s])=>{t=t.replace(re,s)});
+  return t;
+}
 function paraVoz(t){
   const ord={'1':'primeiro','2':'segundo','3':'terceiro','4':'quarto','5':'quinto','6':'sexto','7':'sétimo','8':'oitavo','9':'nono'};
   return String(t)
@@ -1200,7 +1215,7 @@ function paraVoz(t){
     .replace(/\b(Lei|Decreto-Lei|Resolução)\s+(?:n\.?\s*[º°]?\s*)?([\d.]+)\/(\d{4})/gi,'$1 $2, de $3')
     .replace(/\b(\d)\s*[º°](?!\d)/g,(m,d)=>ord[d])
     .replace(/\b(\d+)\s*[ºª°]/g,'$1')
-    .replace(/\bn\.?\s*[ºo°]\s*/gi,'número ')
+    .replace(/\bn\.?\s*[º°]\s*/gi,'número ').replace(/\bno?\.\s*(?=\d)/gi,'número ')
     .replace(/\binc\.\s*/gi,'inciso ').replace(/\bal\.\s*/gi,'alínea ')
     .replace(/\bDra\.\s*/g,'doutora ').replace(/\bDr\.\s*/g,'doutor ').replace(/\bSra\.\s*/g,'senhora ').replace(/\bSr\.\s*/g,'senhor ')
     .replace(/\bEx\.ª|\bExa\.\s*/g,'Excelência ')
@@ -1211,7 +1226,7 @@ function paraVoz(t){
     .trim();
 }
 function speak(text,onEnd){
-  const clean=paraVoz(text).slice(0,1990);
+  const clean=pronuncia(paraVoz(text)).slice(0,1990);
   if(IA_URL&&vozEleven){
     speaking=true;const meu=Symbol();speak.atual=meu;
     falarEleven(clean).then(src=>{
@@ -1396,7 +1411,7 @@ function openVoice(modo){
     V.barge=false;if(V.vadFim)V.vadFim();stopSpeak();clearInterval(V.iv);orb.style.transform='';
     setTimeout(listen,150);
   }
-  function armSilence(){clearTimeout(V.timer);V.timer=setTimeout(()=>{if(V.listening&&(V.heard+V.partial).trim())DICT.stop().catch(()=>{})},1400)}
+  function armSilence(){clearTimeout(V.timer);V.timer=setTimeout(()=>{if(V.listening&&(V.heard+V.partial).trim())DICT.stop().catch(()=>{})},1000)}
   const close=()=>{V.open=false;V.mini=false;document.body.classList.remove('voz-on');if(V.vadFim)V.vadFim();liberarTela();try{sessionStorage.removeItem('mf-voz')}catch(e){}clearTimeout(V.timer);try{DICT&&V.listening&&DICT.stop().catch(()=>{})}catch(e){}V.listening=false;V.cb=null;stopSpeak();r.innerHTML=''};
   r.querySelector('#vClose').onclick=close;{const x2=r.querySelector('#vX2');if(x2)x2.onclick=close}
   const ans=async q=>{
@@ -1648,7 +1663,7 @@ async function explica(btn){
   const box=btn.closest('.law').querySelector('.exp');
   if(!AI){box.innerHTML=`<div class="ai-out">${aiErr({code:'off'})}</div>`;return}
   box.innerHTML='<div class="ai-out"><span class="spin"></span> Explicando...</div>';const b=box.firstChild;
-  try{const t=await ask(base()+'\n\nExplique em palavras simples este artigo, com um exemplo prático do dia a dia de uma mediação. Seja breve (até 6 frases).\n\n'+law.nome+' ('+law.num+'), '+art.n+': '+art.t,x=>{b.innerHTML=md(x)});b.innerHTML=md(t)}
+  try{const t=await ask(base()+'\n\nExplique em palavras simples este artigo, com um exemplo prático do dia a dia de uma mediação. Seja breve (até 6 frases).\n\n'+law.nome+' ('+law.num+'), '+art.n+': '+art.t,x=>{b.innerHTML=md(x)},{modelTier:'default'});b.innerHTML=md(t)}
   catch(e){b.textContent=aiErr(e)}
 }
 function relatorio(){

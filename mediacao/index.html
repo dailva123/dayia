@@ -1,4 +1,4 @@
-a<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -778,7 +778,7 @@ async function perguntaDoc(){
   const ws=norm(q).split(/[^a-z0-9]+/).filter(w=>w.length>3&&!STOP.has(w));
   const ch=chunksOf(d.id).map(c=>{const n=norm(c.t);let s=0;ws.forEach(w=>{const k=n.split(w).length-1;if(k)s+=1+Math.min(k,4)*.3});return {...c,s}}).filter(c=>c.s>0).sort((a,b)=>b.s-a.s).slice(0,8);
   out.innerHTML='<div class="ai-out" style="color:var(--text)"><span class="spin"></span> Lendo o documento...</div>';const b=out.firstChild;
-  try{const t=await ask(base('Responda com base nos trechos abaixo do documento "'+d.nome+'". Explique em palavras simples e cite a página assim: (p. X). Se não estiver nos trechos, diga que não encontrou neste documento.\n\nTRECHOS:\n'+(ch.map(c=>'[p. '+c.p+'] '+c.t.replace(/\s+/g,' ')).join('\n\n')||'(nenhum trecho encontrado)'))+'\n\nPERGUNTA: '+q,x=>{b.innerHTML=md(x)},{modelTier:'default'});
+  try{const t=await ask(base('Responda com base nos trechos abaixo do documento "'+d.nome+'". Explique em palavras simples e cite a página assim: (p. X). Se não estiver nos trechos, diga que não encontrou neste documento.\n\nTRECHOS:\n'+(ch.map(c=>'[p. '+c.p+'] '+c.t.replace(/\s+/g,' ')).join('\n\n')||'(nenhum trecho encontrado)'))+'\n\nPERGUNTA: '+q,x=>{b.innerHTML=md(x)});
     docAns='<div class="ai-out" style="color:var(--text)"><p class="note" style="margin:0 0 6px">'+esc(q)+'</p>'+md(t)+'</div>';out.innerHTML=docAns}
   catch(e){b.textContent=aiErr(e)}
 }
@@ -1160,7 +1160,7 @@ async function sendChat(text){
     hist[0]={role:hist[0].role,content:(hist[0].role==='user'?base()+'\n\nPERGUNTA: ':'')+hist[0].content};
     if(hist[0].role!=='user')hist.unshift({role:'user',content:base()});
     if(dc.txt)hist[hist.length-1]={role:'user',content:dc.txt+'\n\nPERGUNTA: '+text};
-    const txt=await ask(hist,t=>{div.innerHTML=md(t)},{modelTier:'default'});
+    const txt=await ask(hist,t=>{div.innerHTML=md(t)});
     DB.chat.push({role:'assistant',content:txt,fontes:dc.fontes});save();
   }catch(e){div.textContent=aiErr(e)}
   busy=false;render();
@@ -1225,37 +1225,53 @@ function paraVoz(t){
     .replace(/\(\s*\)/g,'').replace(/[ \t]{2,}/g,' ').replace(/\s+([.,;:!?])/g,'$1').replace(/([.,;:])\1+/g,'$1')
     .trim();
 }
+/* Divide a fala: a primeira frase vai sozinha para a voz, assim a Dra. já ouve o começo
+   enquanto o resto é preparado ao mesmo tempo */
+function dividirFala(t){
+  const m=t.match(/^[\s\S]{30,260}?[.!?…](\s|$)/);
+  if(!m||t.length-m[0].length<40)return [t];
+  return [m[0].trim(),t.slice(m[0].length).trim()];
+}
 function speak(text,onEnd){
   const clean=pronuncia(paraVoz(text)).slice(0,1990);
-  if(IA_URL&&vozEleven){
-    speaking=true;const meu=Symbol();speak.atual=meu;
-    falarEleven(clean).then(src=>{
+  if(!(IA_URL&&vozEleven)){falarLocal(clean,onEnd);return}
+  speaking=true;const meu=Symbol();speak.atual=meu;
+  const partes=dividirFala(clean);
+  const pedidos=partes.map(p=>falarEleven(p));   /* pede as partes juntas, ao mesmo tempo */
+  let k=0;
+  const proxima=()=>{
+    if(speak.atual!==meu)return;
+    if(k>=pedidos.length){speak.atual=null;speaking=false;FONTE=null;onEnd&&onEnd();return}
+    const idx=k++;
+    pedidos[idx].then(src=>{
       if(speak.atual!==meu)return;
-      if(!src){speak.atual=null;speaking=false;falarLocal(clean,onEnd);return}
-      const fim=()=>{if(speak.atual!==meu)return;speak.atual=null;speaking=false;FONTE=null;onEnd&&onEnd()};
-      /* Toca a voz já decodificada na memória (Web Audio): no celular não picota */
-      if(AC){(async()=>{try{
-        if(AC.state!=='running')await AC.resume();
-        const b64=src.slice(src.indexOf(',')+1),bin=atob(b64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
-        const buf=await AC.decodeAudioData(u8.buffer);if(speak.atual!==meu)return;
-        if(AC.state!=='running')throw 0;
-        const s=AC.createBufferSource();s.buffer=buf;s.connect(AC.destination);s.onended=fim;FONTE=s;s.start(AC.currentTime+.05);
-      }catch(e){if(speak.atual===meu)tocarElemento()}})();return}
-      tocarElemento();
-      function tocarElemento(){
-      if(!AUDIO)AUDIO=new Audio();
-      try{AUDIO.pause()}catch(e){}
-      AUDIO.onended=fim;AUDIO.onerror=fim;AUDIO.onplaying=()=>{if(speak.atual===meu&&speak.onPlay){const f=speak.onPlay;speak.onPlay=null;f()}};
-      AUDIO.src=src;
-      const tentar=n=>AUDIO.play().catch(()=>{if(speak.atual!==meu)return;
-        if(n<2){setTimeout(()=>tentar(n+1),400);return}
-        speak.atual=null;speaking=false;const st=document.getElementById('vStatus');if(st)st.textContent='O celular bloqueou o som. Toque na bola e pergunte de novo.'});
-      tentar(0);
-      }
+      if(!src){speak.atual=null;speaking=false;falarLocal(partes.slice(idx).join(' '),onEnd);return}
+      tocarAudio(src,meu,proxima);
     });
-    return;
+  };
+  proxima();
+}
+function tocarAudio(src,meu,fimParte){
+  const fim=()=>{if(speak.atual!==meu)return;FONTE=null;fimParte()};
+  /* Toca a voz já decodificada na memória (Web Audio): no celular não picota */
+  if(AC){(async()=>{try{
+    if(AC.state!=='running')await AC.resume();
+    const b64=src.slice(src.indexOf(',')+1),bin=atob(b64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+    const buf=await AC.decodeAudioData(u8.buffer);if(speak.atual!==meu)return;
+    if(AC.state!=='running')throw 0;
+    const s=AC.createBufferSource();s.buffer=buf;s.connect(AC.destination);s.onended=fim;FONTE=s;s.start(AC.currentTime+.05);
+  }catch(e){if(speak.atual===meu)tocarElemento()}})();return}
+  tocarElemento();
+  function tocarElemento(){
+    if(!AUDIO)AUDIO=new Audio();
+    try{AUDIO.pause()}catch(e){}
+    AUDIO.onended=fim;AUDIO.onerror=fim;AUDIO.onplaying=()=>{if(speak.atual===meu&&speak.onPlay){const f=speak.onPlay;speak.onPlay=null;f()}};
+    AUDIO.src=src;
+    const tentar=n=>AUDIO.play().catch(()=>{if(speak.atual!==meu)return;
+      if(n<2){setTimeout(()=>tentar(n+1),400);return}
+      speak.atual=null;speaking=false;const st=document.getElementById('vStatus');if(st)st.textContent='O celular bloqueou o som. Toque na bola e pergunte de novo.'});
+    tentar(0);
   }
-  falarLocal(clean,onEnd);
 }
 function falarLocal(clean,onEnd){
   if(TTS){
@@ -1663,7 +1679,7 @@ async function explica(btn){
   const box=btn.closest('.law').querySelector('.exp');
   if(!AI){box.innerHTML=`<div class="ai-out">${aiErr({code:'off'})}</div>`;return}
   box.innerHTML='<div class="ai-out"><span class="spin"></span> Explicando...</div>';const b=box.firstChild;
-  try{const t=await ask(base()+'\n\nExplique em palavras simples este artigo, com um exemplo prático do dia a dia de uma mediação. Seja breve (até 6 frases).\n\n'+law.nome+' ('+law.num+'), '+art.n+': '+art.t,x=>{b.innerHTML=md(x)},{modelTier:'default'});b.innerHTML=md(t)}
+  try{const t=await ask(base()+'\n\nExplique em palavras simples este artigo, com um exemplo prático do dia a dia de uma mediação. Seja breve (até 6 frases).\n\n'+law.nome+' ('+law.num+'), '+art.n+': '+art.t,x=>{b.innerHTML=md(x)});b.innerHTML=md(t)}
   catch(e){b.textContent=aiErr(e)}
 }
 function relatorio(){

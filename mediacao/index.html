@@ -413,7 +413,7 @@ if(IA_URL){
     catch(e){throw {code:'rede'}}
     let d={};try{d=await r.json()}catch(e){throw {code:'erro'}}
     if(d.erro)throw {code:d.codigo||'erro',message:d.erro};
-    const text=d.texto||'';if(o.onText)o.onText({text});return {text};
+    const text=(d.texto||'').replace(/\\([_*#\-.\[\]()!])/g,'$1');if(o.onText)o.onText({text});return {text};
   };
 }
 (function(){
